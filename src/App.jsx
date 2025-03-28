@@ -1,9 +1,16 @@
 import React from "react";
-// import Example from "./components/navbar/navbar";
-import Dashboard from "./components/Sidebar/sidebar";
+import Login from "./userauth/login";
+import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+import Dashboard from "./components/Sidebar/sidebar"; // Example component for navigation
+
 function App() {
   return (
-    <Dashboard  />
+    <Router>
+      <Routes>
+        <Route path="/" element={<Login />} />
+        <Route path="/dashboard" element={<Dashboard />} />
+      </Routes>
+    </Router>
   );
 }
 
