@@ -1,7 +1,7 @@
 import React from "react";
 import Login from "./userauth/login";
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
-import Dashboard from "./components/Sidebar/sidebar"; // Example component for navigation
+import Dashboard from "./components/Sidebar/sidebar"; 
 
 function App() {
   return (
