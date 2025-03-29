@@ -1,6 +1,9 @@
 import React, { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { Menu, MenuButton, MenuItem, MenuItems } from "@headlessui/react";
 import { BellIcon, CogIcon, UserCircleIcon } from "@heroicons/react/24/outline";
+import { getAuth, signOut } from "firebase/auth";
+
 import {
   ChartBarSquareIcon, // Replaced HomeIcon with this
   UsersIcon,
@@ -16,6 +19,7 @@ import "leaflet/dist/leaflet.css";
 import NetworkSurveillanceDashboard from "../content/dashboard";
 import AddEmail from "../content/addemail";
 import Reports from "../content/reports";
+import ExcelUploader from "../content/documents";
 
 const navigation = [
   { name: "Dashboard", icon: ChartBarSquareIcon }, // Changed to ChartBarSquareIcon
@@ -33,7 +37,20 @@ const socialLinks = [
   { name: "Twitter", icon: FaTwitter, link: "https://twitter.com" },
 ];
 
+
+
 export default function Dashboard() {
+  const auth = getAuth();
+  const navigate = useNavigate();
+  const handleLogout = async () => {
+    try {
+      await signOut(auth);
+      navigate("/"); // Redirect to login page after logout
+    } catch (error) {
+      console.error("Logout failed:", error.message);
+    }
+  };
+
   const [selected, setSelected] = useState("Dashboard");
 
   const renderContent = () => {
@@ -47,7 +64,7 @@ export default function Dashboard() {
       case "Cell sites":
         return <CellSitesPage />;
       case "Documents":
-        return <div>Access your documents here.</div>;
+        return <ExcelUploader/>;
       case "Reports":
         return <Reports/>;
       default:
@@ -142,12 +159,12 @@ export default function Dashboard() {
                   </a>
                 </MenuItem>
                 <MenuItem>
-                  <a
-                    href="#"
-                    className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                <button
+                    onClick={handleLogout}
+                    className="block w-full px-4 py-2 text-sm text-left text-gray-700 hover:bg-gray-100"
                   >
                     Logout
-                  </a>
+                  </button>
                 </MenuItem>
               </MenuItems>
             </Menu>

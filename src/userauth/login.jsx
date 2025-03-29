@@ -1,9 +1,9 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { signInWithEmailAndPassword } from "firebase/auth";
+import { signInWithEmailAndPassword, signOut } from "firebase/auth";
 import { auth, db } from "../backend/firebase/firebaseconfig";
-import { collection, query, where, getDocs } from "firebase/firestore";
-import logo from "../assets/globe-logo-name.png"; // Fixed image import
+import { collection, query, where, getDocs, doc, setDoc, deleteDoc } from "firebase/firestore";
+import logo from "../assets/globe-logo-name.png"; 
 
 const Login = () => {
   const navigate = useNavigate();
@@ -13,11 +13,9 @@ const Login = () => {
   const [loading, setLoading] = useState(false);
 
   const isAuthorized = async (email) => {
-    console.log("Checking authorization for:", email);
     try {
       const q = query(collection(db, "authorizedUsers"), where("email", "==", email));
       const querySnapshot = await getDocs(q);
-      console.log("Query result:", querySnapshot.docs.map(doc => doc.data()));
       return !querySnapshot.empty;
     } catch (error) {
       console.error("Error checking authorization:", error);
@@ -25,21 +23,26 @@ const Login = () => {
     }
   };
 
+  const checkActiveSession = async (uid) => {
+    const sessionRef = doc(db, "activeSessions", uid);
+    const sessionSnapshot = await getDocs(query(collection(db, "activeSessions"), where("uid", "==", uid)));
+    return !sessionSnapshot.empty; // Returns true if user already has an active session
+  };
+
   const handleEmailLogin = async (e) => {
     e.preventDefault();
     setError("");
     setLoading(true);
 
-    const trimmedEmail = email.trim();
-    const trimmedPassword = password.trim();
-
-    if (!trimmedEmail || !trimmedPassword) {
-      setError("Email and password cannot be empty.");
-      setLoading(false);
-      return;
-    }
-
     try {
+      const trimmedEmail = email.trim();
+      const trimmedPassword = password.trim();
+      if (!trimmedEmail || !trimmedPassword) {
+        setError("Email and password cannot be empty.");
+        setLoading(false);
+        return;
+      }
+
       const authorized = await isAuthorized(trimmedEmail);
       if (!authorized) {
         setError("You are not authorized. Contact admin.");
@@ -47,7 +50,21 @@ const Login = () => {
         return;
       }
 
-      await signInWithEmailAndPassword(auth, trimmedEmail, trimmedPassword);
+      const userCredential = await signInWithEmailAndPassword(auth, trimmedEmail, trimmedPassword);
+      const uid = userCredential.user.uid;
+
+      // Check if user already has an active session
+      const hasActiveSession = await checkActiveSession(uid);
+      if (hasActiveSession) {
+        setError("This account is already logged in elsewhere.");
+        await signOut(auth); // Force sign out if session exists
+        setLoading(false);
+        return;
+      }
+
+      // Store session in Firestore
+      await setDoc(doc(db, "activeSessions", uid), { uid, email: trimmedEmail, timestamp: Date.now() });
+
       navigate("/dashboard");
     } catch (err) {
       console.error("Login error:", err);
@@ -66,15 +83,10 @@ const Login = () => {
   return (
     <div className="flex justify-center items-center h-screen bg-gray-100">
       <div className="bg-white p-10 rounded-lg shadow-lg w-[500px] text-center">
-        {/* Logo */}
         <div className="flex justify-center mb-6">
           <img src={logo} alt="Logo" className="w-32 h-auto" />
         </div>
-
-        {/* Title */}
         <h2 className="text-3xl font-semibold text-gray-700 mb-6">Welcome Back!</h2>
-
-        {/* Email Login Form */}
         <form onSubmit={handleEmailLogin} className="space-y-4">
           <input
             type="email"
@@ -96,9 +108,7 @@ const Login = () => {
           <button
             type="submit"
             className={`w-full p-3 rounded-md transition ${
-              loading
-                ? "bg-gray-400 cursor-not-allowed"
-                : "bg-blue-500 text-white hover:bg-blue-600"
+              loading ? "bg-gray-400 cursor-not-allowed" : "bg-blue-500 text-white hover:bg-blue-600"
             }`}
             disabled={loading}
           >
