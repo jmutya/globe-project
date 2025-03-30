@@ -1,133 +1,98 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { PieChart, Pie, Cell, Tooltip, Legend } from "recharts";
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid } from "recharts";
-import { LineChart, Line } from "recharts";
-import { AreaChart, Area } from "recharts";
-import { Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis } from "recharts";
+import * as XLSX from "xlsx";
+import supabase from "../../backend/supabase/supabase";
+import AlarmTypeLineGraph from "./dashboardContent/linegraph"; 
+const SeverityPieChart = () => {
+  const [chartData, setChartData] = useState([]);
 
-const alarmData = [
-  { name: "Critical", value: 1, color: "#f87171" },
-  { name: "Major", value: 2, color: "#fbbf24" },
-  { name: "Normal", value: 3, color: "#34d399" }
-];
+  useEffect(() => {
+    fetchAndProcessFiles();
+  }, []);
 
-const statusData = [
-  { name: "Active", count: 6 },
-  { name: "Inactive", count: 4 }
-];
+  const fetchAndProcessFiles = async () => {
+    try {
+      const { data: files, error } = await supabase.storage.from("uploads").list("excels");
+      if (error) throw error;
 
-const alarmsOverTime = [
-  { month: "Jan", alarms: 3 },
-  { month: "Feb", alarms: 5 },
-  { month: "Mar", alarms: 2 },
-  { month: "Apr", alarms: 4 },
-  { month: "May", alarms: 3 }
-];
+      let severityCounts = {};
 
-const sitePerformance = [
-  { parameter: "Uptime", score: 90 },
-  { parameter: "Latency", score: 70 },
-  { parameter: "Throughput", score: 85 },
-  { parameter: "Packet Loss", score: 60 }
-];
+      for (const file of files) {
+        const { data: fileUrl } = supabase.storage.from("uploads").getPublicUrl(`excels/${file.name}`);
+        const response = await fetch(fileUrl.publicUrl);
+        const blob = await response.arrayBuffer();
+        const workbook = XLSX.read(blob, { type: "array" });
+        const sheetName = workbook.SheetNames[0];
+        const sheet = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName], { header: 1 });
 
-const networkTraffic = [
-  { day: "Mon", traffic: 200 },
-  { day: "Tue", traffic: 450 },
-  { day: "Wed", traffic: 350 },
-  { day: "Thu", traffic: 400 },
-  { day: "Fri", traffic: 300 }
-];
+        if (sheet.length > 1) {
+          console.log("Detected Headers:", sheet[0]);
+          const headers = sheet[0];
+          const severityIndex = headers.indexOf("Severity");
 
-const errorTypes = [
-  { type: "Timeout", count: 10 },
-  { type: "Connection Lost", count: 7 },
-  { type: "Server Error", count: 5 },
-  { type: "Bad Request", count: 3 }
-];
+          if (severityIndex === -1) {
+            console.warn("Severity column not found in the file.");
+            continue;
+          }
 
-const NetworkAnalytics = () => {
+          sheet.slice(1).forEach(row => {
+            const severity = row[severityIndex]?.trim();
+            if (severity) {
+              severityCounts[severity] = (severityCounts[severity] || 0) + 1;
+            }
+          });
+        }
+      }
+
+      console.log("Severity Counts:", severityCounts);
+
+      const total = Object.values(severityCounts).reduce((sum, count) => sum + count, 0);
+      const formattedData = Object.entries(severityCounts).map(([severity, count]) => ({
+        name: severity,
+        value: count,
+        percentage: ((count / total) * 100).toFixed(2),
+      }));
+
+      console.log("Formatted Data for Pie Chart:", formattedData);
+      setChartData(formattedData);
+    } catch (error) {
+      console.error("Error fetching or processing files:", error);
+    }
+  };
+
+  const colors = ["#ff6384", "#36a2eb", "#ffce56", "#4bc0c0", "#9966ff", "#ff9f40"];
+
   return (
-    <div className="p-4 bg-gray-100 min-h-screen">
-      <h1 className="text-3xl font-bold mb-4">🌐 Network Surveillance Dashboard</h1>
-      <p className="text-gray-700 mb-6">Real-time analytics and monitoring of network health</p>
+    <div className="p-4 bg-white shadow-lg rounded-lg">
+      <h2 className="text-lg font-semibold mb-2">Severity Distribution</h2>
+      {chartData.length > 0 ? (
+        <PieChart width={400} height={300}>
+          <Pie
+            data={chartData}
+            dataKey="value"
+            nameKey="name"
+            cx="50%"
+            cy="50%"
+            outerRadius={100}
+            label={({ name, percentage }) => `${name} (${percentage}%)`}
+          >
+            {chartData.map((entry, index) => (
+              <Cell key={`cell-${index}`} fill={colors[index % colors.length]} />
+            ))}
+          </Pie>
+          <Tooltip formatter={(value, name, props) => [`${value} occurrences (${props.payload.percentage}%)`, name]} />
+          <Legend />
+        </PieChart>
+      ) : (
+        <p className="text-gray-600">No severity data available</p>
+      )}
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-        {/* Alarm Severity Distribution */}
-        <div className="bg-white p-4 shadow-md rounded-lg">
-          <h2 className="text-lg font-semibold mb-2">Alarm Severity Distribution</h2>
-          <PieChart width={250} height={250}>
-            <Pie data={alarmData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={80}>
-              {alarmData.map((entry, index) => (
-                <Cell key={`cell-${index}`} fill={entry.color} />
-              ))}
-            </Pie>
-            <Tooltip />
-            <Legend />
-          </PieChart>
-        </div>
-
-        {/* Site Status Overview */}
-        <div className="bg-white p-4 shadow-md rounded-lg">
-          <h2 className="text-lg font-semibold mb-2">Site Status Overview</h2>
-          <BarChart width={250} height={250} data={statusData}>
-            <CartesianGrid strokeDasharray="3 3" />
-            <XAxis dataKey="name" />
-            <YAxis />
-            <Tooltip />
-            <Bar dataKey="count" fill="#4f46e5" />
-          </BarChart>
-        </div>
-
-        {/* Alarms Over Time */}
-        <div className="bg-white p-4 shadow-md rounded-lg">
-          <h2 className="text-lg font-semibold mb-2">Alarms Over Time</h2>
-          <LineChart width={250} height={250} data={alarmsOverTime}>
-            <CartesianGrid strokeDasharray="3 3" />
-            <XAxis dataKey="month" />
-            <YAxis />
-            <Tooltip />
-            <Line type="monotone" dataKey="alarms" stroke="#22c55e" />
-          </LineChart>
-        </div>
-
-        {/* Site Performance Metrics */}
-        <div className="bg-white p-4 shadow-md rounded-lg">
-          <h2 className="text-lg font-semibold mb-2">Site Performance Metrics</h2>
-          <RadarChart outerRadius={80} width={250} height={250} data={sitePerformance}>
-            <PolarGrid />
-            <PolarAngleAxis dataKey="parameter" />
-            <PolarRadiusAxis />
-            <Radar name="Performance" dataKey="score" stroke="#8884d8" fill="#8884d8" fillOpacity={0.6} />
-          </RadarChart>
-        </div>
-
-        {/* Network Traffic Analysis */}
-        <div className="bg-white p-4 shadow-md rounded-lg">
-          <h2 className="text-lg font-semibold mb-2">Network Traffic Analysis</h2>
-          <AreaChart width={250} height={250} data={networkTraffic}>
-            <CartesianGrid strokeDasharray="3 3" />
-            <XAxis dataKey="day" />
-            <YAxis />
-            <Tooltip />
-            <Area type="monotone" dataKey="traffic" stroke="#f87171" fill="#f87171" />
-          </AreaChart>
-        </div>
-
-        {/* Network Error Types */}
-        <div className="bg-white p-4 shadow-md rounded-lg">
-          <h2 className="text-lg font-semibold mb-2">Network Error Types</h2>
-          <BarChart width={250} height={250} data={errorTypes}>
-            <CartesianGrid strokeDasharray="3 3" />
-            <XAxis dataKey="type" />
-            <YAxis />
-            <Tooltip />
-            <Bar dataKey="count" fill="#ef4444" />
-          </BarChart>
-        </div>
+      {/* 🔥 Include the line graph here */}
+      <div className="mt-6">
+        <AlarmTypeLineGraph />
       </div>
     </div>
   );
 };
 
-export default NetworkAnalytics;
+export default SeverityPieChart;
