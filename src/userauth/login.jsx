@@ -33,7 +33,7 @@ const Login = () => {
     e.preventDefault();
     setError("");
     setLoading(true);
-
+  
     try {
       const trimmedEmail = email.trim();
       const trimmedPassword = password.trim();
@@ -42,29 +42,33 @@ const Login = () => {
         setLoading(false);
         return;
       }
-
+  
       const authorized = await isAuthorized(trimmedEmail);
       if (!authorized) {
         setError("You are not authorized. Contact admin.");
         setLoading(false);
         return;
       }
-
+  
       const userCredential = await signInWithEmailAndPassword(auth, trimmedEmail, trimmedPassword);
       const uid = userCredential.user.uid;
-
-      // Check if user already has an active session
+      const loggedInUser = { email: trimmedEmail, uid };
+  
+      // Store user in localStorage
+      localStorage.setItem("user", JSON.stringify(loggedInUser));
+  
+      // Check for active session
       const hasActiveSession = await checkActiveSession(uid);
       if (hasActiveSession) {
         setError("This account is already logged in elsewhere.");
-        await signOut(auth); // Force sign out if session exists
+        await signOut(auth);
         setLoading(false);
         return;
       }
-
+  
       // Store session in Firestore
       await setDoc(doc(db, "activeSessions", uid), { uid, email: trimmedEmail, timestamp: Date.now() });
-
+  
       navigate("/dashboard");
     } catch (err) {
       console.error("Login error:", err);
@@ -79,6 +83,7 @@ const Login = () => {
       setLoading(false);
     }
   };
+  
 
   return (
     <div className="flex justify-center items-center h-screen bg-gray-100">
