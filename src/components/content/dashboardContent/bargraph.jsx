@@ -77,7 +77,7 @@ const AlarmTypeBarGraph = () => {
           </BarChart>
         </ResponsiveContainer>
       ) : (
-        <p className="text-gray-600">No failure category data available</p>
+        <p className="text-gray-600">Waiting for data to load</p>
       )}
     </div>
   );

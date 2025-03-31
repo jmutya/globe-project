@@ -18,7 +18,7 @@ const Login = () => {
       const querySnapshot = await getDocs(q);
       return !querySnapshot.empty;
     } catch (error) {
-      console.error("Error checking authorization:", error);
+     
       return false;
     }
   };
@@ -71,7 +71,6 @@ const Login = () => {
   
       navigate("/dashboard");
     } catch (err) {
-      console.error("Login error:", err);
       if (err.code === "auth/user-not-found") {
         setError("User not found. Please check your email.");
       } else if (err.code === "auth/wrong-password") {
