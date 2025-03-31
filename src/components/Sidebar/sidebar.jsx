@@ -39,7 +39,7 @@ const socialLinks = [
 
 
 
-export default function Sidebar() {
+export default function Sidebar({ user }) {
   const auth = getAuth();
   const navigate = useNavigate();
   const handleLogout = async () => {
@@ -139,7 +139,9 @@ export default function Sidebar() {
             <Menu>
               <MenuButton className="flex items-center space-x-2">
                 <UserCircleIcon className="w-8 h-8 text-gray-600" />
-                <span>Jefferson</span>
+                <span><p className="text-sm">Hello, {user?.email?.split("@")[0]}</p></span>
+
+
               </MenuButton>
               <MenuItems className="bg-white border rounded-md shadow-lg">
                 <MenuItem>
