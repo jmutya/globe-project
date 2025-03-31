@@ -66,61 +66,80 @@ const ExcelUploader = () => {
   };
 
   return (
-    <div className="max-w-4xl mx-auto p-6 bg-white shadow-lg rounded-lg border border-gray-200">
-      <h2 className="text-xl font-semibold text-gray-800 mb-4 flex items-center gap-2">
-        <FaUpload /> Upload Excel File
-      </h2>
-      <label className="cursor-pointer flex flex-col items-center p-4 border border-gray-300 rounded-lg hover:bg-gray-100">
-        <FaFileExcel className="text-green-500 text-4xl" />
-        <span className="mt-2 text-sm text-gray-600">Click to Upload</span>
-        <input type="file" accept=".xlsx, .xls" onChange={handleFileUpload} className="hidden" />
-      </label>
-      {uploading && (
-        <div className="w-full bg-gray-200 rounded-full h-3 mt-3 overflow-hidden">
-          <div className="bg-blue-500 h-full rounded-full transition-all" style={{ width: `${uploadProgress}%` }}></div>
-        </div>
-      )}
-      
-      {files.length > 0 && (
-        <div className="mt-4">
-          <h3 className="text-md font-semibold mb-2">Uploaded Files</h3>
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-            {files.map((file, index) => (
-              <button 
-                key={index} 
-                onClick={() => viewExcelFile(file.url)}
-                className="flex items-center px-3 py-2 bg-gray-200 rounded-lg hover:bg-gray-300 transition">
-                <FaEye className="mr-2" /> {file.name}
-              </button>
-            ))}
+    <div className="flex p-4 gap-8">
+      {/* Left - File Upload */}
+      <div className="w-1/3 p-4 border rounded-lg shadow-lg text-center">
+        <h2 className="text-lg font-semibold mb-4">Upload Excel File</h2>
+        <input 
+          type="file" 
+          accept=".xlsx, .xls" 
+          onChange={handleFileUpload} 
+          className="mb-4 border p-2 w-full cursor-pointer" 
+        />
+        {uploading && (
+          <div className="w-full bg-gray-200 rounded-full h-4 mt-2">
+            <div 
+              className="bg-blue-500 h-4 rounded-full text-white text-xs flex items-center justify-center"
+              style={{ width: `${uploadProgress}%` }}
+            >
+              {uploadProgress}%
+            </div>
           </div>
-        </div>
-      )}
-      
-      {parsedData.length > 0 && (
-        <div className="mt-4 overflow-x-auto border border-gray-300 rounded-lg">
-          <table className="table-auto w-full text-sm">
-            <thead className="bg-gray-200">
-              <tr>
-                {Object.keys(parsedData[0]).map((key) => (
-                  <th key={key} className="px-4 py-2 border">{key}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {parsedData.map((row, index) => (
-                <tr key={index} className="odd:bg-white even:bg-gray-100">
-                  {Object.values(row).map((value, idx) => (
-                    <td key={idx} className="px-4 py-2 border">{value}</td>
-                  ))}
-                </tr>
+        )}
+
+        {/* Uploaded Files List (Vertically Listed) */}
+        {files.length > 0 && (
+          <div className="mt-4 overflow-y-auto max-h-70">
+            <h3 className="text-md font-semibold mb-2">Uploaded Files</h3>
+            <div className="flex flex-col gap-2">
+              {files.map((file, index) => (
+                <button 
+                  key={index} 
+                  onClick={() => viewExcelFile(file.url)}
+                  className="px-3 py-2 bg-gray-100 border rounded-lg text-blue-600 hover:bg-blue-200 transition"
+                >
+                  {file.name}
+                </button>
               ))}
-            </tbody>
-          </table>
-        </div>
-      )}
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Right - Table */}
+      <div className="w-2/3 p-4 border rounded-lg shadow-lg overflow-hidden">
+        {parsedData.length > 0 ? (
+          <>
+            {/* <h3 className="text-md font-semibold mb-2">Excel Data</h3> */}
+            <div className="max-h-[750px] overflow-auto border border-gray-300 rounded-lg">
+              <table className="table-auto w-full border-collapse border border-gray-300">
+                <thead>
+                  <tr>
+                    {Object.keys(parsedData[0]).map((key) => (
+                      <th key={key} className="border border-gray-300 px-3 py-2 bg-gray-100">{key}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {parsedData.map((row, index) => (
+                    <tr key={index}>
+                      {Object.entries(row).map(([key, value], idx) => (
+                        <td key={idx} className={`border border-gray-300 px-3 py-1 ${key === "Severity" ? (value === "Critical" ? "bg-red-700 text-white" : value === "Major" ? "bg-orange-500" : value === "Minor" ? "bg-yellow-300" : "") : ""}`}>{value}</td>
+                      ))}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </>
+        ) : (
+          <p className="text-center text-gray-500 text-lg font-semibold">No file selected. Please upload or select a file.</p>
+        )}
+      </div>
+      
+      
     </div>
+    
   );
 };
-
 export default ExcelUploader;
