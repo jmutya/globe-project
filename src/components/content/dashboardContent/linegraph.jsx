@@ -25,25 +25,44 @@ const AlarmTypeLineGraph = () => {
         const workbook = XLSX.read(blob, { type: "array" });
         const sheetName = workbook.SheetNames[0];
         const sheet = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName], { header: 1 });
-
         if (sheet.length > 1) {
           console.log("Detected Headers:", sheet[0]);
           const headers = sheet[0];
-          const timestampIndex = headers.indexOf("Timestamp");
-          const alarmTypeIndex = headers.indexOf("Alarm Type");
-
+          const timestampIndex = headers.indexOf("Opened");
+          const alarmTypeIndex = headers.indexOf("AOR001");
+        
           if (timestampIndex === -1 || alarmTypeIndex === -1) {
             console.warn("Timestamp or Alarm Type column not found in the file.");
-            continue;
+            return;
           }
-
+        
           sheet.slice(1).forEach(row => {
-            const timestamp = row[timestampIndex];
+            let timestamp = row[timestampIndex];
             const alarmType = row[alarmTypeIndex]?.trim();
-
+        
             if (timestamp && alarmType) {
-              const date = new Date(timestamp).toISOString().split("T")[0]; // Extract date only
-
+              let date = "";
+        
+              // Handle Excel serial date numbers
+              if (typeof timestamp === "number") {
+                const excelEpoch = new Date(1899, 11, 30); // Excel's date system starts from 1899-12-30
+                date = new Date(excelEpoch.getTime() + timestamp * 86400000)
+                  .toISOString()
+                  .split("T")[0]; // Extract YYYY-MM-DD
+              } else if (typeof timestamp === "string") {
+                // Ensure correct MM/DD/YYYY parsing
+                const parts = timestamp.split(" ")[0].split("/");
+                if (parts.length === 3) {
+                  const [month, day, year] = parts;
+                  date = `${year}-${month.padStart(2, "0")}-${day.padStart(2, "0")}`; // Convert to YYYY-MM-DD
+                }
+              }
+        
+              if (!date) {
+                console.warn("Invalid timestamp:", timestamp);
+                return; // Skip invalid dates
+              }
+        
               if (!alarmData[date]) {
                 alarmData[date] = {};
               }
@@ -51,6 +70,9 @@ const AlarmTypeLineGraph = () => {
             }
           });
         }
+        
+        
+        
       }
 
       console.log("Alarm Data:", alarmData);
@@ -83,7 +105,7 @@ const AlarmTypeLineGraph = () => {
 
   return (
     <div className="p-4 bg-white shadow-lg rounded-lg">
-      <h2 className="text-lg font-semibold mb-2">Alarm Type Trend Over Time</h2>
+      <h2 className="text-lg font-semibold mb-2">Overall AOR Minandao</h2>
       {chartData.length > 0 ? (
         <ResponsiveContainer width="100%" height={300}>
           <LineChart data={chartData}>

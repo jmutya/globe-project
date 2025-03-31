@@ -28,7 +28,7 @@ const SeverityPieChart = () => {
         if (sheet.length > 1) {
           console.log("Detected Headers:", sheet[0]);
           const headers = sheet[0];
-          const severityIndex = headers.indexOf("Severity");
+          const severityIndex = headers.indexOf("Failure Category");
 
           if (severityIndex === -1) {
             console.warn("Severity column not found in the file.");

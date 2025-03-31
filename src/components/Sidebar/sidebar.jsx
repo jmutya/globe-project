@@ -39,7 +39,7 @@ const socialLinks = [
 
 
 
-export default function Dashboard() {
+export default function Sidebar() {
   const auth = getAuth();
   const navigate = useNavigate();
   const handleLogout = async () => {

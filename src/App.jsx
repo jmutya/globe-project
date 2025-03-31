@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
 import { getAuth, onAuthStateChanged } from "firebase/auth";
 import Login from "./userauth/login";
-import Dashboard from "./components/Sidebar/sidebar";
+import Sidebar from "./components/Sidebar/sidebar";
 import AddEmail from "./components/content/addemail";
 import ProtectedRoute from "./userauth/protectedroute"; // Import the protected route
 import CellSitesTopology from "./components/content/cellsites";
@@ -32,10 +32,10 @@ function App() {
     <Router>
   <Routes>
     {/* Redirect logged-in users to dashboard */}
-    <Route path="/" element={user ? <Navigate to="/dashboard" /> : <Login />} />
+    <Route path="/" element={user ? <Navigate to="/sidebar" /> : <Login />} />
 
     {/* Protected Routes */}
-    <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+    <Route path="/sidebar" element={<ProtectedRoute><Sidebar /></ProtectedRoute>} />
     <Route path="/addemail" element={<ProtectedRoute><AddEmail /></ProtectedRoute>} />
     <Route path="/cellsites" element={<ProtectedRoute><CellSitesTopology /></ProtectedRoute>} />
     <Route path="/reports" element={<ProtectedRoute>< AlarmLegends/></ProtectedRoute>} />

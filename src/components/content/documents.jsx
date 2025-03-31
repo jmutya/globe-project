@@ -1,43 +1,35 @@
 import React, { useState, useEffect } from "react";
 import * as XLSX from "xlsx";
-import supabase from "../../backend/supabase/supabase"; // Import Supabase client
+import supabase from "../../backend/supabase/supabase";
+import { FaFileExcel, FaUpload, FaSpinner, FaEye } from "react-icons/fa";
 
 const ExcelUploader = () => {
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
-  const [files, setFiles] = useState([]); // Stores all uploaded Excel files
-  const [parsedData, setParsedData] = useState([]); // Stores parsed Excel data
+  const [files, setFiles] = useState([]);
+  const [parsedData, setParsedData] = useState([]);
 
   useEffect(() => {
-    fetchUploadedFiles(); // Fetch files on component mount
+    fetchUploadedFiles();
   }, []);
 
   const handleFileUpload = async (event) => {
     const file = event.target.files[0];
-    if (!file) {
-      alert("No file selected!");
-      return;
-    }
+    if (!file) return alert("No file selected!");
 
-    console.log("Selected file:", file);
     setUploading(true);
     setUploadProgress(10);
 
     try {
-      // Upload file to Supabase Storage
-      const { data: uploadData, error: uploadError } = await supabase
-        .storage
+      const { data: uploadData, error } = await supabase.storage
         .from("uploads")
         .upload(`excels/${file.name}`, file, { cacheControl: "3600", upsert: true });
-
-      if (uploadError) throw uploadError;
-      console.log("File uploaded:", uploadData);
+      
+      if (error) throw error;
       setUploadProgress(50);
-
-      fetchUploadedFiles(); // Refresh file list after upload
+      fetchUploadedFiles();
       setUploadProgress(100);
     } catch (error) {
-      console.error("Error uploading file: ", error);
       alert("Upload failed!");
     } finally {
       setUploading(false);
@@ -46,21 +38,12 @@ const ExcelUploader = () => {
 
   const fetchUploadedFiles = async () => {
     try {
-      const { data, error } = await supabase
-        .storage
-        .from("uploads")
-        .list("excels", { limit: 100, offset: 0 });
-
+      const { data, error } = await supabase.storage.from("uploads").list("excels", { limit: 100 });
       if (error) throw error;
-      console.log("Fetched Files:", data);
-
-      // Generate public URLs for all files
-      const fileUrls = data.map((file) => ({
+      setFiles(data.map(file => ({
         name: file.name,
         url: supabase.storage.from("uploads").getPublicUrl(`excels/${file.name}`).data.publicUrl,
-      }));
-
-      setFiles(fileUrls);
+      })));
     } catch (error) {
       console.error("Error fetching files:", error);
     }
@@ -70,84 +53,65 @@ const ExcelUploader = () => {
     try {
       const response = await fetch(fileUrl);
       const blob = await response.blob();
-
       const reader = new FileReader();
       reader.onload = (e) => {
-        const binaryData = e.target.result;
-        const workbook = XLSX.read(binaryData, { type: "binary" });
-
-        // Get first sheet name
-        const sheetName = workbook.SheetNames[0];
-
-        // Convert sheet to JSON
-        const sheet = workbook.Sheets[sheetName];
-        const parsedData = XLSX.utils.sheet_to_json(sheet);
-
-        console.log("Parsed Excel Data:", parsedData);
-        setParsedData(parsedData);
+        const workbook = XLSX.read(e.target.result, { type: "binary" });
+        const sheet = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]]);
+        setParsedData(sheet);
       };
-
       reader.readAsBinaryString(blob);
     } catch (error) {
-      console.error("Error fetching Excel file:", error);
+      console.error("Error reading Excel file:", error);
     }
   };
 
   return (
-    <div className="p-4 border rounded-lg shadow-lg w-full max-w-lg mx-auto text-center">
-      <h2 className="text-lg font-semibold mb-4">Upload Excel File</h2>
-      <input 
-        type="file" 
-        accept=".xlsx, .xls" 
-        onChange={handleFileUpload} 
-        className="mb-4 border p-2 w-full cursor-pointer" 
-      />
+    <div className="max-w-4xl mx-auto p-6 bg-white shadow-lg rounded-lg border border-gray-200">
+      <h2 className="text-xl font-semibold text-gray-800 mb-4 flex items-center gap-2">
+        <FaUpload /> Upload Excel File
+      </h2>
+      <label className="cursor-pointer flex flex-col items-center p-4 border border-gray-300 rounded-lg hover:bg-gray-100">
+        <FaFileExcel className="text-green-500 text-4xl" />
+        <span className="mt-2 text-sm text-gray-600">Click to Upload</span>
+        <input type="file" accept=".xlsx, .xls" onChange={handleFileUpload} className="hidden" />
+      </label>
       {uploading && (
-        <div className="w-full bg-gray-200 rounded-full h-4 mt-2">
-          <div 
-            className="bg-blue-500 h-4 rounded-full text-white text-xs flex items-center justify-center"
-            style={{ width: `${uploadProgress}%` }}
-          >
-            {uploadProgress}%
-          </div>
+        <div className="w-full bg-gray-200 rounded-full h-3 mt-3 overflow-hidden">
+          <div className="bg-blue-500 h-full rounded-full transition-all" style={{ width: `${uploadProgress}%` }}></div>
         </div>
       )}
-
-      {/* Uploaded Files List (Scrollable Left to Right) */}
+      
       {files.length > 0 && (
-        <div className="mt-4 overflow-x-auto whitespace-nowrap">
+        <div className="mt-4">
           <h3 className="text-md font-semibold mb-2">Uploaded Files</h3>
-          <div className="flex space-x-4">
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
             {files.map((file, index) => (
               <button 
                 key={index} 
                 onClick={() => viewExcelFile(file.url)}
-                className="px-3 py-2 bg-gray-100 border rounded-lg text-blue-600 hover:bg-blue-200 transition"
-              >
-                {file.name}
+                className="flex items-center px-3 py-2 bg-gray-200 rounded-lg hover:bg-gray-300 transition">
+                <FaEye className="mr-2" /> {file.name}
               </button>
             ))}
           </div>
         </div>
       )}
-
-      {/* Display Parsed Excel Data */}
+      
       {parsedData.length > 0 && (
-        <div className="overflow-x-auto mt-4">
-          <h3 className="text-md font-semibold mb-2">Excel Data</h3>
-          <table className="table-auto w-full border-collapse border border-gray-300">
-            <thead>
+        <div className="mt-4 overflow-x-auto border border-gray-300 rounded-lg">
+          <table className="table-auto w-full text-sm">
+            <thead className="bg-gray-200">
               <tr>
                 {Object.keys(parsedData[0]).map((key) => (
-                  <th key={key} className="border border-gray-300 px-3 py-2 bg-gray-100">{key}</th>
+                  <th key={key} className="px-4 py-2 border">{key}</th>
                 ))}
               </tr>
             </thead>
             <tbody>
               {parsedData.map((row, index) => (
-                <tr key={index}>
+                <tr key={index} className="odd:bg-white even:bg-gray-100">
                   {Object.values(row).map((value, idx) => (
-                    <td key={idx} className="border border-gray-300 px-3 py-1">{value}</td>
+                    <td key={idx} className="px-4 py-2 border">{value}</td>
                   ))}
                 </tr>
               ))}
