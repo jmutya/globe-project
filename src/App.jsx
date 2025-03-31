@@ -8,13 +8,22 @@ import ProtectedRoute from "./userauth/protectedroute";
 import CellSitesTopology from "./components/content/cellsites";
 import AlarmLegends from "./components/content/alarm";
 import ExcelUploader from "./components/content/documents";
+import { FaSpinner } from "react-icons/fa";
 
 function App() {
   const { user, loading } = useAuth(); // Get authentication state
 
   if (loading) {
-    return <p>Loading...</p>; // Prevent flickering
+    return (
+      <div className="fixed inset-0 flex justify-center items-center bg-black bg-opacity-50">
+        <div className="p-5 rounded-lg bg-white shadow-lg flex items-center gap-2">
+          <FaSpinner className="animate-spin text-xl text-blue-500" />
+          <p className="text-gray-700">Loading, please wait...</p>
+        </div>
+      </div>
+    );
   }
+  
 
   return (
     <Router>

@@ -28,7 +28,6 @@ const navigation = [
   // { name: "Alarms", icon: BellAlertIcon },
   { name: "Documents", icon: DocumentIcon },
   { name: "Add Emails", icon: UsersIcon },
-  
 ];
 
 const socialLinks = [
@@ -36,8 +35,6 @@ const socialLinks = [
   { name: "Instagram", icon: FaInstagram, link: "https://instagram.com" },
   { name: "Twitter", icon: FaTwitter, link: "https://twitter.com" },
 ];
-
-
 
 export default function Sidebar({ user }) {
   const auth = getAuth();
@@ -64,9 +61,9 @@ export default function Sidebar({ user }) {
       case "Cell sites":
         return <CellSitesPage />;
       case "Documents":
-        return <ExcelUploader/>;
+        return <ExcelUploader />;
       case "Reports":
-        return <Reports/>;
+        return <Reports />;
       default:
         return <div>Select an option from the sidebar.</div>;
     }
@@ -135,38 +132,32 @@ export default function Sidebar({ user }) {
             className="px-4 py-2 border rounded-md w-1/3"
           />
           <div className="flex items-center space-x-4">
-            <BellIcon className="w-6 h-6 text-gray-600" />
-            <Menu>
-              <MenuButton className="flex items-center space-x-2">
-                <UserCircleIcon className="w-8 h-8 text-gray-600" />
-                <span><p className="text-sm">Hello, {user?.email?.split("@")[0]}</p></span>
+          <div className="w-4 h-4 rounded-full bg-green-500" />
 
 
+            <Menu as="div" className="relative">
+              <MenuButton className="flex items-center space-x-2">   
+                <span>
+                  <p className="text-sm">Hello, {user?.email?.split("@")[0]}</p>
+                </span>
               </MenuButton>
-              <MenuItems className="bg-white border rounded-md shadow-lg">
+
+              <MenuItems
+                as="div"
+                className="absolute right-0 mt-2 w-48 bg-white border rounded-md shadow-lg"
+              >
+                
                 <MenuItem>
-                  <a
-                    href="#"
-                    className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
-                  >
-                    Profile
-                  </a>
-                </MenuItem>
-                <MenuItem>
-                  <a
-                    href="#"
-                    className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
-                  >
-                    Settings
-                  </a>
-                </MenuItem>
-                <MenuItem>
-                <button
-                    onClick={handleLogout}
-                    className="block w-full px-4 py-2 text-sm text-left text-gray-700 hover:bg-gray-100"
-                  >
-                    Logout
-                  </button>
+                  {({ active }) => (
+                    <button
+                      onClick={handleLogout}
+                      className={`block w-full px-4 py-2 text-sm text-left text-gray-700 ${
+                        active ? "bg-gray-100" : ""
+                      }`}
+                    >
+                      Logout
+                    </button>
+                  )}
                 </MenuItem>
               </MenuItems>
             </Menu>

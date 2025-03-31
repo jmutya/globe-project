@@ -2,6 +2,8 @@ import React, { useState, useEffect } from "react";
 import { LineChart, Line, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer } from "recharts";
 import * as XLSX from "xlsx";
 import supabase from "../../../backend/supabase/supabase"; // Import Supabase client
+import Skeleton from 'react-loading-skeleton'; // Correct import
+import 'react-loading-skeleton/dist/skeleton.css';
 
 const AlarmTypeLineGraph = () => {
   const [chartData, setChartData] = useState([]);
@@ -105,7 +107,7 @@ const AlarmTypeLineGraph = () => {
 
   return (
     <div className="p-4 bg-white shadow-lg rounded-lg">
-      <h2 className="text-lg font-semibold mb-2">Overall AOR Minandao</h2>
+      <h2 className="text-lg font-semibold mb-2">Overall AOR Mindanao</h2>
       {chartData.length > 0 ? (
         <ResponsiveContainer width="100%" height={300}>
           <LineChart data={chartData}>
@@ -119,7 +121,10 @@ const AlarmTypeLineGraph = () => {
           </LineChart>
         </ResponsiveContainer>
       ) : (
-        <p className="text-gray-600">No alarm data available</p>
+        <div className="text-center">
+          <Skeleton height={300} />
+          <p className="text-gray-600 mt-4">Loading...</p>
+        </div>
       )}
     </div>
   );

@@ -76,7 +76,7 @@ const TerritoryGraph = () => {
           </BarChart>
         </ResponsiveContainer>
       ) : (
-        <p className="text-gray-600">No territory data available</p>
+        <p className="text-gray-600">Waiting for data to load</p>
       )}
     </div>
   );
