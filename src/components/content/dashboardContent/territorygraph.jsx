@@ -26,12 +26,12 @@ const TerritoryGraph = () => {
         const sheet = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName], { header: 1 });
 
         if (sheet.length > 1) {
-          console.log("Detected Headers:", sheet[0]);
+          // console.log("Detected Headers:", sheet[0]);
           const headers = sheet[0];
           const territoryIndex = headers.indexOf("Territory");
 
           if (territoryIndex === -1) {
-            console.warn("Territory column not found in the file.");
+            // console.warn("Territory column not found in the file.");
             continue;
           }
 
@@ -45,7 +45,7 @@ const TerritoryGraph = () => {
         }
       }
 
-      console.log("Territory Counts:", territoryCounts);
+      // console.log("Territory Counts:", territoryCounts);
 
       const formattedData = Object.entries(territoryCounts).map(([category, count], index) => ({
         category,
@@ -55,7 +55,7 @@ const TerritoryGraph = () => {
 
       setChartData(formattedData);
     } catch (error) {
-      console.error("Error fetching or processing files:", error);
+      // console.error("Error fetching or processing files:", error);
     }
   };
 

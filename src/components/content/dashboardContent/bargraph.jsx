@@ -26,12 +26,12 @@ const AlarmTypeBarGraph = () => {
         const sheet = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName], { header: 1 });
 
         if (sheet.length > 1) {
-          console.log("Detected Headers:", sheet[0]);
+          // console.log("Detected Headers:", sheet[0]);
           const headers = sheet[0];
           const failureCategoryIndex = headers.indexOf("Failure Category");
 
           if (failureCategoryIndex === -1) {
-            console.warn("Failure Category column not found in the file.");
+           
             continue;
           }
 
@@ -44,8 +44,6 @@ const AlarmTypeBarGraph = () => {
         }
       }
 
-      console.log("Failure Category Counts:", failureCategoryCounts);
-
       const formattedData = Object.entries(failureCategoryCounts).map(([category, count], index) => ({
         category,
         count,
@@ -54,7 +52,7 @@ const AlarmTypeBarGraph = () => {
 
       setChartData(formattedData);
     } catch (error) {
-      console.error("Error fetching or processing files:", error);
+    
     }
   };
 

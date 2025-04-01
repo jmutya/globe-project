@@ -1,7 +1,4 @@
 import React, { useState, useEffect } from "react";
-import { PieChart, Pie, Cell, Tooltip, Legend } from "recharts";
-import * as XLSX from "xlsx";
-import supabase from "../../backend/supabase/supabase";
 import AlarmTypeLineGraph from "./dashboardContent/linegraph";
 import AlarmTypeBarGraph from "./dashboardContent/bargraph";
 import TerritoryGraph from "./dashboardContent/territorygraph";

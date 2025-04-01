@@ -28,13 +28,13 @@ const AlarmTypeLineGraph = () => {
         const sheetName = workbook.SheetNames[0];
         const sheet = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName], { header: 1 });
         if (sheet.length > 1) {
-          console.log("Detected Headers:", sheet[0]);
+          // console.log("Detected Headers:", sheet[0]);
           const headers = sheet[0];
           const timestampIndex = headers.indexOf("Opened");
           const alarmTypeIndex = headers.indexOf("AOR001");
         
           if (timestampIndex === -1 || alarmTypeIndex === -1) {
-            console.warn("Timestamp or Alarm Type column not found in the file.");
+            // console.warn("Timestamp or Alarm Type column not found in the file.");
             return;
           }
         
@@ -61,7 +61,7 @@ const AlarmTypeLineGraph = () => {
               }
         
               if (!date) {
-                console.warn("Invalid timestamp:", timestamp);
+                // console.warn("Invalid timestamp:", timestamp);
                 return; // Skip invalid dates
               }
         
@@ -77,7 +77,7 @@ const AlarmTypeLineGraph = () => {
         
       }
 
-      console.log("Alarm Data:", alarmData);
+      // console.log("Alarm Data:", alarmData);
 
       // Extract all unique alarm types
       const allAlarmTypes = new Set();
@@ -99,7 +99,7 @@ const AlarmTypeLineGraph = () => {
       setChartData(formattedData);
       setAlarmTypes([...allAlarmTypes]); // Store all unique alarm types
     } catch (error) {
-      console.error("Error fetching or processing files:", error);
+      // console.error("Error fetching or processing files:", error);
     }
   };
 
