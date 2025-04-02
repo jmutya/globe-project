@@ -1,13 +1,13 @@
 import React, { useState, useEffect } from "react";
 import * as XLSX from "xlsx";
 import supabase from "../../backend/supabase/supabase";
-import { FaFileExcel, FaUpload, FaSpinner, FaEye } from "react-icons/fa";
 
 const ExcelUploader = () => {
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [files, setFiles] = useState([]);
   const [parsedData, setParsedData] = useState([]);
+  const [loadingFilesUploaded, setLoadingFilesUploaded] = useState(true);
 
   useEffect(() => {
     fetchUploadedFiles();
@@ -27,7 +27,7 @@ const ExcelUploader = () => {
       
       if (error) throw error;
       setUploadProgress(50);
-      fetchUploadedFiles();
+      await fetchUploadedFiles();
       setUploadProgress(100);
     } catch (error) {
       alert("Upload failed!");
@@ -46,6 +46,8 @@ const ExcelUploader = () => {
       })));
     } catch (error) {
       console.error("Error fetching files:", error);
+    } finally {
+      setLoadingFilesUploaded(false);
     }
   };
 
@@ -87,10 +89,15 @@ const ExcelUploader = () => {
           </div>
         )}
 
-        {/* Uploaded Files List (Vertically Listed) */}
-        {files.length > 0 && (
-          <div className="mt-4 overflow-y-auto max-h-70">
-            <h3 className="text-md font-semibold mb-2">Uploaded Files</h3>
+        {/* Uploaded Files List */}
+        <div className="mt-4 overflow-y-auto max-h-70">
+          <h3 className="text-md font-semibold mb-2">Uploaded Files</h3>
+          {loadingFilesUploaded ? (
+            <div className="flex justify-center items-center py-4">
+              <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-indigo-500"></div>
+              <p className="ml-3 text-gray-600">Loading files...</p>
+            </div>
+          ) : files.length > 0 ? (
             <div className="flex flex-col gap-2">
               {files.map((file, index) => (
                 <button 
@@ -102,44 +109,41 @@ const ExcelUploader = () => {
                 </button>
               ))}
             </div>
-          </div>
-        )}
+          ) : (
+            <p className="text-gray-500">No files uploaded yet.</p>
+          )}
+        </div>
       </div>
 
       {/* Right - Table */}
       <div className="w-2/3 p-4 border rounded-lg shadow-lg overflow-hidden">
         {parsedData.length > 0 ? (
-          <>
-            {/* <h3 className="text-md font-semibold mb-2">Excel Data</h3> */}
-            <div className="max-h-[750px] overflow-auto border border-gray-300 rounded-lg">
-              <table className="table-auto w-full border-collapse border border-gray-300">
-                <thead>
-                  <tr>
-                    {Object.keys(parsedData[0]).map((key) => (
-                      <th key={key} className="border border-gray-300 px-3 py-2 bg-gray-100">{key}</th>
+          <div className="max-h-[750px] overflow-auto border border-gray-300 rounded-lg">
+            <table className="table-auto w-full border-collapse border border-gray-300">
+              <thead>
+                <tr>
+                  {Object.keys(parsedData[0]).map((key) => (
+                    <th key={key} className="border border-gray-300 px-3 py-2 bg-gray-100">{key}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {parsedData.map((row, index) => (
+                  <tr key={index}>
+                    {Object.entries(row).map(([key, value], idx) => (
+                      <td key={idx} className={`border border-gray-300 px-3 py-1 ${key === "Severity" ? (value === "Critical" ? "bg-red-700 text-white" : value === "Major" ? "bg-orange-500" : value === "Minor" ? "bg-yellow-300" : "") : ""}`}>{value}</td>
                     ))}
                   </tr>
-                </thead>
-                <tbody>
-                  {parsedData.map((row, index) => (
-                    <tr key={index}>
-                      {Object.entries(row).map(([key, value], idx) => (
-                        <td key={idx} className={`border border-gray-300 px-3 py-1 ${key === "Severity" ? (value === "Critical" ? "bg-red-700 text-white" : value === "Major" ? "bg-orange-500" : value === "Minor" ? "bg-yellow-300" : "") : ""}`}>{value}</td>
-                      ))}
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </>
+                ))}
+              </tbody>
+            </table>
+          </div>
         ) : (
           <p className="text-center text-gray-500 text-lg font-semibold">No file selected. Please upload or select a file.</p>
         )}
       </div>
-      
-      
     </div>
-    
   );
 };
+
 export default ExcelUploader;
