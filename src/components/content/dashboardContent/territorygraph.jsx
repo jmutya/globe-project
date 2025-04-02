@@ -91,7 +91,7 @@ const TerritoryGraph = () => {
     >
       <h2 className="text-lg font-semibold mb-2">Territory Distribution</h2>
       {chartData.length > 0 ? (
-        <ResponsiveContainer width="50%" height={300}>
+        <ResponsiveContainer width="100%" height={300}>
           <BarChart data={chartData} layout="horizontal" barSize={50}>
             <CartesianGrid strokeDasharray="3 3" />
             <XAxis dataKey="category" type="category" />
