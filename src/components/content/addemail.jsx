@@ -4,6 +4,8 @@ import { collection, addDoc, query, where, getDocs } from "firebase/firestore";
 import {
   createUserWithEmailAndPassword,
   fetchSignInMethodsForEmail,
+  linkWithCredential,
+  EmailAuthProvider,
 } from "firebase/auth";
 
 const AddEmail = () => {
@@ -78,9 +80,9 @@ const AddEmail = () => {
       alert("Please enter both email and password.");
       return;
     }
-
+  
     setLoading(true);
-
+  
     try {
       // Check if email exists in Firestore
       const existsInFirestore = await checkIfEmailExistsInFirestore(email);
@@ -89,26 +91,24 @@ const AddEmail = () => {
         setLoading(false);
         return;
       }
-
-      // Check Firebase Authentication
+  
+      // Check if email is already linked to a Firebase Authentication user
       const methods = await fetchSignInMethodsForEmail(auth, email);
       if (methods.length > 0) {
-        alert("This email already exists in Firebase Authentication.");
+        alert("This email is already linked to another account.");
         setLoading(false);
         return;
       }
-
-      // Create user in Firebase Authentication
-      await createUserWithEmailAndPassword(auth, email, password);
-
-      // Save email to Firestore
+  
+      // If email is not linked in Firebase Auth, we don't need to create a new user
+      // Save the email directly to Firestore without changing the current logged-in user
       await addDoc(collection(db, "authorizedUsers"), { email });
-
-      // Update state with new email
+  
+      // Update state with the new email
       setEmails((prev) => [...prev, email]);
       alert(`Email "${email}" added successfully.`);
-
-      // Reset form
+  
+      // Reset the form
       setEmail("");
       setPassword("");
       setEmailCheckResult("");
@@ -119,6 +119,7 @@ const AddEmail = () => {
       setLoading(false);
     }
   };
+  
 
   return (
     <div className="p-6 bg-white rounded-lg shadow-lg mx-auto flex gap-8 w-full h-[80vh] max-w-full">
