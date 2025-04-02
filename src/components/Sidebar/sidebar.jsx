@@ -25,7 +25,7 @@ const navigation = [
   { name: "Dashboard", icon: ChartBarSquareIcon }, // Changed to ChartBarSquareIcon
   { name: "Reports", icon: ChartBarIcon },
   { name: "Cell sites", icon: SignalIcon },
-  // { name: "Alarms", icon: BellAlertIcon },
+  // { name: "Alarms", icon: BellAlertIcon }, this is commented temp
   { name: "Documents", icon: DocumentIcon },
   { name: "Add Emails", icon: UsersIcon },
 ];
