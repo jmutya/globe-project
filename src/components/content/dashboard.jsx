@@ -11,16 +11,17 @@ const SeverityPieChart = () => {
         <AlarmTypeLineGraph />
       </div>
 
-      <div className="mt-6">
-        <TerritoryGraph />
+      <div className="mt-6 flex space-x-6">
+        <div className="flex-1">
+          <AlarmTypeBarGraph />
+        </div>
+        <div className="flex-1">
+          <TerritoryGraph />
+        </div>
       </div>
 
       <div className="mt-6">
         <AreaLineGraph />
-      </div>
-
-      <div className="mt-6">
-        <AlarmTypeBarGraph />
       </div>
     </div>
   );
