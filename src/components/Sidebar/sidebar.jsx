@@ -25,7 +25,7 @@ const navigation = [
   { name: "Dashboard", icon: ChartBarSquareIcon }, // Changed to ChartBarSquareIcon
   { name: "Reports", icon: ChartBarIcon },
   { name: "Cell sites", icon: SignalIcon },
-  // { name: "Alarms", icon: BellAlertIcon }, this is commented temp
+  // { name: "Alarms", icon: BellAlertIcon },
   { name: "Documents", icon: DocumentIcon },
   { name: "Add Emails", icon: UsersIcon },
 ];
@@ -91,7 +91,7 @@ export default function Sidebar({ user }) {
           >
             <item.icon className="w-6 h-6" />
             <span className="text-lg">{item.name}</span>
-          </button>
+          </button>          
           ))}
         </nav>
 
