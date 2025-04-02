@@ -83,16 +83,15 @@ export default function Sidebar({ user }) {
         <nav className="space-y-2">
           {navigation.map((item) => (
             <button
-              key={item.name}
-              onClick={() => setSelected(item.name)}
-              className={`flex items-center p-2 space-x-3 rounded-md hover:bg-indigo-700 ${
-                selected === item.name ? "bg-indigo-700" : ""
-              }`}
-            >
-              <item.icon className="w-6 h-6" />
-              <span className="text-xl">{item.name}</span>{" "}
-              {/* Adjusted text size to 'text-xl' */}
-            </button>
+            key={item.name}
+            onClick={() => setSelected(item.name)}
+            className={`flex items-center p-2 space-x-3 rounded-md transition-all duration-300 ${
+              selected === item.name ? "bg-indigo-700 font-bold border-l-4 border-white pl-4" : "hover:bg-indigo-700"
+            }`}
+          >
+            <item.icon className="w-6 h-6" />
+            <span className="text-lg">{item.name}</span>
+          </button>          
           ))}
         </nav>
 
