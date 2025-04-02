@@ -85,8 +85,10 @@ export default function Sidebar({ user }) {
             <button
             key={item.name}
             onClick={() => setSelected(item.name)}
-            className={`flex items-center p-2 space-x-3 rounded-md transition-all duration-300 ${
-              selected === item.name ? "bg-indigo-700 font-bold border-l-4 border-white pl-4" : "hover:bg-indigo-700"
+            className={`flex items-center p-2 space-x-3 rounded-md transition-colors ease-in-out duration-200 will-change-transform ${
+              selected === item.name
+                ? "bg-indigo-700 font-bold border-l-[3px] border-white pl-4 scale-105"
+                : "hover:bg-indigo-700 hover:scale-[1.02]"
             }`}
           >
             <item.icon className="w-6 h-6" />
