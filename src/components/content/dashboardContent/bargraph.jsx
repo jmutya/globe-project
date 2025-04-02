@@ -26,14 +26,10 @@ const AlarmTypeBarGraph = () => {
         const sheet = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName], { header: 1 });
 
         if (sheet.length > 1) {
-          console.log("Detected Headers:", sheet[0]);
           const headers = sheet[0];
           const failureCategoryIndex = headers.indexOf("Failure Category");
 
-          if (failureCategoryIndex === -1) {
-            console.warn("Failure Category column not found in the file.");
-            continue;
-          }
+          if (failureCategoryIndex === -1) continue;
 
           sheet.slice(1).forEach(row => {
             const failureCategory = row[failureCategoryIndex]?.trim();
@@ -44,8 +40,6 @@ const AlarmTypeBarGraph = () => {
         }
       }
 
-      console.log("Failure Category Counts:", failureCategoryCounts);
-
       const formattedData = Object.entries(failureCategoryCounts).map(([category, count], index) => ({
         category,
         count,
@@ -54,7 +48,7 @@ const AlarmTypeBarGraph = () => {
 
       setChartData(formattedData);
     } catch (error) {
-      console.error("Error fetching or processing files:", error);
+      console.error(error);
     }
   };
 
@@ -65,15 +59,17 @@ const AlarmTypeBarGraph = () => {
       <h2 className="text-lg font-semibold mb-2">Failure Category Distribution</h2>
       {chartData.length > 0 ? (
         <ResponsiveContainer width="100%" height={300}>
-          <BarChart data={chartData} layout="vertical">
+          <BarChart data={chartData} layout="horizontal" barSize={50}>
             <CartesianGrid strokeDasharray="3 3" />
-            <XAxis type="number" allowDecimals={false} />
-            <YAxis dataKey="category" type="category" width={150} />
+            <XAxis dataKey="category" type="category" />
+            <YAxis type="number" allowDecimals={false} />
             <Tooltip />
-            <Legend />
-            {chartData.map((entry, index) => (
-              <Bar key={entry.category} dataKey="count" fill={entry.fill} name={entry.category} />
-            ))}
+            <Legend payload={chartData.map((entry) => ({
+                          value: entry.category,
+                          type: "square",
+                          color: entry.fill,
+                        }))} />
+            <Bar dataKey="count" fill={colors[0]} />
           </BarChart>
         </ResponsiveContainer>
       ) : (

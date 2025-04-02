@@ -5,7 +5,7 @@ import supabase from "../../../backend/supabase/supabase"; // Import Supabase cl
 import Skeleton from 'react-loading-skeleton'; // Correct import
 import 'react-loading-skeleton/dist/skeleton.css';
 
-const AlarmTypeLineGraph = () => {
+const AreaLineGraph = () => {
   const [chartData, setChartData] = useState([]);
   const [alarmTypes, setAlarmTypes] = useState([]);
 
@@ -28,13 +28,11 @@ const AlarmTypeLineGraph = () => {
         const sheetName = workbook.SheetNames[0];
         const sheet = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName], { header: 1 });
         if (sheet.length > 1) {
-          // console.log("Detected Headers:", sheet[0]);
           const headers = sheet[0];
           const timestampIndex = headers.indexOf("Opened");
-          const alarmTypeIndex = headers.indexOf("AOR001");
+          const alarmTypeIndex = headers.indexOf("AOR002");
         
           if (timestampIndex === -1 || alarmTypeIndex === -1) {
-            // console.warn("Timestamp or Alarm Type column not found in the file.");
             return;
           }
         
@@ -45,24 +43,21 @@ const AlarmTypeLineGraph = () => {
             if (timestamp && alarmType) {
               let date = "";
         
-              // Handle Excel serial date numbers
               if (typeof timestamp === "number") {
-                const excelEpoch = new Date(1899, 11, 30); // Excel's date system starts from 1899-12-30
+                const excelEpoch = new Date(1899, 11, 30);
                 date = new Date(excelEpoch.getTime() + timestamp * 86400000)
                   .toISOString()
-                  .split("T")[0]; // Extract YYYY-MM-DD
+                  .split("T")[0];
               } else if (typeof timestamp === "string") {
-                // Ensure correct MM/DD/YYYY parsing
                 const parts = timestamp.split(" ")[0].split("/");
                 if (parts.length === 3) {
                   const [month, day, year] = parts;
-                  date = `${year}-${month.padStart(2, "0")}-${day.padStart(2, "0")}`; // Convert to YYYY-MM-DD
+                  date = `${year}-${month.padStart(2, "0")}-${day.padStart(2, "0")}`;
                 }
               }
         
               if (!date) {
-                // console.warn("Invalid timestamp:", timestamp);
-                return; // Skip invalid dates
+                return;
               }
         
               if (!alarmData[date]) {
@@ -72,24 +67,17 @@ const AlarmTypeLineGraph = () => {
             }
           });
         }
-        
-        
-        
       }
 
-      // console.log("Alarm Data:", alarmData);
-
-      // Extract all unique alarm types
       const allAlarmTypes = new Set();
       Object.values(alarmData).forEach(types => {
         Object.keys(types).forEach(type => allAlarmTypes.add(type));
       });
 
-      // Convert to array format for Recharts
       const formattedData = Object.entries(alarmData).map(([date, alarms]) => {
         let entry = { date };
         allAlarmTypes.forEach(type => {
-          entry[type] = alarms[type] || 0; // Ensure all alarm types exist even if 0
+          entry[type] = alarms[type] || 0;
         });
         return entry;
       });
@@ -97,9 +85,8 @@ const AlarmTypeLineGraph = () => {
       formattedData.sort((a, b) => new Date(a.date) - new Date(b.date));
 
       setChartData(formattedData);
-      setAlarmTypes([...allAlarmTypes]); // Store all unique alarm types
+      setAlarmTypes([...allAlarmTypes]);
     } catch (error) {
-      // console.error("Error fetching or processing files:", error);
     }
   };
 
@@ -107,7 +94,7 @@ const AlarmTypeLineGraph = () => {
 
   return (
     <div className="p-4 bg-white shadow-lg rounded-lg">
-      <h2 className="text-lg font-semibold mb-2">Overall AOR Mindanao</h2>
+      <h2 className="text-lg font-semibold mb-2">Alarm Distribution by Area</h2>
       {chartData.length > 0 ? (
         <ResponsiveContainer width="100%" height={300}>
           <LineChart data={chartData}>
@@ -130,4 +117,4 @@ const AlarmTypeLineGraph = () => {
   );
 };
 
-export default AlarmTypeLineGraph;
+export default AreaLineGraph;
