@@ -132,7 +132,7 @@ export default function Sidebar({ user }) {
           <input
             type="search"
             placeholder="Search"
-            className="px-4 py-2 border rounded-md w-1/3"
+            className="px-4 py-2 border border-gray-300 rounded-md shadow-md w-1/3 focus:outline-none focus:ring-2 focus:ring-indigo-500"
           />
           <div className="flex items-center space-x-4">
           <div className="w-4 h-4 rounded-full bg-green-500" />
