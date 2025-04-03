@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { Menu, MenuButton, MenuItem, MenuItems } from "@headlessui/react";
 import { BellIcon, CogIcon, UserCircleIcon } from "@heroicons/react/24/outline";
 import { getAuth, signOut } from "firebase/auth";
-
+import { FaSignOutAlt } from 'react-icons/fa';
 import {
   ChartBarSquareIcon, // Replaced HomeIcon with this
   UsersIcon,
@@ -116,10 +116,12 @@ export default function Sidebar({ user }) {
           </nav>
           <a
             href="#"
+            onClick={handleLogout}
             className="flex items-center p-2 mt-4 space-x-3 rounded-md hover:bg-indigo-700"
           >
-            <CogIcon className="w-6 h-6" />
-            <span>Settings</span>
+            <FaSignOutAlt className="w-6 h-6" /> {/* FontAwesome logout icon */}
+            <span>Logout</span>
+          
           </a>
         </div>
       </div>
@@ -130,7 +132,7 @@ export default function Sidebar({ user }) {
           <input
             type="search"
             placeholder="Search"
-            className="px-4 py-2 border border-gray-300 rounded-md shadow-md w-1/3 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            className="px-4 py-2 border rounded-md w-1/3"
           />
           <div className="flex items-center space-x-4">
           <div className="w-4 h-4 rounded-full bg-green-500" />
@@ -139,9 +141,7 @@ export default function Sidebar({ user }) {
             <Menu as="div" className="relative">
               <MenuButton className="flex items-center space-x-2">   
                 <span>
-                  <p className="text-sm font-semibold">
-                    Hello, {user?.email?.split("@")[0]}
-                  </p>
+                  <p className="text-sm">Hello, {user?.email?.split("@")[0]}</p>
                 </span>
               </MenuButton>
 
