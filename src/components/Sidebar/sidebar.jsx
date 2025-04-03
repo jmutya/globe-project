@@ -72,7 +72,7 @@ export default function Sidebar({ user }) {
   return (
     <div className="flex h-screen bg-gray-100 overflow-hidden">
       {/* Sidebar */}
-      <div className="flex flex-col w-64 bg-indigo-600 p-4 text-white">
+      <div className="flex flex-col w-64 bg-indigo-600 p-4 text-white h-screen overflow-y-auto">
         <div className="flex items-center mb-6">
           <img
             alt="Your Company"
@@ -132,7 +132,7 @@ export default function Sidebar({ user }) {
           <input
             type="search"
             placeholder="Search"
-            className="px-4 py-2 border rounded-md w-1/3"
+            className="px-4 py-2 border border-gray-300 rounded-md shadow-md w-1/3 focus:outline-none focus:ring-2 focus:ring-indigo-500"
           />
           <div className="flex items-center space-x-4">
           <div className="w-4 h-4 rounded-full bg-green-500" />
@@ -141,7 +141,7 @@ export default function Sidebar({ user }) {
             <Menu as="div" className="relative">
               <MenuButton className="flex items-center space-x-2">   
                 <span>
-                  <p className="text-sm">Hello, {user?.email?.split("@")[0]}</p>
+                  <p className="text-sm font-semibold">Hello, {user?.email?.split("@")[0]}</p>
                 </span>
               </MenuButton>
 
