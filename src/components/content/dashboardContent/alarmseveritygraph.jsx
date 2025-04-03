@@ -68,7 +68,7 @@ const AlarmsSeverity = () => {
 
   return (
     <div className="p-4 bg-white shadow-lg rounded-lg flex flex-col items-center">
-      <h2 className="text-lg font-semibold mb-4 text-center">Alarm Severity Distribution</h2>
+      <h2 className="text-lg font-semibold mb-4 text-center">Alarm Severity Distribution </h2>
 
       {isLoading ? (
         <div className="flex justify-center items-center">
