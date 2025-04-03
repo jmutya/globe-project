@@ -155,7 +155,15 @@ const ExcelUploader = () => {
             </table>
           </div>
         ) : (
-          <p className="text-center text-gray-500 text-lg font-semibold">No file selected. Please upload or select a file.</p>
+          <p className="text-center text-gray-500 text-lg font-semibold">
+            {parsedData.length === 0 && (
+              <div className="flex flex-col items-center justify-center text-gray-500 p-8">
+                <FaEye className="text-4xl text-gray-400" />
+                  <p className="text-lg font-semibold mt-2">No file selected.</p>
+                  <p className="text-sm text-gray-400">Upload or select a file to display data.</p>
+              </div>
+)}
+          </p>
         )}
       </div>
     </div>
