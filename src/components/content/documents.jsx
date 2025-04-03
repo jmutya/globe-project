@@ -71,24 +71,25 @@ const ExcelUploader = () => {
     <div className="flex p-4 gap-8">
       {/* Left - File Upload */}
       <div className="w-1/3 p-4 border rounded-lg shadow-lg text-center">
-        <h2 className="text-lg font-semibold mb-4">Upload Excel File</h2>
-        <input 
-          type="file" 
-          accept=".xlsx, .xls" 
-          onChange={handleFileUpload} 
-          className="mb-4 border p-2 w-full cursor-pointer" 
-        />
+        <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:bg-gray-100 transition">
+          <input 
+            type="file" 
+            accept=".xlsx, .xls" 
+            onChange={handleFileUpload} 
+            className="hidden" 
+          />
+          <span className="text-gray-600">Drag & Drop or <span className="text-blue-600 font-semibold">Click to Upload</span></span>
+        </label>
+
+      {/* Progress Bar */}
         {uploading && (
-          <div className="w-full bg-gray-200 rounded-full h-4 mt-2">
-            <div 
-              className="bg-blue-500 h-4 rounded-full text-white text-xs flex items-center justify-center"
-              style={{ width: `${uploadProgress}%` }}
-            >
-              {uploadProgress}%
+          <div className="relative w-full bg-gray-200 rounded-full h-4 mt-2">
+            <div className="absolute top-0 left-0 bg-blue-500 h-4 rounded-full text-white text-xs flex items-center justify-center"
+              style={{ width: `${uploadProgress}%` }}>
+      {uploadProgress}%
             </div>
           </div>
         )}
-
         {/* Uploaded Files List */}
         <div className="mt-4 overflow-y-auto max-h-70">
           <h3 className="text-md font-semibold mb-2">Uploaded Files</h3>
