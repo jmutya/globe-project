@@ -130,22 +130,28 @@ const ExcelUploader = () => {
         {parsedData.length > 0 ? (
           <div className="max-h-[750px] overflow-auto border border-gray-300 rounded-lg">
             <table className="table-auto w-full border-collapse border border-gray-300">
-              <thead>
-                <tr>
-                  {Object.keys(parsedData[0]).map((key) => (
-                    <th key={key} className="border border-gray-300 px-3 py-2 bg-gray-100">{key}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {parsedData.map((row, index) => (
-                  <tr key={index}>
-                    {Object.entries(row).map(([key, value], idx) => (
-                      <td key={idx} className={`border border-gray-300 px-3 py-1 ${key === "Severity" ? (value === "Critical" ? "bg-red-700 text-white" : value === "Major" ? "bg-orange-500" : value === "Minor" ? "bg-yellow-300" : "") : ""}`}>{value}</td>
-                    ))}
-                  </tr>
+            <thead>
+              <tr className="bg-indigo-600 text-white">
+                {Object.keys(parsedData[0]).map((key) => (
+                  <th key={key} className="border border-gray-300 px-3 py-2">{key}</th>
                 ))}
-              </tbody>
+              </tr>
+            </thead>
+            <tbody>
+              {parsedData.map((row, index) => (
+                <tr 
+                  key={index} 
+                  className={index % 2 === 0 ? "bg-gray-50" : "bg-white"}>
+                  {Object.entries(row).map(([key, value], idx) => (
+                  <td 
+                    key={idx} 
+                    className={`border border-gray-300 px-3 py-1 text-center ${key === "Severity" ? getSeverityClass(value) : ""}`}>
+                    {key === "Severity" ? getSeverityIcon(value) : value}
+                  </td>
+              ))}
+                </tr>
+              ))}
+            </tbody>
             </table>
           </div>
         ) : (
