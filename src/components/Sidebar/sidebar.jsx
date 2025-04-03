@@ -141,7 +141,7 @@ export default function Sidebar({ user }) {
             <Menu as="div" className="relative">
               <MenuButton className="flex items-center space-x-2">   
                 <span>
-                  <p className="text-sm">Hello, {user?.email?.split("@")[0]}</p>
+                  <p className="text-sm font-semibold">Hello, {user?.email?.split("@")[0]}</p>
                 </span>
               </MenuButton>
 
