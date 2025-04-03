@@ -1,13 +1,16 @@
 import React, { useState, useEffect } from "react";
-import { LineChart, Line, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer } from "recharts";
+import { 
+  LineChart, Line, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer 
+} from "recharts";
 import * as XLSX from "xlsx";
-import supabase from "../../../backend/supabase/supabase"; // Import Supabase client
-import Skeleton from 'react-loading-skeleton'; // Correct import
+import supabase from "../../../backend/supabase/supabase";
+import Skeleton from 'react-loading-skeleton';
 import 'react-loading-skeleton/dist/skeleton.css';
 
 const AlarmTypeLineGraph = () => {
   const [chartData, setChartData] = useState([]);
   const [alarmTypes, setAlarmTypes] = useState([]);
+  const [isLoading, setIsLoading] = useState(true); // Added loading state
 
   useEffect(() => {
     fetchAndProcessFiles();
@@ -27,44 +30,36 @@ const AlarmTypeLineGraph = () => {
         const workbook = XLSX.read(blob, { type: "array" });
         const sheetName = workbook.SheetNames[0];
         const sheet = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName], { header: 1 });
+
         if (sheet.length > 1) {
-          // console.log("Detected Headers:", sheet[0]);
           const headers = sheet[0];
           const timestampIndex = headers.indexOf("Opened");
           const alarmTypeIndex = headers.indexOf("AOR001");
-        
-          if (timestampIndex === -1 || alarmTypeIndex === -1) {
-            // console.warn("Timestamp or Alarm Type column not found in the file.");
-            return;
-          }
-        
+
+          if (timestampIndex === -1 || alarmTypeIndex === -1) return;
+
           sheet.slice(1).forEach(row => {
             let timestamp = row[timestampIndex];
             const alarmType = row[alarmTypeIndex]?.trim();
-        
+
             if (timestamp && alarmType) {
               let date = "";
-        
-              // Handle Excel serial date numbers
+
               if (typeof timestamp === "number") {
-                const excelEpoch = new Date(1899, 11, 30); // Excel's date system starts from 1899-12-30
+                const excelEpoch = new Date(1899, 11, 30);
                 date = new Date(excelEpoch.getTime() + timestamp * 86400000)
                   .toISOString()
-                  .split("T")[0]; // Extract YYYY-MM-DD
+                  .split("T")[0];
               } else if (typeof timestamp === "string") {
-                // Ensure correct MM/DD/YYYY parsing
                 const parts = timestamp.split(" ")[0].split("/");
                 if (parts.length === 3) {
                   const [month, day, year] = parts;
-                  date = `${year}-${month.padStart(2, "0")}-${day.padStart(2, "0")}`; // Convert to YYYY-MM-DD
+                  date = `${year}-${month.padStart(2, "0")}-${day.padStart(2, "0")}`;
                 }
               }
-        
-              if (!date) {
-                // console.warn("Invalid timestamp:", timestamp);
-                return; // Skip invalid dates
-              }
-        
+
+              if (!date) return;
+
               if (!alarmData[date]) {
                 alarmData[date] = {};
               }
@@ -72,24 +67,17 @@ const AlarmTypeLineGraph = () => {
             }
           });
         }
-        
-        
-        
       }
 
-      // console.log("Alarm Data:", alarmData);
-
-      // Extract all unique alarm types
       const allAlarmTypes = new Set();
       Object.values(alarmData).forEach(types => {
         Object.keys(types).forEach(type => allAlarmTypes.add(type));
       });
 
-      // Convert to array format for Recharts
       const formattedData = Object.entries(alarmData).map(([date, alarms]) => {
         let entry = { date };
         allAlarmTypes.forEach(type => {
-          entry[type] = alarms[type] || 0; // Ensure all alarm types exist even if 0
+          entry[type] = alarms[type] || 0;
         });
         return entry;
       });
@@ -97,9 +85,11 @@ const AlarmTypeLineGraph = () => {
       formattedData.sort((a, b) => new Date(a.date) - new Date(b.date));
 
       setChartData(formattedData);
-      setAlarmTypes([...allAlarmTypes]); // Store all unique alarm types
+      setAlarmTypes([...allAlarmTypes]);
+      setIsLoading(false); // Set loading to false after data is fetched
     } catch (error) {
-      // console.error("Error fetching or processing files:", error);
+      console.error("Error fetching or processing files:", error);
+      setIsLoading(false); // Stop loading even if there is an error
     }
   };
 
@@ -108,7 +98,13 @@ const AlarmTypeLineGraph = () => {
   return (
     <div className="p-4 bg-white shadow-lg rounded-lg">
       <h2 className="text-lg font-semibold mb-2">Overall AOR Mindanao</h2>
-      {chartData.length > 0 ? (
+
+      {isLoading ? (
+        <div className="flex justify-center items-center h-[300px]">
+          <div className="animate-spin rounded-full h-10 w-10 border-t-4 border-b-4 border-indigo-500"></div>
+          <p className="ml-3 text-gray-600">Generating Graph</p>
+        </div>
+      ) : chartData.length > 0 ? (
         <ResponsiveContainer width="100%" height={300}>
           <LineChart data={chartData}>
             <XAxis dataKey="date" tickFormatter={(date) => new Date(date).toLocaleDateString()} />
@@ -121,10 +117,7 @@ const AlarmTypeLineGraph = () => {
           </LineChart>
         </ResponsiveContainer>
       ) : (
-        <div className="text-center">
-          <Skeleton height={300} />
-          <p className="text-gray-600 mt-4">Loading...</p>
-        </div>
+        <p className="text-gray-600 text-center mt-4">No data available</p>
       )}
     </div>
   );
