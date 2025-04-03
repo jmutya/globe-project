@@ -4,16 +4,19 @@ import supabase from "../../backend/supabase/supabase";
 import { FaFileExcel, FaUpload, FaSpinner, FaEye } from "react-icons/fa";
 
 const ExcelUploader = () => {
+  // State management
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [files, setFiles] = useState([]);
   const [parsedData, setParsedData] = useState([]);
   const [loadingFilesUploaded, setLoadingFilesUploaded] = useState(false);
 
+  // Fetch uploaded files on component mount
   useEffect(() => {
     fetchUploadedFiles();
   }, []);
 
+  // Handle file upload
   const handleFileUpload = async (event) => {
     const file = event.target.files[0];
     if (!file) return alert("No file selected!");
@@ -37,6 +40,7 @@ const ExcelUploader = () => {
     }
   };
 
+  // Fetch list of uploaded files
   const fetchUploadedFiles = async () => {
     setLoadingFilesUploaded(true);
     try {
@@ -53,6 +57,7 @@ const ExcelUploader = () => {
     }
   };
 
+  // View an uploaded Excel file
   const viewExcelFile = async (fileUrl) => {
     try {
       const response = await fetch(fileUrl);
@@ -71,17 +76,21 @@ const ExcelUploader = () => {
 
   return (
     <div className="flex p-4 gap-8">
+      {/* File Upload Section */}
       <div className="w-1/3 p-4 border rounded-lg shadow-lg text-center">
-        <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:bg-gray-100 transition">
-          <input 
-            type="file" 
-            accept=".xlsx, .xls" 
-            onChange={handleFileUpload} 
-            className="hidden" 
-          />
+        <label 
+          className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:bg-gray-100 transition">
+            <input 
+              type="file" 
+              accept=".xlsx, .xls" 
+              onChange={handleFileUpload} 
+              className="hidden" 
+            />
+          <FaUpload className="text-gray-400 text-3xl mb-2" />
           <span className="text-gray-600">Drag & Drop or <span className="text-blue-600 font-semibold">Click to Upload</span></span>
         </label>
 
+        {/* Upload Progress Bar */}
         {uploading && (
           <div className="relative w-full bg-gray-200 rounded-full h-4 mt-2">
             <div className="absolute top-0 left-0 bg-blue-500 h-4 rounded-full text-white text-xs flex items-center justify-center" style={{ width: `${uploadProgress}%` }}>
@@ -90,6 +99,7 @@ const ExcelUploader = () => {
           </div>
         )}
 
+        {/* Uploaded Files List */}
         <div className="mt-4 overflow-y-auto max-h-70">
           <h3 className="text-md font-semibold mb-2">Uploaded Files</h3>
           {loadingFilesUploaded ? (
@@ -115,6 +125,7 @@ const ExcelUploader = () => {
         </div>
       </div>
 
+      {/* File Preview Section */}
       <div className="w-2/3 p-4 border rounded-lg shadow-lg overflow-hidden">
         {parsedData.length > 0 ? (
           <div className="max-h-[750px] overflow-auto border border-gray-300 rounded-lg">
