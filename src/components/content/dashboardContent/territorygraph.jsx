@@ -15,7 +15,7 @@ import supabase from "../../../backend/supabase/supabase";
 
 const TerritoryGraph = () => {
   const [chartData, setChartData] = useState([]);
-  const [isLoading, setIsLoading] = useState(true); // New loading state
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     fetchAndProcessFiles();
@@ -29,6 +29,7 @@ const TerritoryGraph = () => {
       if (error) throw error;
 
       let territoryCounts = {};
+      let totalAlarms = 0;
 
       for (const file of files) {
         const { data: fileUrl } = supabase.storage
@@ -55,6 +56,7 @@ const TerritoryGraph = () => {
             if (territory) {
               territoryCounts[territory] =
                 (territoryCounts[territory] || 0) + 1;
+              totalAlarms++;
             }
           });
         }
@@ -64,15 +66,16 @@ const TerritoryGraph = () => {
         ([category, count], index) => ({
           category,
           count,
-          fill: colors[index % colors.length], // Assign different colors
+          percentage: ((count / totalAlarms) * 100).toFixed(1),
+          fill: colors[index % colors.length],
         })
       );
 
       setChartData(formattedData);
-      setIsLoading(false); // Data is loaded, so stop the loading spinner
+      setIsLoading(false);
     } catch (error) {
       console.error("Error fetching or processing files:", error);
-      setIsLoading(false); // In case of error, stop the loading spinner
+      setIsLoading(false);
     }
   };
 
@@ -92,7 +95,7 @@ const TerritoryGraph = () => {
       className="p-4 bg-white shadow-lg rounded-lg"
       style={{ maxHeight: "400px" }}
     >
-      <h2 className="text-lg font-semibold mb-2">Territory Distribution</h2>
+      <h2 className="text-lg font-semibold mb-2">Alarm Distribution by Territory </h2>
       {isLoading ? (
         <div className="flex justify-center items-center">
           <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-indigo-500"></div>
@@ -104,7 +107,11 @@ const TerritoryGraph = () => {
             <CartesianGrid strokeDasharray="3 3" />
             <XAxis dataKey="category" type="category" />
             <YAxis type="number" allowDecimals={false} />
-            <Tooltip />
+            <Tooltip
+              formatter={(value, name, props) =>
+                [`${value} (${props.payload.percentage}%)`, "Count"]
+              }
+            />
             <Legend
               payload={chartData.map((entry) => ({
                 value: "Territory - " + entry.category,
