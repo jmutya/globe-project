@@ -54,7 +54,7 @@ const AlarmCount = () => {
   const totalCount = Object.values(severityCounts).reduce((acc, count) => acc + count, 0);
 
   return (
-    <div className="p-6  rounded-lg shadow-lg max-w-md mx-auto mt-10">
+    <div className="p-6  rounded-lg shadow-lg max-w-md mx-auto mt-10 flex flex-col">
       <h2 className="text-xl font-semibold text-black mb-4">Alarm Counts</h2>
 
       {isLoading ? (
@@ -63,7 +63,7 @@ const AlarmCount = () => {
           <p className="text-white">Processing Data...</p>
         </div>
       ) : totalCount > 0 ? (
-        <p className="text-3xl font-semibold font-serif text-center text-indigo-600 mt-4">{totalCount}</p>
+        <p className="text-6xl font-semibold font-serif text-center text-indigo-600 mt-4">{totalCount}</p>
       ) : (
         <p className="text-white text-center mt-6">No data available</p>
       )}
