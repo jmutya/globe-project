@@ -1,13 +1,16 @@
 import React, { useState, useEffect } from "react";
-import { LineChart, Line, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer } from "recharts";
+import { 
+  LineChart, Line, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer 
+} from "recharts";
 import * as XLSX from "xlsx";
-import supabase from "../../../backend/supabase/supabase"; // Import Supabase client
-import Skeleton from 'react-loading-skeleton'; // Correct import
+import supabase from "../../../backend/supabase/supabase";
+import Skeleton from 'react-loading-skeleton';
 import 'react-loading-skeleton/dist/skeleton.css';
 
 const AreaLineGraph = () => {
   const [chartData, setChartData] = useState([]);
   const [alarmTypes, setAlarmTypes] = useState([]);
+  const [isLoading, setIsLoading] = useState(true); // Added loading state
 
   useEffect(() => {
     fetchAndProcessFiles();
@@ -27,22 +30,21 @@ const AreaLineGraph = () => {
         const workbook = XLSX.read(blob, { type: "array" });
         const sheetName = workbook.SheetNames[0];
         const sheet = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName], { header: 1 });
+
         if (sheet.length > 1) {
           const headers = sheet[0];
           const timestampIndex = headers.indexOf("Opened");
           const alarmTypeIndex = headers.indexOf("AOR002");
-        
-          if (timestampIndex === -1 || alarmTypeIndex === -1) {
-            return;
-          }
-        
+
+          if (timestampIndex === -1 || alarmTypeIndex === -1) return;
+
           sheet.slice(1).forEach(row => {
             let timestamp = row[timestampIndex];
             const alarmType = row[alarmTypeIndex]?.trim();
-        
+
             if (timestamp && alarmType) {
               let date = "";
-        
+
               if (typeof timestamp === "number") {
                 const excelEpoch = new Date(1899, 11, 30);
                 date = new Date(excelEpoch.getTime() + timestamp * 86400000)
@@ -55,11 +57,9 @@ const AreaLineGraph = () => {
                   date = `${year}-${month.padStart(2, "0")}-${day.padStart(2, "0")}`;
                 }
               }
-        
-              if (!date) {
-                return;
-              }
-        
+
+              if (!date) return;
+
               if (!alarmData[date]) {
                 alarmData[date] = {};
               }
@@ -86,7 +86,10 @@ const AreaLineGraph = () => {
 
       setChartData(formattedData);
       setAlarmTypes([...allAlarmTypes]);
+      setIsLoading(false); // Set loading to false after data is fetched
     } catch (error) {
+      console.error("Error fetching or processing files:", error);
+      setIsLoading(false); // Stop loading even if there is an error
     }
   };
 
@@ -95,7 +98,13 @@ const AreaLineGraph = () => {
   return (
     <div className="p-4 bg-white shadow-lg rounded-lg">
       <h2 className="text-lg font-semibold mb-2">Alarm Distribution by Area</h2>
-      {chartData.length > 0 ? (
+
+      {isLoading ? (
+        <div className="flex justify-center items-center h-[300px]">
+          <div className="animate-spin rounded-full h-10 w-10 border-t-4 border-b-4 border-indigo-500"></div>
+          <p className="ml-3 text-gray-600">Generating Graph</p>
+        </div>
+      ) : chartData.length > 0 ? (
         <ResponsiveContainer width="100%" height={300}>
           <LineChart data={chartData}>
             <XAxis dataKey="date" tickFormatter={(date) => new Date(date).toLocaleDateString()} />
@@ -108,10 +117,7 @@ const AreaLineGraph = () => {
           </LineChart>
         </ResponsiveContainer>
       ) : (
-        <div className="text-center">
-          <Skeleton height={300} />
-          <p className="text-gray-600 mt-4">Loading...</p>
-        </div>
+        <p className="text-gray-600 text-center mt-4">No data available</p>
       )}
     </div>
   );

@@ -1,22 +1,19 @@
 import React, { useState, useEffect } from "react";
 import { db, auth } from "../../backend/firebase/firebaseconfig";
-import { collection, addDoc, query, where, getDocs } from "firebase/firestore";
-import {
-  createUserWithEmailAndPassword,
-  fetchSignInMethodsForEmail,
-  linkWithCredential,
-  EmailAuthProvider,
-} from "firebase/auth";
+import { collection, addDoc, getDocs } from "firebase/firestore";
+import { fetchSignInMethodsForEmail } from "firebase/auth";
 
 const AddEmail = () => {
+  // State variables to manage user input, email list, and loading states
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [emails, setEmails] = useState([]);
   const [loading, setLoading] = useState(false);
   const [emailCheckResult, setEmailCheckResult] = useState("");
   const [checkingEmail, setCheckingEmail] = useState(false);
+  const [loadingEmails, setLoadingEmails] = useState(true);
 
-  // Fetch emails from Firestore on component mount
+  // Fetches emails from Firestore when the component mounts
   useEffect(() => {
     const fetchEmails = async () => {
       try {
@@ -25,154 +22,103 @@ const AddEmail = () => {
         setEmails(emailList);
       } catch (error) {
         console.error("Error fetching emails:", error);
+      } finally {
+        setLoadingEmails(false);
       }
     };
-
     fetchEmails();
   }, []);
 
-  // Check if email exists in Firestore
-  const checkIfEmailExistsInFirestore = async (email) => {
-    const q = query(collection(db, "authorizedUsers"), where("email", "==", email));
-    const querySnapshot = await getDocs(q);
-    return !querySnapshot.empty; // True if email exists
-  };
-
-  // Check if email exists in Firebase Authentication
+  // Checks if an email exists in Firebase Authentication
   const checkEmailInAuth = async (emailToCheck) => {
     if (!emailToCheck) {
       setEmailCheckResult("");
       return;
     }
-
     setCheckingEmail(true);
     try {
       const methods = await fetchSignInMethodsForEmail(auth, emailToCheck);
-      if (methods.length > 0) {
-        setEmailCheckResult("✅ Email exists in Firebase Authentication.");
-      } else {
-        setEmailCheckResult("❌ Email does not exist in Firebase Authentication.");
-      }
+      setEmailCheckResult(methods.length > 0 ? "✅ Email exists in Firebase Authentication." : "❌ Email not found.");
     } catch (error) {
-      console.error("Error checking email:", error);
       setEmailCheckResult("⚠️ Invalid email format or error checking email.");
     } finally {
       setCheckingEmail(false);
     }
   };
 
-  // Auto-check email in Firebase Auth on change
+  // Debounced effect to check email existence while typing
   useEffect(() => {
     const timeout = setTimeout(() => {
-      if (email) {
-        checkEmailInAuth(email);
-      } else {
-        setEmailCheckResult("");
-      }
-    }, 800); // Debounced 800ms
-
+      if (email) checkEmailInAuth(email);
+    }, 800);
     return () => clearTimeout(timeout);
   }, [email]);
 
-  // Handle adding user to Firebase Auth & Firestore
+  // Handles adding a new email to Firestore
   const handleAddUser = async () => {
     if (!email || !password) {
       alert("Please enter both email and password.");
       return;
     }
-  
     setLoading(true);
-  
     try {
-      // Check if email exists in Firestore
-      const existsInFirestore = await checkIfEmailExistsInFirestore(email);
-      if (existsInFirestore) {
-        alert("This email is already added to Firestore.");
-        setLoading(false);
-        return;
-      }
-  
-      // Check if email is already linked to a Firebase Authentication user
-      const methods = await fetchSignInMethodsForEmail(auth, email);
-      if (methods.length > 0) {
-        alert("This email is already linked to another account.");
-        setLoading(false);
-        return;
-      }
-  
-      // If email is not linked in Firebase Auth, we don't need to create a new user
-      // Save the email directly to Firestore without changing the current logged-in user
       await addDoc(collection(db, "authorizedUsers"), { email });
-  
-      // Update state with the new email
-      setEmails((prev) => [...prev, email]);
-      alert(`Email "${email}" added successfully.`);
-  
-      // Reset the form
+      setEmails([...emails, email]);
       setEmail("");
       setPassword("");
       setEmailCheckResult("");
     } catch (error) {
-      console.error("Error adding user:", error);
       alert(error.message);
     } finally {
       setLoading(false);
     }
   };
-  
 
   return (
-    <div className="p-6 bg-white rounded-lg shadow-lg mx-auto flex gap-8 w-full h-[80vh] max-w-full">
-      {/* Add New User Section */}
-      <div className="flex-1 p-8 border-2 border-indigo-300 rounded-lg bg-gradient-to-r from-blue-50 to-indigo-50 flex flex-col justify-center shadow-md">
-        <h3 className="text-2xl font-bold mb-6 text-indigo-800">Add New User Email</h3>
-        
-        {/* Email Input */}
+    <div className="p-6 bg-gray-100 rounded-lg shadow-lg mx-auto flex gap-8 w-full h-[80vh] max-w-full">
+      {/* Left panel: Add new email */}
+      <div className="flex-1 p-8 border-2 border-indigo-400 rounded-xl bg-gradient-to-r from-blue-100 to-indigo-200 flex flex-col justify-center shadow-lg">
+        <h3 className="text-3xl font-bold mb-6 text-indigo-900">Add New User Email</h3>
         <div className="flex flex-col mb-4 gap-2">
           <input
             type="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             placeholder="Enter email"
-            className="p-3 border rounded-lg w-full"
+            className="p-3 border rounded-xl w-full focus:ring-2 focus:ring-indigo-500 placeholder-gray-400"
           />
           {checkingEmail && <p className="text-gray-500">Checking email...</p>}
-          {emailCheckResult && (
-            <p className={`${emailCheckResult.startsWith("✅") ? "text-green-600" : "text-red-500"}`}>
-              {emailCheckResult}
-            </p>
-          )}
+          {emailCheckResult && <p className={`${emailCheckResult.includes("✅") ? "text-green-600" : "text-red-500"}`}>{emailCheckResult}</p>}
         </div>
-
-        {/* Password Input */}
         <input
           type="password"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           placeholder="Enter password"
-          className="mb-4 p-3 border rounded-lg w-full"
+          className="mb-4 p-3 border rounded-xl w-full focus:ring-2 focus:ring-indigo-500"
         />
-
-        {/* Add User Button */}
         <button
           onClick={handleAddUser}
-          className={`px-6 py-3 bg-indigo-600 text-white rounded-lg ${
-            loading ? "opacity-50 cursor-not-allowed" : "hover:bg-indigo-700"
-          }`}
+          className={`px-6 py-3 bg-indigo-600 text-white rounded-xl shadow-lg transition-all ${loading ? "opacity-50 cursor-not-allowed animate-pulse" : "hover:bg-indigo-700"}`}
           disabled={loading}
         >
           {loading ? "Adding..." : "Add User"}
         </button>
       </div>
-
-      {/* Added Emails Section */}
-      <div className="flex-1 p-6 border-2 border-gray-300 rounded-lg bg-gray-50 overflow-auto shadow-md">
-        <h3 className="text-2xl font-semibold mb-4 text-indigo-700">Added Emails:</h3>
-        {emails.length > 0 ? (
+      
+      {/* Right panel: List of added emails */}
+      <div className="flex-1 p-6 border-2 border-gray-400 rounded-xl bg-gray-50 overflow-auto shadow-lg">
+        <h3 className="text-3xl font-semibold mb-4 text-indigo-700">Added Emails:</h3>
+        {loadingEmails ? (
+          <div className="flex justify-center items-center py-4">
+            <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-indigo-500"></div>
+            <p className="ml-3 text-gray-600">Loading emails...</p>
+          </div>
+        ) : emails.length > 0 ? (
           <ul className="space-y-3">
             {emails.map((email, index) => (
-              <li key={index} className="flex justify-between items-center p-3 border border-gray-300 rounded-lg bg-white">
-                <span className="text-gray-800">{email}</span>
+              <li key={index} className="p-3 border rounded-xl bg-indigo-100 text-indigo-800 px-4 py-2 shadow-md hover:bg-indigo-200">
+                {email}
               </li>
             ))}
           </ul>
