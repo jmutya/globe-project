@@ -46,7 +46,11 @@ const ExcelUploader = () => {
     try {
       const { data, error } = await supabase.storage.from("uploads").list("excels", { limit: 100 });
       if (error) throw error;
-      setFiles(data.map(file => ({
+  
+      // Filter out starts with "."
+      const validFiles = data.filter(file => !file.name.startsWith("."));
+  
+      setFiles(validFiles.map(file => ({
         name: file.name,
         url: supabase.storage.from("uploads").getPublicUrl(`excels/${file.name}`).data.publicUrl,
       })));
@@ -55,7 +59,7 @@ const ExcelUploader = () => {
     } finally {
       setLoadingFilesUploaded(false);
     }
-  };
+  };  
 
   // View an uploaded Excel file
   const viewExcelFile = async (fileUrl) => {
