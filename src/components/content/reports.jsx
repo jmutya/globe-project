@@ -32,7 +32,7 @@ const Reports = () => {
 
     const requiredColumns = ["Failure Category", "Cause", "AOR001", "AOR002"];
     const requiredIndices = requiredColumns.map(col => headers.indexOf(col));
-    const assignedToIndex = headers.indexOf("Assigned To");
+    const assignedToIndex = headers.indexOf("Assigned to");
 
     if (requiredIndices.some(idx => idx === -1)) {
       console.warn("One or more required columns not found in the sheet.");
@@ -326,9 +326,10 @@ const Reports = () => {
       )}
 
       <div className="mt-4">
-        <h3 className="text-lg font-semibold">Analysis:</h3>
+        <h3 className="text-lg font-semibold">Ticket Issuance Accuracy:</h3>
         <p>{analysis}</p>
       </div>
+
 
       {hasCompleteRows && (
         <div className="mt-4 p-4 bg-green-100 text-green-800 rounded">
@@ -341,7 +342,9 @@ const Reports = () => {
           <h4 className="font-semibold mb-2">⚠️ Incomplete Rows Found:</h4>
           <ul className="list-disc list-inside space-y-1">
             {incompleteRows.map((row, idx) => (
-              <li key={idx}>Row {row.rowNumber} — Assigned To: {row.assignedTo}</li>
+              <li key={idx}>
+                Row {row.rowNumber} — Assigned To: {row.assignedTo || "Not Assigned"}
+              </li>
             ))}
           </ul>
         </div>
