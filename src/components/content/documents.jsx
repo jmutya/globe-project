@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import * as XLSX from "xlsx";
 import supabase from "../../backend/supabase/supabase";
-import { FaFileExcel, FaUpload, FaSpinner, FaEye } from "react-icons/fa";
+import { FaFileExcel, FaUpload, FaSpinner, FaEye, FaTrash } from "react-icons/fa";
 
 const ExcelUploader = () => {
   // State management
@@ -78,6 +78,21 @@ const ExcelUploader = () => {
     }
   };
 
+  // Delete an uploaded Excel file
+  const handleDeleteFile = async (fileName) => {
+    if (!window.confirm(`Are you sure you want to delete "${fileName}"?`)) return;
+  
+    try {
+      const { error } = await supabase.storage.from("uploads").remove([`excels/${fileName}`]);
+      if (error) throw error;
+      alert("File deleted successfully.");
+      fetchUploadedFiles(); // Refresh the file list
+    } catch (error) {
+      console.error("Error deleting file:", error);
+      alert("Failed to delete the file.");
+    }
+  };
+
   return (
     <div className="flex p-4 gap-8">
       {/* File Upload Section */}
@@ -104,7 +119,7 @@ const ExcelUploader = () => {
         )}
 
         {/* Uploaded Files List */}
-        <div className="mt-4 overflow-y-auto max-h-70">
+        <div className="mt-4 overflow-y-auto max-h-70 px-2" >
           <h3 className="text-md font-semibold mb-2">Uploaded Files</h3>
           {loadingFilesUploaded ? (
             <div className="flex justify-center items-center py-4">
@@ -113,19 +128,30 @@ const ExcelUploader = () => {
             </div>
           ) : files.length > 0 ? (
             <div className="flex flex-col gap-2">
-              {files.map((file, index) => (
-                <button 
-                  key={index}
-                  onClick={() => viewExcelFile(file.url)}
-                  className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 rounded-lg shadow-sm hover:bg-indigo-50 text-indigo-700 transition duration-200"
-                >
-                <FaFileExcel 
-                  className="text-green-600" />
-                <span 
-                  className="truncate">{file.name}</span>
-              </button>
-              
-              ))}
+{files.map((file, index) => (
+  <div 
+    key={index} 
+    className="relative flex items-center justify-between px-4 py-3 bg-white border border-gray-200 rounded-lg shadow-sm hover:bg-indigo-50 transition duration-200"
+  >
+    <div className="flex items-start gap-2 w-full pr-10">
+      <FaFileExcel className="text-green-600 mt-1" />
+      <button 
+        onClick={() => viewExcelFile(file.url)}
+        className="text-indigo-700 text-sm text-left break-words w-full"
+      >
+        {file.name}
+      </button>
+    </div>
+
+    <button 
+      onClick={() => handleDeleteFile(file.name)}
+      className="absolute right-2 top-1/2 transform -translate-y-1/2 text-red-600 hover:text-red-800 text-2xl"
+      title="Delete file"
+    >
+      <FaTrash />
+    </button>
+  </div>
+))}
             </div>
           ) : (
             <p className="text-center text-gray-500">No files uploaded.</p>
@@ -137,11 +163,11 @@ const ExcelUploader = () => {
       <div className="w-2/3 p-4 border rounded-lg shadow-lg overflow-hidden">
         {parsedData.length > 0 ? (
           <div className="max-h-[750px] overflow-auto border border-gray-300 rounded-lg">
-            <table className="table-auto w-full border-collapse border border-gray-300">
+            <table className="min-w-full table-fixed border-collapse border border-gray-300">
             <thead>
               <tr className="bg-indigo-600 text-white">
                 {Object.keys(parsedData[0]).map((key) => (
-                  <th key={key} className="border border-gray-300 px-3 py-2">{key}</th>
+                  <th key={key} className="border border-gray-300 px-3 py-2 text-sm text-left bg-indigo-600 text-white">{key}</th>
                 ))}
               </tr>
             </thead>
@@ -153,7 +179,7 @@ const ExcelUploader = () => {
                   {Object.entries(row).map(([key, value], idx) => (
                   <td 
                     key={idx} 
-                    className={`border border-gray-300 px-3 py-1 text-center ${key === "Severity" ? getSeverityClass(value) : ""}`}>
+                    className={`border border-gray-300 px-3 py-2 text-sm text-left ${key === "Severity" ? getSeverityClass(value) : ""}`}>
                     {key === "Severity" ? getSeverityIcon(value) : value}
                   </td>
               ))}
