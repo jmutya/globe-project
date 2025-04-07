@@ -2,6 +2,8 @@ import React, { useState, useEffect } from "react";
 import { LineChart, Line, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer } from "recharts";
 import * as XLSX from "xlsx";
 import supabase from "../../backend/supabase/supabase";
+import { CircularProgressbar, buildStyles } from "react-circular-progressbar";
+import "react-circular-progressbar/dist/styles.css";  // Required for styling
 import "react-loading-skeleton/dist/skeleton.css";
 import { MinusSmallIcon } from "@heroicons/react/20/solid";
 
@@ -17,6 +19,8 @@ const Reports = () => {
   const [availableYears, setAvailableYears] = useState([]);
   const [sortBy, setSortBy] = useState("date");
   const [incompleteRows, setIncompleteRows] = useState([]);
+  const [totalRows, setTotalRows] = useState(0); // Total rows
+  const [accuracyPercentage, setAccuracyPercentage] = useState(0); // Accuracy percentage
 
   const colors = [
     "#ff6384", "#36a2eb", "#ffce56", "#4bc0c0", "#9966ff", "#ff9f40", "#8b0000", "#008000"
@@ -24,7 +28,7 @@ const Reports = () => {
 
   useEffect(() => {
     fetchAndProcessFiles();
-  }, [timeRange, selectedMonth, selectedYear]);  // Trigger fetch when these values change
+  }, [timeRange, selectedMonth, selectedYear]);
 
   const getIncompleteRows = (sheet) => {
     const headers = sheet[0];
@@ -68,6 +72,7 @@ const Reports = () => {
       let allRequiredFieldsComplete = true;
       const detectedYears = new Set();
       const allIncompleteRows = [];
+      let totalRowCount = 0; // To track the total rows
 
       for (const file of files) {
         const { data: fileUrl } = supabase.storage.from("uploads").getPublicUrl(`excels/${file.name}`);
@@ -89,6 +94,8 @@ const Reports = () => {
             allIncompleteRows.push(...incompleteRows);
             allRequiredFieldsComplete = false;
           }
+
+          totalRowCount += sheet.length - 1; // Add the rows count excluding header
 
           sheet.slice(1).forEach((row) => {
             const timestamp = row[timestampIndex];
@@ -117,8 +124,7 @@ const Reports = () => {
 
               if (
                 (timeRange === "monthly" && (year !== selectedYear || month !== selectedMonth)) ||
-                (timeRange === "yearly" && year !== selectedYear) ||
-                (timeRange === "weekly" && !isSameWeek(new Date(), dateObj))
+                (timeRange === "yearly" && year !== selectedYear)
               ) {
                 return;
               }
@@ -164,7 +170,8 @@ const Reports = () => {
       setHasCompleteRows(allRequiredFieldsComplete);
       setAvailableYears(Array.from(detectedYears).sort());
       setIncompleteRows(allIncompleteRows);
-
+      setTotalRows(totalRowCount); // Set the total rows
+      calculateAccuracy(totalRowCount, allIncompleteRows.length); // Calculate accuracy
       fetchAnalysis(formattedData, [...allAlarmTypes]);
     } catch (error) {
       console.error("Error fetching or processing files:", error);
@@ -172,24 +179,19 @@ const Reports = () => {
     }
   };
 
-  const isSameWeek = (date1, date2) => {
-    const startOfWeek = (date) => {
-      const d = new Date(date);
-      d.setDate(d.getDate() - d.getDay());
-      return d;
-    };
-
-    return startOfWeek(date1).getTime() === startOfWeek(date2).getTime();
+  const calculateAccuracy = (totalRows, incompleteRows) => {
+    const accuracy = totalRows > 0 ? ((totalRows - incompleteRows) / totalRows) * 100 : 0;
+    setAccuracyPercentage(accuracy.toFixed(2)); // Set accuracy with 2 decimal places
   };
 
   const groupByTimeRange = (data) => {
     switch (timeRange) {
+      case "weekly":
+        return groupDataByWeek(data);
       case "monthly":
         return groupDataByMonth(data);
       case "yearly":
         return groupDataByYear(data);
-      case "weekly":
-        return groupDataByWeek(data);
       default:
         return data;
     }
@@ -254,68 +256,123 @@ const Reports = () => {
       <h2 className="text-lg font-semibold mb-2">Alarm Distribution by Area</h2>
 
       <div className="mb-4 flex gap-4 items-center flex-wrap">
-        <label htmlFor="timeRange">Time Range:</label>
-        <select
-          id="timeRange"
-          value={timeRange}
-          onChange={(e) => setTimeRange(e.target.value)}
-        >
+        <label>Time Range:</label>
+        <select className="p-2 border rounded-md" value={timeRange} onChange={(e) => setTimeRange(e.target.value)}>
           <option value="daily">Daily</option>
+          <option value="weekly">Weekly</option>
           <option value="monthly">Monthly</option>
           <option value="yearly">Yearly</option>
-          <option value="weekly">Weekly</option>
         </select>
 
-        <label htmlFor="selectedMonth">Month:</label>
-        <select
-          id="selectedMonth"
-          value={selectedMonth}
-          onChange={(e) => setSelectedMonth(Number(e.target.value))}
-        >
-          {/* Populate months */}
-          {Array.from({ length: 12 }).map((_, index) => (
-            <option key={index} value={index + 1}>
-              {new Date(0, index).toLocaleString("en", { month: "long" })}
-            </option>
-          ))}
-        </select>
+        {(timeRange === "monthly" || timeRange === "yearly") && (
+          <>
+            {timeRange === "monthly" && (
+              <select
+                className="p-2 border rounded-md"
+                value={selectedMonth}
+                onChange={(e) => setSelectedMonth(parseInt(e.target.value))}
+              >
+                {[...Array(12)].map((_, i) => (
+                  <option key={i + 1} value={i + 1}>{new Date(0, i).toLocaleString("default", { month: "long" })}</option>
+                ))}
+              </select>
+            )}
 
-        <label htmlFor="selectedYear">Year:</label>
-        <select
-          id="selectedYear"
-          value={selectedYear}
-          onChange={(e) => setSelectedYear(Number(e.target.value))}
-        >
-          {availableYears.map((year) => (
-            <option key={year} value={year}>
-              {year}
-            </option>
-          ))}
+            <select
+              className="p-2 border rounded-md"
+              value={selectedYear}
+              onChange={(e) => setSelectedYear(parseInt(e.target.value))}
+            >
+              {availableYears.map((year) => (
+                <option key={year} value={year}>{year}</option>
+              ))}
+            </select>
+          </>
+        )}
+
+        <label>Sort By:</label>
+        <select className="p-2 border rounded-md" value={sortBy} onChange={(e) => setSortBy(e.target.value)}>
+          <option value="date">Date</option>
+          <option value="total">Total Alarms</option>
         </select>
       </div>
 
       {isLoading ? (
-        <p>Loading...</p>
-      ) : (
-        <ResponsiveContainer width="100%" height={400}>
+        <div className="flex justify-center items-center h-[300px]">
+          <div className="animate-spin rounded-full h-10 w-10 border-t-4 border-b-4 border-indigo-500"></div>
+          <p className="ml-3 text-gray-600">Generating Graph</p>
+        </div>
+      ) : chartData.length > 0 ? (
+        <ResponsiveContainer width="100%" height={300}>
           <LineChart data={chartData}>
-            <XAxis dataKey="date" />
-            <YAxis />
+            <XAxis dataKey="date" tickFormatter={(date) => new Date(date).toLocaleDateString()} />
+            <YAxis allowDecimals={false} />
             <Tooltip />
             <Legend />
             {alarmTypes.map((type, index) => (
-              <Line
-                key={type}
-                type="monotone"
-                dataKey={type}
-                stroke={colors[index % colors.length]}
-                strokeWidth={2}
-                dot={false}
-              />
+              <Line key={type} type="monotone" dataKey={type} stroke={colors[index % colors.length]} />
             ))}
           </LineChart>
         </ResponsiveContainer>
+      ) : (
+        <p className="text-gray-600 text-center mt-4">No data available</p>
       )}
+
+      {/* Circular Progress Bar */}
+      <div className="mb-4">
+  <h3 className="text-lg font-semibold mr-4">Ticket Issuance Accuracy:</h3>
+  <div className="w-32 h-32">
+    <CircularProgressbar
+      value={parseFloat(accuracyPercentage)}
+      text={`${accuracyPercentage}%`}
+      styles={buildStyles({
+        pathColor: "#4caf50", // Customize color of the progress
+        textColor: "#333", // Text color
+        trailColor: "#f4f4f4", // Trail color (background)
+        strokeWidth: 10, // Width of the circular path
+        textSize: "16px", // Size of the percentage text
+      })}
+    />
+  </div>
+</div>
+
+
+      <div className="mt-4">
+        <h2 className="text-lg font-semibold">Incomplete Rows:</h2>
+      </div>
+
+      {hasCompleteRows && (
+        <div className="mt-4 p-4 bg-green-100 text-green-800 rounded">
+          ✅ All required fields are complete in the uploaded Excel files.
+        </div>
+      )}
+
+{!hasCompleteRows && incompleteRows.length > 0 && (
+  <div className="mt-4 p-4 bg-yellow-100 text-yellow-800 rounded">
+    <h4 className="font-semibold mb-2">⚠️ Incomplete Rows Found:</h4>
+    <table className="min-w-full table-auto">
+      <thead>
+        <tr className="border-b">
+          <th className="px-4 py-2 text-left">Row Number</th>
+          <th className="px-4 py-2 text-left">Assigned To</th>
+        
+          <th className="px-4 py-2 text-left">Accuracy Percentage</th>
+        </tr>
+      </thead>
+      <tbody>
+        {incompleteRows.map((row, idx) => (
+          <tr key={idx} className="border-b">
+            <td className="px-4 py-2">{row.rowNumber}</td>
+            <td className="px-4 py-2">{row.assignedTo || "Not Assigned"}</td>
+           
+            <td className="px-4 py-2">{accuracyPercentage}%</td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  </div>
+)}
+
     </div>
   );
 };

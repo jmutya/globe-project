@@ -81,7 +81,7 @@ const ExcelUploader = () => {
   return (
     <div className="flex p-4 gap-8">
       {/* File Upload Section */}
-      <div className="w-1/3 p-4 border rounded-lg shadow-lg text-center">
+      <div className="flex flex-wrap gap-8 p-6 bg-white rounded-xl shadow-lg">
         <label 
           className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:bg-gray-100 transition">
             <input 
@@ -115,12 +115,16 @@ const ExcelUploader = () => {
             <div className="flex flex-col gap-2">
               {files.map((file, index) => (
                 <button 
-                  key={index} 
+                  key={index}
                   onClick={() => viewExcelFile(file.url)}
-                  className="px-3 py-2 bg-gray-100 border rounded-lg text-blue-600 hover:bg-blue-200 transition"
+                  className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 rounded-lg shadow-sm hover:bg-indigo-50 text-indigo-700 transition duration-200"
                 >
-                  {file.name}
-                </button>
+                <FaFileExcel 
+                  className="text-green-600" />
+                <span 
+                  className="truncate">{file.name}</span>
+              </button>
+              
               ))}
             </div>
           ) : (
