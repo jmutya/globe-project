@@ -24,7 +24,7 @@ const Reports = () => {
 
   useEffect(() => {
     fetchAndProcessFiles();
-  }, [timeRange, selectedMonth, selectedYear]);
+  }, [timeRange, selectedMonth, selectedYear]);  // Trigger fetch when these values change
 
   const getIncompleteRows = (sheet) => {
     const headers = sheet[0];
@@ -32,7 +32,7 @@ const Reports = () => {
 
     const requiredColumns = ["Failure Category", "Cause", "AOR001", "AOR002"];
     const requiredIndices = requiredColumns.map(col => headers.indexOf(col));
-    const assignedToIndex = headers.indexOf("Assigned To");
+    const assignedToIndex = headers.indexOf("Assigned to");
 
     if (requiredIndices.some(idx => idx === -1)) {
       console.warn("One or more required columns not found in the sheet.");
@@ -117,7 +117,8 @@ const Reports = () => {
 
               if (
                 (timeRange === "monthly" && (year !== selectedYear || month !== selectedMonth)) ||
-                (timeRange === "yearly" && year !== selectedYear)
+                (timeRange === "yearly" && year !== selectedYear) ||
+                (timeRange === "weekly" && !isSameWeek(new Date(), dateObj))
               ) {
                 return;
               }
@@ -171,34 +172,24 @@ const Reports = () => {
     }
   };
 
-  const fetchAnalysis = async (data, alarmTypes) => {
-    try {
-      const response = await fetch("/api/analyze-graph", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          chartData: data,
-          alarmTypes: alarmTypes,
-        }),
-      });
+  const isSameWeek = (date1, date2) => {
+    const startOfWeek = (date) => {
+      const d = new Date(date);
+      d.setDate(d.getDate() - d.getDay());
+      return d;
+    };
 
-      const result = await response.json();
-      setAnalysis(result.analysis);
-    } catch (error) {
-      console.error("Error fetching analysis:", error);
-    }
+    return startOfWeek(date1).getTime() === startOfWeek(date2).getTime();
   };
 
   const groupByTimeRange = (data) => {
     switch (timeRange) {
-      case "weekly":
-        return groupDataByWeek(data);
       case "monthly":
         return groupDataByMonth(data);
       case "yearly":
         return groupDataByYear(data);
+      case "weekly":
+        return groupDataByWeek(data);
       default:
         return data;
     }
@@ -263,88 +254,67 @@ const Reports = () => {
       <h2 className="text-lg font-semibold mb-2">Alarm Distribution by Area</h2>
 
       <div className="mb-4 flex gap-4 items-center flex-wrap">
-        <label>Time Range:</label>
-        <select className="p-2 border rounded-md" value={timeRange} onChange={(e) => setTimeRange(e.target.value)}>
+        <label htmlFor="timeRange">Time Range:</label>
+        <select
+          id="timeRange"
+          value={timeRange}
+          onChange={(e) => setTimeRange(e.target.value)}
+        >
           <option value="daily">Daily</option>
-          <option value="weekly">Weekly</option>
           <option value="monthly">Monthly</option>
           <option value="yearly">Yearly</option>
+          <option value="weekly">Weekly</option>
         </select>
 
-        {(timeRange === "monthly" || timeRange === "yearly") && (
-          <>
-            {timeRange === "monthly" && (
-              <select
-                className="p-2 border rounded-md"
-                value={selectedMonth}
-                onChange={(e) => setSelectedMonth(parseInt(e.target.value))}
-              >
-                {[...Array(12)].map((_, i) => (
-                  <option key={i + 1} value={i + 1}>{new Date(0, i).toLocaleString("default", { month: "long" })}</option>
-                ))}
-              </select>
-            )}
+        <label htmlFor="selectedMonth">Month:</label>
+        <select
+          id="selectedMonth"
+          value={selectedMonth}
+          onChange={(e) => setSelectedMonth(Number(e.target.value))}
+        >
+          {/* Populate months */}
+          {Array.from({ length: 12 }).map((_, index) => (
+            <option key={index} value={index + 1}>
+              {new Date(0, index).toLocaleString("en", { month: "long" })}
+            </option>
+          ))}
+        </select>
 
-            <select
-              className="p-2 border rounded-md"
-              value={selectedYear}
-              onChange={(e) => setSelectedYear(parseInt(e.target.value))}
-            >
-              {availableYears.map((year) => (
-                <option key={year} value={year}>{year}</option>
-              ))}
-            </select>
-          </>
-        )}
-
-        <label>Sort By:</label>
-        <select className="p-2 border rounded-md" value={sortBy} onChange={(e) => setSortBy(e.target.value)}>
-          <option value="date">Date</option>
-          <option value="total">Total Alarms</option>
+        <label htmlFor="selectedYear">Year:</label>
+        <select
+          id="selectedYear"
+          value={selectedYear}
+          onChange={(e) => setSelectedYear(Number(e.target.value))}
+        >
+          {availableYears.map((year) => (
+            <option key={year} value={year}>
+              {year}
+            </option>
+          ))}
         </select>
       </div>
 
       {isLoading ? (
-        <div className="flex justify-center items-center h-[300px]">
-          <div className="animate-spin rounded-full h-10 w-10 border-t-4 border-b-4 border-indigo-500"></div>
-          <p className="ml-3 text-gray-600">Generating Graph</p>
-        </div>
-      ) : chartData.length > 0 ? (
-        <ResponsiveContainer width="100%" height={300}>
+        <p>Loading...</p>
+      ) : (
+        <ResponsiveContainer width="100%" height={400}>
           <LineChart data={chartData}>
-            <XAxis dataKey="date" tickFormatter={(date) => new Date(date).toLocaleDateString()} />
-            <YAxis allowDecimals={false} />
+            <XAxis dataKey="date" />
+            <YAxis />
             <Tooltip />
             <Legend />
             {alarmTypes.map((type, index) => (
-              <Line key={type} type="monotone" dataKey={type} stroke={colors[index % colors.length]} />
+              <Line
+                key={type}
+                type="monotone"
+                dataKey={type}
+                stroke={colors[index % colors.length]}
+                strokeWidth={2}
+                dot={false}
+              />
             ))}
           </LineChart>
         </ResponsiveContainer>
-      ) : (
-        <p className="text-gray-600 text-center mt-4">No data available</p>
-      )}
-
-      <div className="mt-4">
-        <h3 className="text-lg font-semibold">Analysis:</h3>
-        <p>{analysis}</p>
-      </div>
-
-      {hasCompleteRows && (
-        <div className="mt-4 p-4 bg-green-100 text-green-800 rounded">
-          ✅ All required fields are complete in the uploaded Excel files.
-        </div>
-      )}
-
-      {!hasCompleteRows && incompleteRows.length > 0 && (
-        <div className="mt-4 p-4 bg-yellow-100 text-yellow-800 rounded">
-          <h4 className="font-semibold mb-2">⚠️ Incomplete Rows Found:</h4>
-          <ul className="list-disc list-inside space-y-1">
-            {incompleteRows.map((row, idx) => (
-              <li key={idx}>Row {row.rowNumber} — Assigned To: {row.assignedTo}</li>
-            ))}
-          </ul>
-        </div>
       )}
     </div>
   );
