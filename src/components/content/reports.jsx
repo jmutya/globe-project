@@ -45,16 +45,22 @@ const Reports = () => {
 
     const incompleteRows = [];
 
+    
     rows.forEach((row, i) => {
-      const isComplete = requiredIndices.every(idx => {
-        return row[idx] !== undefined && String(row[idx]).trim() !== "";
+      const missingColumns = [];
+
+      requiredIndices.forEach((idx, idxRow) => {
+        if (row[idx] === undefined || String(row[idx]).trim() === "") {
+          missingColumns.push(requiredColumns[idxRow]); // Track which columns are missing
+        }
       });
 
-      if (!isComplete) {
+      if (missingColumns.length > 0) {
         const assignedTo = assignedToIndex !== -1 ? row[assignedToIndex] : "";
         incompleteRows.push({
           rowNumber: i + 2,
           assignedTo,
+          missingColumns, // Add the missing columns
           rowData: row,
         });
       }
