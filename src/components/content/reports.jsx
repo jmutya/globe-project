@@ -47,7 +47,6 @@ const Reports = () => {
   }, [timeRange, selectedMonth, selectedYear]);
 
   
-
   const getIncompleteRows = (sheet) => {
     const headers = sheet[0];
     const rows = sheet.slice(1);
@@ -306,6 +305,8 @@ const Reports = () => {
     return Object.values(groupedData);
   };
 
+  
+
   return (
     <div
       className="p-4 bg-white shadow-lg rounded-lg overflow-y-auto"
@@ -491,7 +492,7 @@ const Reports = () => {
       </div>
 
       {/* Add here */}
-
+          
     </div>
   );
 };
