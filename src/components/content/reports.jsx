@@ -2,6 +2,8 @@ import React, { useState, useEffect } from "react";
 import { LineChart, Line, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer } from "recharts";
 import * as XLSX from "xlsx";
 import supabase from "../../backend/supabase/supabase";
+import { CircularProgressbar, buildStyles } from "react-circular-progressbar";
+import "react-circular-progressbar/dist/styles.css";  // Required for styling
 import "react-loading-skeleton/dist/skeleton.css";
 import { MinusSmallIcon } from "@heroicons/react/20/solid";
 
@@ -17,6 +19,8 @@ const Reports = () => {
   const [availableYears, setAvailableYears] = useState([]);
   const [sortBy, setSortBy] = useState("date");
   const [incompleteRows, setIncompleteRows] = useState([]);
+  const [totalRows, setTotalRows] = useState(0); // Total rows
+  const [accuracyPercentage, setAccuracyPercentage] = useState(0); // Accuracy percentage
 
   const colors = [
     "#ff6384", "#36a2eb", "#ffce56", "#4bc0c0", "#9966ff", "#ff9f40", "#8b0000", "#008000"
@@ -68,6 +72,7 @@ const Reports = () => {
       let allRequiredFieldsComplete = true;
       const detectedYears = new Set();
       const allIncompleteRows = [];
+      let totalRowCount = 0; // To track the total rows
 
       for (const file of files) {
         const { data: fileUrl } = supabase.storage.from("uploads").getPublicUrl(`excels/${file.name}`);
@@ -89,6 +94,8 @@ const Reports = () => {
             allIncompleteRows.push(...incompleteRows);
             allRequiredFieldsComplete = false;
           }
+
+          totalRowCount += sheet.length - 1; // Add the rows count excluding header
 
           sheet.slice(1).forEach((row) => {
             const timestamp = row[timestampIndex];
@@ -163,7 +170,8 @@ const Reports = () => {
       setHasCompleteRows(allRequiredFieldsComplete);
       setAvailableYears(Array.from(detectedYears).sort());
       setIncompleteRows(allIncompleteRows);
-
+      setTotalRows(totalRowCount); // Set the total rows
+      calculateAccuracy(totalRowCount, allIncompleteRows.length); // Calculate accuracy
       fetchAnalysis(formattedData, [...allAlarmTypes]);
     } catch (error) {
       console.error("Error fetching or processing files:", error);
@@ -171,24 +179,9 @@ const Reports = () => {
     }
   };
 
-  const fetchAnalysis = async (data, alarmTypes) => {
-    try {
-      const response = await fetch("/api/analyze-graph", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          chartData: data,
-          alarmTypes: alarmTypes,
-        }),
-      });
-
-      const result = await response.json();
-      setAnalysis(result.analysis);
-    } catch (error) {
-      console.error("Error fetching analysis:", error);
-    }
+  const calculateAccuracy = (totalRows, incompleteRows) => {
+    const accuracy = totalRows > 0 ? ((totalRows - incompleteRows) / totalRows) * 100 : 0;
+    setAccuracyPercentage(accuracy.toFixed(2)); // Set accuracy with 2 decimal places
   };
 
   const groupByTimeRange = (data) => {
@@ -325,11 +318,28 @@ const Reports = () => {
         <p className="text-gray-600 text-center mt-4">No data available</p>
       )}
 
-      <div className="mt-4">
-        <h3 className="text-lg font-semibold">Ticket Issuance Accuracy:</h3>
-        <p>{analysis}</p>
-      </div>
+      {/* Circular Progress Bar */}
+      <div className="mb-4">
+  <h3 className="text-lg font-semibold mr-4">Ticket Issuance Accuracy:</h3>
+  <div className="w-32 h-32">
+    <CircularProgressbar
+      value={parseFloat(accuracyPercentage)}
+      text={`${accuracyPercentage}%`}
+      styles={buildStyles({
+        pathColor: "#4caf50", // Customize color of the progress
+        textColor: "#333", // Text color
+        trailColor: "#f4f4f4", // Trail color (background)
+        strokeWidth: 10, // Width of the circular path
+        textSize: "16px", // Size of the percentage text
+      })}
+    />
+  </div>
+</div>
 
+
+      <div className="mt-4">
+        <h2 className="text-lg font-semibold">Incomplete Rows:</h2>
+      </div>
 
       {hasCompleteRows && (
         <div className="mt-4 p-4 bg-green-100 text-green-800 rounded">
@@ -337,18 +347,34 @@ const Reports = () => {
         </div>
       )}
 
-      {!hasCompleteRows && incompleteRows.length > 0 && (
-        <div className="mt-4 p-4 bg-yellow-100 text-yellow-800 rounded">
-          <h4 className="font-semibold mb-2">⚠️ Incomplete Rows Found:</h4>
-          <ul className="list-disc list-inside space-y-1">
-            {incompleteRows.map((row, idx) => (
-              <li key={idx}>
-                Row {row.rowNumber} — Assigned To: {row.assignedTo || "Not Assigned"}
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
+{!hasCompleteRows && incompleteRows.length > 0 && (
+  <div className="mt-4 p-4 bg-yellow-100 text-yellow-800 rounded">
+    <h4 className="font-semibold mb-2">⚠️ Incomplete Rows Found:</h4>
+    <table className="min-w-full table-auto">
+      <thead>
+        <tr className="border-b">
+          <th className="px-4 py-2 text-left">Row Number</th>
+          <th className="px-4 py-2 text-left">Assigned To</th>
+          <th className="px-4 py-2 text-left">Missing Columns</th>
+          <th className="px-4 py-2 text-left">Accuracy Percentage</th>
+        </tr>
+      </thead>
+      <tbody>
+        {incompleteRows.map((row, idx) => (
+          <tr key={idx} className="border-b">
+            <td className="px-4 py-2">{row.rowNumber}</td>
+            <td className="px-4 py-2">{row.assignedTo || "Not Assigned"}</td>
+            <td className="px-4 py-2">
+                        {row.missingColumns.length > 0 ? row.missingColumns.join(", ") : "None"}
+                      </td>
+            <td className="px-4 py-2">{accuracyPercentage}%</td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  </div>
+)}
+
     </div>
   );
 };
