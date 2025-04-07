@@ -18,6 +18,7 @@ const AlarmCount = () => {
       let counts = {};
 
       for (const file of files) {
+        console.log(`Processing file: ${file.name}`); // Add log for each file
         const { data: fileUrl } = supabase.storage.from("uploads").getPublicUrl(`excels/${file.name}`);
         const response = await fetch(fileUrl.publicUrl);
         const blob = await response.arrayBuffer();
@@ -41,6 +42,7 @@ const AlarmCount = () => {
           });
         }
       }
+      console.log("Final counts:", counts); // Log final counts after processing all files
 
       setSeverityCounts(counts);
       setIsLoading(false);
