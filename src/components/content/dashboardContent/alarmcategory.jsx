@@ -69,7 +69,7 @@ const AlarmCategory = () => {
 
   return (
     <div className="p-4 bg-white shadow-lg rounded-lg flex flex-col items-center">
-      <h2 className="text-lg font-semibold mb-4">Alarm Distribution by Category</h2>
+      <h2 className="text-lg font-semibold mb-4">Overall Alarm Distribution by Category</h2>
       {isLoading ? (
         <div className="flex justify-center items-center">
           <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-indigo-500"></div>

@@ -128,7 +128,7 @@ const parseExcelDate = (dateValue) => {
   return (
     <div className="p-6 rounded-lg shadow-lg max-w-md mx-auto mt-10 flex flex-col">
       <h2 className="text-xl font-semibold text-black mb-4">
-        Overall Ticket Counts as of {latestMonth || "Loading..."}
+        Overall Ticket Counts for {latestMonth || "Loading..."}
       </h2>
 
       {isLoading ? (

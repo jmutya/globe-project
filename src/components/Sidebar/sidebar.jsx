@@ -125,17 +125,22 @@ const Sidebar = ({ user }) => {
         </nav>
 
         {/* Social Media Links */}
-        <div className="mt-auto pt-4">
-          <h2 className="mb-2 text-sm">RSC MIN</h2>
-          <a
-            href="#"
-            onClick={handleLogout}
-            className="flex items-center p-2 mt-4 space-x-3 rounded-md hover:bg-indigo-700"
-          >
-            <FaSignOutAlt className="w-6 h-6" />
-            <span>Logout</span>
-          </a>
-        </div>
+        <div className="mt-auto pt-10">
+  <h2 className="mb-2 text-2xl">RSC Mindanao</h2>
+
+  {/* Divider Line */}
+  <div className="border-t border-gray-300 my-4"></div>
+
+  <a
+    href="#"
+    onClick={handleLogout}
+    className="flex items-center p-2 mt-4 space-x-3 rounded-md hover:bg-indigo-700"
+  >
+    <FaSignOutAlt className="w-6 h-6" />
+    <span>Logout</span>
+  </a>
+</div>
+
       </div>
 
       {/* Main Content */}
