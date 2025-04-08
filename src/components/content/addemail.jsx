@@ -75,9 +75,10 @@ const AddEmail = () => {
   };
 
   return (
-    <div className="p-6 bg-gray-100 rounded-lg shadow-lg mx-auto flex gap-8 w-full h-[80vh] max-w-full">
-      {/* Left panel: Add new email */}
-      <div className="flex-1 p-8 border-2 border-indigo-400 rounded-xl bg-gradient-to-r from-blue-100 to-indigo-200 flex flex-col justify-center shadow-lg">
+  <div className="flex flex-col md:flex-row p-4 gap-4 h-[calc(100vh-100px)]">
+    
+    {/* Left Panel: Add User */}
+    <div className="flex-1 p-8 border-2 border-indigo-400 rounded-xl bg-gradient-to-r from-blue-100 to-indigo-200 flex flex-col justify-center shadow-lg">
         <h3 className="text-3xl font-bold mb-6 text-indigo-900">Add New User Email</h3>
         <div className="flex flex-col mb-4 gap-2">
           <input
@@ -85,18 +86,18 @@ const AddEmail = () => {
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             placeholder="Enter email"
-            className="p-3 border rounded-xl w-full focus:ring-2 focus:ring-indigo-500 placeholder-gray-400"
+            className="p-3 border border-gray-200 bg-white rounded-xl w-full placeholder-gray-400 shadow-md focus:outline-none focus:ring-2 focus:ring-indigo-400 transition"
           />
           {checkingEmail && <p className="text-gray-500">Checking email...</p>}
           {emailCheckResult && <p className={`${emailCheckResult.includes("✅") ? "text-green-600" : "text-red-500"}`}>{emailCheckResult}</p>}
         </div>
-        <input
-          type="password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          placeholder="Enter password"
-          className="mb-4 p-3 border rounded-xl w-full focus:ring-2 focus:ring-indigo-500"
-        />
+          <input
+            type="password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            placeholder="Enter password"
+            className="mb-4 p-3 border border-gray-200 bg-white rounded-xl w-full placeholder-gray-400 shadow-md focus:outline-none focus:ring-2 focus:ring-indigo-400 transition"
+          />
         <button
           onClick={handleAddUser}
           className={`px-6 py-3 bg-indigo-600 text-white rounded-xl shadow-lg transition-all ${loading ? "opacity-50 cursor-not-allowed animate-pulse" : "hover:bg-indigo-700"}`}
@@ -105,9 +106,9 @@ const AddEmail = () => {
           {loading ? "Adding..." : "Add User"}
         </button>
       </div>
-      
-      {/* Right panel: List of added emails */}
-      <div className="flex-1 p-6 border-2 border-gray-400 rounded-xl bg-gray-50 overflow-auto shadow-lg">
+
+    {/* Right Panel: Email List */}
+    <div className="flex-1 p-6 border-2 border-gray-400 rounded-xl bg-gray-50 overflow-auto shadow-lg">
         <h3 className="text-3xl font-semibold mb-4 text-indigo-700">Added Emails:</h3>
         {loadingEmails ? (
           <div className="flex justify-center items-center py-4">
@@ -126,8 +127,9 @@ const AddEmail = () => {
           <p className="text-gray-500">No emails added yet.</p>
         )}
       </div>
-    </div>
-  );
+  </div>
+);
+
 };
 
 export default AddEmail;
