@@ -31,6 +31,9 @@ const Reports = () => {
   const [accuracyPercentage, setAccuracyPercentage] = useState(0); // Accuracy percentage
   const [selectedRow, setSelectedRow] = useState(null);
 
+  const [percentagePerAssignedPerson, setPercentagePerAssignedPerson] =
+    useState({}); // Store the percentages for each assigned person
+
   const colors = [
     "#ff6384",
     "#36a2eb",
@@ -46,7 +49,6 @@ const Reports = () => {
     fetchAndProcessFiles();
   }, [timeRange, selectedMonth, selectedYear]);
 
-  
   const getIncompleteRows = (sheet) => {
     const headers = sheet[0];
     const rows = sheet.slice(1);
@@ -73,17 +75,17 @@ const Reports = () => {
 
       requiredIndices.forEach((idx, idxRow) => {
         if (row[idx] === undefined || String(row[idx]).trim() === "") {
-          missingColumns.push(requiredColumns[idxRow]); // Track which columns are missing
+          missingColumns.push(requiredColumns[idxRow]);
         }
       });
 
       if (missingColumns.length > 0) {
         const assignedTo = assignedToIndex !== -1 ? row[assignedToIndex] : "";
-        const number = row[headers.indexOf("Number")] || "Not Provided"; // Get the "Number" column value
+        const number = row[headers.indexOf("Number")] || "Not Provided";
         incompleteRows.push({
-          number: number, // Use the "Number" column instead of row number
+          number: number,
           assignedTo,
-          missingColumns, // Add the missing columns
+          missingColumns,
           rowData: row,
         });
       }
@@ -91,8 +93,6 @@ const Reports = () => {
 
     return incompleteRows;
   };
-
-  
 
   const fetchAndProcessFiles = async () => {
     try {
@@ -105,7 +105,8 @@ const Reports = () => {
       let allRequiredFieldsComplete = true;
       const detectedYears = new Set();
       const allIncompleteRows = [];
-      let totalRowCount = 0; // To track the total rows
+      let totalRowCount = 0;
+      const assignedPersonsData = {};
 
       for (const file of files) {
         const { data: fileUrl } = supabase.storage
@@ -132,7 +133,7 @@ const Reports = () => {
             allRequiredFieldsComplete = false;
           }
 
-          totalRowCount += sheet.length - 1; // Add the rows count excluding header
+          totalRowCount += sheet.length - 1;
 
           sheet.slice(1).forEach((row) => {
             const timestamp = row[timestampIndex];
@@ -177,10 +178,34 @@ const Reports = () => {
               }
               alarmData[date][alarmType] =
                 (alarmData[date][alarmType] || 0) + 1;
+
+              const assignedTo = row[headers.indexOf("Assigned to")];
+              if (assignedTo) {
+                if (!assignedPersonsData[assignedTo]) {
+                  assignedPersonsData[assignedTo] = { total: 0, completed: 0 };
+                }
+                assignedPersonsData[assignedTo].total += 1;
+
+                const missingColumns = incompleteRows.filter(
+                  (incompleteRow) => incompleteRow.rowData === row
+                );
+                if (missingColumns.length === 0) {
+                  assignedPersonsData[assignedTo].completed += 1;
+                }
+              }
             }
           });
         }
       }
+
+      const percentageData = {};
+      for (const [person, data] of Object.entries(assignedPersonsData)) {
+        const percentage = data.total
+          ? ((data.completed / data.total) * 100).toFixed(2)
+          : "0.00";
+        percentageData[person] = percentage;
+      }
+      setPercentagePerAssignedPerson(percentageData);
 
       const allAlarmTypes = new Set();
       Object.values(alarmData).forEach((types) => {
@@ -216,8 +241,8 @@ const Reports = () => {
       setHasCompleteRows(allRequiredFieldsComplete);
       setAvailableYears(Array.from(detectedYears).sort());
       setIncompleteRows(allIncompleteRows);
-      setTotalRows(totalRowCount); // Set the total rows
-      calculateAccuracy(totalRowCount, allIncompleteRows.length); // Calculate accuracy
+      setTotalRows(totalRowCount);
+      calculateAccuracy(totalRowCount, allIncompleteRows.length);
       fetchAnalysis(formattedData, [...allAlarmTypes]);
     } catch (error) {
       console.error("Error fetching or processing files:", error);
@@ -228,7 +253,7 @@ const Reports = () => {
   const calculateAccuracy = (totalRows, incompleteRows) => {
     const accuracy =
       totalRows > 0 ? ((totalRows - incompleteRows) / totalRows) * 100 : 0;
-    setAccuracyPercentage(accuracy.toFixed(2)); // Set accuracy with 2 decimal places
+    setAccuracyPercentage(accuracy.toFixed(2));
   };
 
   const groupByTimeRange = (data) => {
@@ -305,15 +330,11 @@ const Reports = () => {
     return Object.values(groupedData);
   };
 
-  
-
   return (
     <div
       className="p-4 bg-white shadow-lg rounded-lg overflow-y-auto"
       style={{ maxHeight: "88vh", height: "auto" }}
     >
-      <h2 className="text-lg font-semibold mb-2">Alarm Distribution by Area</h2>
-
       <div className="mb-4 flex gap-4 items-center flex-wrap">
         <label>Time Range:</label>
         <select
@@ -419,29 +440,31 @@ const Reports = () => {
               })}
             />
           </div>
-          {selectedRow && (
-            <div className="mt-10 p-4 bg-gray-100 text-gray-800 rounded">
-              <h3 className="text-lg font-semibold">Selected Row Details</h3>
-              <p>
-                <strong>Ticket Number:</strong> {selectedRow.number}
-              </p>
-              <p>
-                <strong>Assigned To:</strong>{" "}
-                {selectedRow.assignedTo || "Not Assigned"}
-              </p>
-              <p>
-                <strong>Missing Columns:</strong>{" "}
-                {selectedRow.missingColumns.join(", ")}
-              </p>
-              <p>
-                <strong>Accuracy Percentage:</strong> {accuracyPercentage}%
-              </p>
-            </div>
-          )}
+          {selectedRow?.assignedTo &&
+            percentagePerAssignedPerson[selectedRow.assignedTo] && (
+              <div className="mt-10 p-4 bg-gray-100 text-gray-800 rounded">
+                <h3 className="text-lg font-semibold">Selected Row Details</h3>
+                <p>
+                  <strong>Ticket Number:</strong> {selectedRow.number}
+                </p>
+                <p>
+                  <strong>Assigned To:</strong>{" "}
+                  {selectedRow.assignedTo || "Not Assigned"}
+                </p>
+                <p>
+                  <strong>Missing Columns:</strong>{" "}
+                  {selectedRow.missingColumns.join(", ")}
+                </p>
+                <p>
+                  <strong>Accuracy Percentage:</strong>{" "}
+                  {percentagePerAssignedPerson[selectedRow.assignedTo]}%
+                </p>
+              </div>
+            )}
         </div>
 
         {/* Incomplete Rows */}
-        <div className="w-3/4">
+        <div className="w-3/4 overflow-y-auto max-h-90">
           {/* <div className="mt-4">
             <h2 className="text-lg font-semibold">Incomplete Rows:</h2>
           </div> */}
@@ -487,13 +510,56 @@ const Reports = () => {
           )}
 
           {/* Conditionally render selected row details */}
-          
         </div>
       </div>
 
+      <div className="mb-4 p-4 bg-gray-100 text-gray-800 rounded flex space-x-4">
+        <div className="w-1/2">
+        <h3 className="text-lg font-semibold mr-4 ml-6 mt-4">
+            Overall Closing Accuracy:
+          </h3>
+        <div className="w-60 h-60 mt-8 ml-12">
+            <CircularProgressbar
+              value={parseFloat(accuracyPercentage)}
+              text={`${accuracyPercentage}%`}
+              styles={buildStyles({
+                pathColor: "#4caf50", // Customize color of the progress
+                textColor: "#333", // Text color
+                trailColor: "#f4f4f4", // Trail color (background)
+                strokeWidth: 10, // Width of the circular path
+                textSize: "16px", // Size of the percentage text
+              })}
+            />
+          </div>
+        </div>
+
+        <div className="w-1/2 max-h-4"></div>
+      </div>
+
+      {/* Display the assigned person's completion percentage */}
+      {/* <div className="mt-6 p-4 bg-gray-100 rounded overflow-y-auto max-h-80">
+        <h3 className="font-semibold text-lg mb-4">Completion Accuracy per Assigned Person</h3>
+        <table className="min-w-full table-auto">
+          <thead>
+            <tr className="border-b">
+              <th className="px-4 py-2 text-left">Assigned Person</th>
+              <th className="px-4 py-2 text-left">Completion Percentage</th>
+            </tr>
+          </thead>
+          <tbody>
+            {Object.entries(percentagePerAssignedPerson).map(
+              ([person, percentage]) => (
+                <tr key={person} className="border-b">
+                  <td className="px-4 py-2">{person}</td>
+                  <td className="px-4 py-2">{percentage}%</td>
+                </tr>
+              )
+            )}
+          </tbody>
+        </table>
+      </div> */}
+
       {/* Add here */}
-
-
     </div>
   );
 };
