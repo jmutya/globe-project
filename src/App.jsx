@@ -35,7 +35,7 @@ function App() {
         <Route path="/sidebar" element={<ProtectedRoute><Sidebar user={user} /></ProtectedRoute>} />
 
         <Route path="/addemail" element={<ProtectedRoute><AddEmail /></ProtectedRoute>} />
-        <Route path="/cellsites" element={<ProtectedRoute><CellSitesTopology /></ProtectedRoute>} />
+        {/* <Route path="/cellsites" element={<ProtectedRoute><CellSitesTopology /></ProtectedRoute>} /> */}
         <Route path="/reports" element={<ProtectedRoute><AlarmLegends /></ProtectedRoute>} />
         <Route path="/documents" element={<ProtectedRoute><ExcelUploader /></ProtectedRoute>} />
       </Routes>

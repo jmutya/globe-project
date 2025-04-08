@@ -491,6 +491,31 @@ const Reports = () => {
       </div>
 
       {/* Add here */}
+{!hasCompleteRows && incompleteRows.length > 0 && (
+  <div className="mt-4 p-4 bg-yellow-100 text-yellow-800 rounded">
+    <h4 className="font-semibold mb-2">⚠️ Incomplete Rows Found:</h4>
+    <table className="min-w-full table-auto">
+      <thead>
+        <tr className="border-b">
+          <th className="px-4 py-2 text-left">Row Number</th>
+          <th className="px-4 py-2 text-left">Assigned To</th>
+        
+          <th className="px-4 py-2 text-left">Accuracy Percentage</th>
+        </tr>
+      </thead>
+      <tbody>
+        {incompleteRows.map((row, idx) => (
+          <tr key={idx} className="border-b">
+            <td className="px-4 py-2">{row.rowNumber}</td>
+            <td className="px-4 py-2">{row.assignedTo || "Not Assigned"}</td>
+           
+            <td className="px-4 py-2">{accuracyPercentage}%</td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  </div>
+)}
 
     </div>
   );

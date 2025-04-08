@@ -1,11 +1,10 @@
-import React, { useState } from "react";
+import React, { useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { Menu, MenuButton, MenuItem, MenuItems } from "@headlessui/react";
-import { BellIcon, CogIcon, UserCircleIcon } from "@heroicons/react/24/outline";
 import { getAuth, signOut } from "firebase/auth";
-import { FaSignOutAlt } from 'react-icons/fa';
+import { FaSignOutAlt } from "react-icons/fa";
 import {
-  ChartBarSquareIcon, // Replaced HomeIcon with this
+  ChartBarSquareIcon,
   UsersIcon,
   BellAlertIcon,
   SignalIcon,
@@ -13,19 +12,19 @@ import {
   ChartBarIcon,
 } from "@heroicons/react/24/outline";
 import { FaFacebook, FaInstagram, FaTwitter } from "react-icons/fa";
-import CellSitesPage from "../content/cellsites";
 import Alarms from "../content/alarm";
-import "leaflet/dist/leaflet.css";
 import NetworkSurveillanceDashboard from "../content/dashboard";
 import AddEmail from "../content/addemail";
 import Reports from "../content/reports";
 import ExcelUploader from "../content/documents";
+import SearchBar from "../../main/searchbar/searchbar";
+import MainContent from "../../main/mainContent";
+import UserMenu from "../../main/logout/logout";
+import LogOut from "../../main/logout/logout";
 
 const navigation = [
-  { name: "Dashboard", icon: ChartBarSquareIcon }, // Changed to ChartBarSquareIcon
+  { name: "Dashboard", icon: ChartBarSquareIcon },
   { name: "Reports", icon: ChartBarIcon },
-  { name: "Cell sites", icon: SignalIcon },
-  // { name: "Alarms", icon: BellAlertIcon },
   { name: "Documents", icon: DocumentIcon },
   { name: "Add Emails", icon: UsersIcon },
 ];
@@ -36,17 +35,45 @@ const socialLinks = [
   { name: "Twitter", icon: FaTwitter, link: "https://twitter.com" },
 ];
 
-export default function Sidebar({ user }) {
+const NavigationItem = ({ item, selected, onClick }) => (
+  <button
+    onClick={() => onClick(item.name)}
+    className={`flex items-center p-2 space-x-3 rounded-md ${
+      selected === item.name
+        ? "bg-indigo-700 font-bold border-l-[3px] border-white pl-4"
+        : "hover:bg-indigo-700"
+    }`}
+  >
+    <item.icon className="w-6 h-6" />
+    <span className="text-lg">{item.name}</span>
+  </button>
+);
+
+const SocialLink = ({ link }) => (
+  <a
+    href={link.link}
+    target="_blank"
+    rel="noopener noreferrer"
+    className="flex items-center p-2 space-x-3 rounded-md hover:bg-indigo-700"
+  >
+    <link.icon className="w-6 h-6" />
+    <span>{link.name}</span>
+  </a>
+);
+
+const Sidebar = ({ user }) => {
   const auth = getAuth();
   const navigate = useNavigate();
-  const handleLogout = async () => {
+
+  // Using useCallback to memoize logout handler
+  const handleLogout = useCallback(async () => {
     try {
       await signOut(auth);
       navigate("/"); // Redirect to login page after logout
     } catch (error) {
       console.error("Logout failed:", error.message);
     }
-  };
+  }, [auth, navigate]);
 
   const [selected, setSelected] = useState("Dashboard");
 
@@ -58,8 +85,6 @@ export default function Sidebar({ user }) {
         return <AddEmail />;
       case "Alarms":
         return <Alarms />;
-      case "Cell sites":
-        return <CellSitesPage />;
       case "Documents":
         return <ExcelUploader />;
       case "Reports":
@@ -82,36 +107,21 @@ export default function Sidebar({ user }) {
         </div>
         <nav className="space-y-2">
           {navigation.map((item) => (
-            <button
-            key={item.name}
-            onClick={() => setSelected(item.name)}
-            className={`flex items-center p-2 space-x-3 rounded-md ${
-              selected === item.name
-                ? "bg-indigo-700 font-bold border-l-[3px] border-white pl-4"
-                : "hover:bg-indigo-700"
-            }`}
-          >
-            <item.icon className="w-6 h-6" />
-            <span className="text-lg">{item.name}</span>
-          </button>          
+            <NavigationItem
+              key={item.name}
+              item={item}
+              selected={selected}
+              onClick={setSelected}
+            />
           ))}
         </nav>
 
         {/* Social Media Links */}
         <div className="mt-auto pt-4">
-          <h2 className="mb-2 text-sm">Messanging Tools</h2>
+          <h2 className="mb-2 text-sm">Messaging Tools</h2>
           <nav className="space-y-2">
             {socialLinks.map((link) => (
-              <a
-                key={link.name}
-                href={link.link}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center p-2 space-x-3 rounded-md hover:bg-indigo-700"
-              >
-                <link.icon className="w-6 h-6" />
-                <span>{link.name}</span>
-              </a>
+              <SocialLink key={link.name} link={link} />
             ))}
           </nav>
           <a
@@ -119,9 +129,8 @@ export default function Sidebar({ user }) {
             onClick={handleLogout}
             className="flex items-center p-2 mt-4 space-x-3 rounded-md hover:bg-indigo-700"
           >
-            <FaSignOutAlt className="w-6 h-6" /> {/* FontAwesome logout icon */}
+            <FaSignOutAlt className="w-6 h-6" />
             <span>Logout</span>
-          
           </a>
         </div>
       </div>
@@ -129,48 +138,33 @@ export default function Sidebar({ user }) {
       {/* Main Content */}
       <div className="flex-1 p-4">
         <div className="flex justify-between items-center mb-6">
-          <input
-            type="search"
-            placeholder="Search"
-            className="px-4 py-2 border border-gray-300 rounded-md shadow-md w-1/3 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-          />
+         
+        <SearchBar/>
           <div className="flex items-center space-x-4">
-          <div className="w-4 h-4 rounded-full bg-green-500" />
-
-
+            <div className="w-4 h-4 rounded-full bg-green-500" />
             <Menu as="div" className="relative">
-              <MenuButton className="flex items-center space-x-2">   
+              <MenuButton className="flex items-center space-x-2">
                 <span>
-                  <p className="text-sm font-semibold">Hello, {user?.email?.split("@")[0]}</p>
+                  <p className="text-sm font-semibold">{user?.email?.split("@")[0]}</p>
                 </span>
               </MenuButton>
-
               <MenuItems
                 as="div"
                 className="absolute right-0 mt-2 w-48 bg-white border rounded-md shadow-lg"
               >
-                
                 <MenuItem>
-                  {({ active }) => (
-                    <button
-                      onClick={handleLogout}
-                      className={`block w-full px-4 py-2 text-sm text-left text-gray-700 ${
-                        active ? "bg-gray-100" : ""
-                      }`}
-                    >
-                      Logout
-                    </button>
-                  )}
+                  
+                  <LogOut handleLogout={handleLogout} />
                 </MenuItem>
               </MenuItems>
             </Menu>
           </div>
         </div>
 
-        <div className="w-full h-full border-2 border-dashed border-gray-300 rounded-lg bg-gray-50 p-4">
-          {renderContent()}
-        </div>
+        <MainContent renderContent={renderContent}/>
       </div>
     </div>
   );
-}
+};
+
+export default Sidebar;
