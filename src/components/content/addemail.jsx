@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from "react";
 import { db, auth } from "../../backend/firebase/firebaseconfig";
 import { collection, addDoc, getDocs } from "firebase/firestore";
-import { fetchSignInMethodsForEmail } from "firebase/auth";
+import { fetchSignInMethodsForEmail, sendPasswordResetEmail } from "firebase/auth";
+import { FaKey } from "react-icons/fa"; // Icon for reset password
+import { ToastContainer, toast } from "react-toastify"; // Import Toast components
+import "react-toastify/dist/ReactToastify.css"; // Import toast styles
 
 const AddEmail = () => {
-  // State variables to manage user input, email list, and loading states
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [emails, setEmails] = useState([]);
@@ -13,7 +15,6 @@ const AddEmail = () => {
   const [checkingEmail, setCheckingEmail] = useState(false);
   const [loadingEmails, setLoadingEmails] = useState(true);
 
-  // Fetches emails from Firestore when the component mounts
   useEffect(() => {
     const fetchEmails = async () => {
       try {
@@ -29,7 +30,6 @@ const AddEmail = () => {
     fetchEmails();
   }, []);
 
-  // Checks if an email exists in Firebase Authentication
   const checkEmailInAuth = async (emailToCheck) => {
     if (!emailToCheck) {
       setEmailCheckResult("");
@@ -46,7 +46,6 @@ const AddEmail = () => {
     }
   };
 
-  // Debounced effect to check email existence while typing
   useEffect(() => {
     const timeout = setTimeout(() => {
       if (email) checkEmailInAuth(email);
@@ -54,10 +53,9 @@ const AddEmail = () => {
     return () => clearTimeout(timeout);
   }, [email]);
 
-  // Handles adding a new email to Firestore
   const handleAddUser = async () => {
     if (!email || !password) {
-      alert("Please enter both email and password.");
+      toast.error("Please enter both email and password.");
       return;
     }
     setLoading(true);
@@ -67,58 +65,78 @@ const AddEmail = () => {
       setEmail("");
       setPassword("");
       setEmailCheckResult("");
+      toast.success("User added successfully!");
     } catch (error) {
-      alert(error.message);
+      toast.error("Error adding user: " + error.message);
     } finally {
       setLoading(false);
     }
   };
 
+  const handlePasswordReset = async (emailToReset) => {
+    try {
+      await sendPasswordResetEmail(auth, emailToReset);
+      toast.success(`Password reset link sent to ${emailToReset}`);
+    } catch (error) {
+      toast.error("Error sending password reset link: " + error.message);
+    }
+  };
+
   return (
-    <div className="p-6 bg-gray-100 rounded-lg shadow-lg mx-auto flex gap-8 w-full h-[80vh] max-w-full">
-      {/* Left panel: Add new email */}
-      <div className="flex-1 p-8 border-2 border-indigo-400 rounded-xl bg-gradient-to-r from-blue-100 to-indigo-200 flex flex-col justify-center shadow-lg">
-        <h3 className="text-3xl font-bold mb-6 text-indigo-900">Add New User Email</h3>
-        <div className="flex flex-col mb-4 gap-2">
+    <div className="flex flex-col md:flex-row p-6 gap-6 h-[calc(100vh-100px)]">
+      {/* Left Panel: Add User */}
+      <div className="flex-1 p-6 bg-gradient-to-r from-blue-100 to-indigo-200 rounded-lg shadow-xl flex flex-col justify-center">
+        <h3 className="text-3xl font-bold text-indigo-900 mb-4">Add New User Email</h3>
+        <div className="flex flex-col mb-4 gap-3">
           <input
             type="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             placeholder="Enter email"
-            className="p-3 border rounded-xl w-full focus:ring-2 focus:ring-indigo-500 placeholder-gray-400"
+            className="p-4 border border-indigo-300 rounded-lg focus:ring-2 focus:ring-indigo-400 focus:outline-none transition-shadow"
           />
           {checkingEmail && <p className="text-gray-500">Checking email...</p>}
-          {emailCheckResult && <p className={`${emailCheckResult.includes("✅") ? "text-green-600" : "text-red-500"}`}>{emailCheckResult}</p>}
+          {emailCheckResult && (
+            <p className={`text-sm font-semibold ${emailCheckResult.includes("✅") ? "text-green-600" : "text-red-500"}`}>
+              {emailCheckResult}
+            </p>
+          )}
         </div>
         <input
           type="password"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           placeholder="Enter password"
-          className="mb-4 p-3 border rounded-xl w-full focus:ring-2 focus:ring-indigo-500"
+          className="p-4 border border-indigo-300 rounded-lg mb-6 focus:ring-2 focus:ring-indigo-400 focus:outline-none transition-shadow"
         />
         <button
           onClick={handleAddUser}
-          className={`px-6 py-3 bg-indigo-600 text-white rounded-xl shadow-lg transition-all ${loading ? "opacity-50 cursor-not-allowed animate-pulse" : "hover:bg-indigo-700"}`}
+          className={`w-full p-4 text-white rounded-lg shadow-md bg-indigo-600 transition-all ${loading ? "opacity-50 cursor-not-allowed" : "hover:bg-indigo-700"}`}
           disabled={loading}
         >
           {loading ? "Adding..." : "Add User"}
         </button>
       </div>
-      
-      {/* Right panel: List of added emails */}
-      <div className="flex-1 p-6 border-2 border-gray-400 rounded-xl bg-gray-50 overflow-auto shadow-lg">
-        <h3 className="text-3xl font-semibold mb-4 text-indigo-700">Added Emails:</h3>
+
+      {/* Right Panel: Email List */}
+      <div className="flex-1 p-6 bg-white border border-gray-200 rounded-lg shadow-lg overflow-auto">
+        <h3 className="text-3xl font-semibold text-indigo-700 mb-6">Added Emails</h3>
         {loadingEmails ? (
-          <div className="flex justify-center items-center py-4">
-            <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-indigo-500"></div>
-            <p className="ml-3 text-gray-600">Loading emails...</p>
+          <div className="flex justify-center items-center py-8">
+            <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-indigo-500"></div>
+            <p className="ml-4 text-gray-600">Loading emails...</p>
           </div>
         ) : emails.length > 0 ? (
-          <ul className="space-y-3">
+          <ul className="space-y-4">
             {emails.map((email, index) => (
-              <li key={index} className="p-3 border rounded-xl bg-indigo-100 text-indigo-800 px-4 py-2 shadow-md hover:bg-indigo-200">
-                {email}
+              <li key={index} className="flex justify-between items-center p-4 border rounded-lg bg-indigo-50 text-indigo-700 shadow-md hover:bg-indigo-100">
+                <span>{email}</span>
+                <button
+                  onClick={() => handlePasswordReset(email)}
+                  className="text-indigo-600 hover:text-indigo-800"
+                >
+                  <FaKey size={20} />
+                </button>
               </li>
             ))}
           </ul>
@@ -126,6 +144,9 @@ const AddEmail = () => {
           <p className="text-gray-500">No emails added yet.</p>
         )}
       </div>
+
+      {/* Toast Notification Container */}
+      <ToastContainer position="bottom-right" />
     </div>
   );
 };
