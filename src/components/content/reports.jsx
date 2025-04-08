@@ -32,10 +32,10 @@ const Reports = () => {
   const [selectedRow, setSelectedRow] = useState(null);
   const [closingAccuracy, setClosingAccuracy] = useState(0);
   const [unmatchedRows, setUnmatchedRows] = useState([]);
-
+  const [selectedUnmatchedRow, setSelectedUnmatchedRow] = useState(null);
   const [percentagePerAssignedPerson, setPercentagePerAssignedPerson] =
     useState({}); // Store the percentages for each assigned person
-
+  const [individualAccuracy, setIndividualAccuracy] = useState({});
   const colors = [
     "#ff6384",
     "#36a2eb",
@@ -197,58 +197,69 @@ const Reports = () => {
               }
 
               const causeIndex = headers.indexOf("Cause");
-              const reasonIndex = headers.indexOf("Reason For Outage");
-              const resolvedByIndex = headers.indexOf("Resolved by"); // 👈 Add Resolved By index
-              const numberByIndex = headers.indexOf("Number"); // 👈 Add Number index
+const reasonIndex = headers.indexOf("Reason For Outage");
+const resolvedByIndex = headers.indexOf("Resolved by");
+const numberByIndex = headers.indexOf("Number");
 
-              let unmatchedRows = [];
-              let totalRows = 0;
+let unmatchedRows = [];
+let totalRows = 0;
+let resolverStats = {}; // Will track { totalResolved, errors }
 
-              sheet.slice(1).forEach((row, index) => {
-                totalRows += 1;
+// Process each row
+sheet.slice(1).forEach(row => {
+  totalRows += 1;
 
-                const cause = row[causeIndex];
-                const reason = row[reasonIndex];
-                const resolvedBy = row[resolvedByIndex]; // 👈 Fetch Resolved By
-                const number = row[numberByIndex]; // 👈 Fetch Number
+  const cause = row[causeIndex];
+  const reason = row[reasonIndex];
+  const resolvedBy = row[resolvedByIndex]?.trim();
+  const number = row[numberByIndex];
 
-                if (
-                  !cause ||
-                  !reason ||
-                  typeof cause !== "string" ||
-                  typeof reason !== "string"
-                ) {
-                  unmatchedRows.push({
-                    number: number,
-                    cause,
-                    reason,
-                    resolvedBy,
-                  }); // +2 for header row
-                  return;
-                }
+  // Initialize resolver if not exists
+  if (resolvedBy && !resolverStats[resolvedBy]) {
+    resolverStats[resolvedBy] = { totalResolved: 0, errors: 0 };
+  }
 
-                const reasonPrefix = reason.split("-")[0].trim().toLowerCase();
-                const causeText = cause.trim().toLowerCase();
+  // Count this resolution
+  if (resolvedBy) {
+    resolverStats[resolvedBy].totalResolved += 1;
+  }
 
-                if (reasonPrefix !== causeText) {
-                  unmatchedRows.push({
-                    number: number,
-                    cause,
-                    reason,
-                    resolvedBy,
-                  });
-                }
-              });
+  // Check for errors
+  const hasError = !cause || !reason || 
+                  typeof cause !== "string" || 
+                  typeof reason !== "string" ||
+                  reason.split("-")[0].trim().toLowerCase() !== cause.trim().toLowerCase();
 
-              let closingAccuracy = 0;
+  if (hasError) {
+    unmatchedRows.push({ number, cause, reason, resolvedBy });
+    
+    if (resolvedBy) {
+      resolverStats[resolvedBy].errors += 1;
+    }
+  }
+});
 
-              if (totalRows > 0) {
-                closingAccuracy =
-                  ((totalRows - unmatchedRows.length) / totalRows) * 100;
-              }
+// Calculate overall accuracy
+const closingAccuracy = totalRows > 0 
+  ? ((totalRows - unmatchedRows.length) / totalRows * 100).toFixed(2)
+  : "0.00";
 
-              setClosingAccuracy(closingAccuracy.toFixed(2));
-              setUnmatchedRows(unmatchedRows);
+// Calculate individual accuracy using the standard formula
+const individualAccuracy = {};
+Object.entries(resolverStats).forEach(([resolver, stats]) => {
+  if (stats.totalResolved > 0) {
+    individualAccuracy[resolver] = (
+      (stats.totalResolved - stats.errors) / 
+      stats.totalResolved * 100
+    ).toFixed(2);
+  } else {
+    individualAccuracy[resolver] = "0.00";
+  }
+});
+
+setClosingAccuracy(closingAccuracy);
+setUnmatchedRows(unmatchedRows);
+setIndividualAccuracy(individualAccuracy);
             }
           });
         }
@@ -529,7 +540,9 @@ const Reports = () => {
 
           {!hasCompleteRows && incompleteRows.length > 0 && (
             <div className="mt-4 p-4 bg-yellow-100 text-yellow-800 rounded">
-              <h4 className="font-semibold mb-4 text-lg">⚠️ Incomplete Rows Found:</h4>
+              <h4 className="font-semibold mb-4 text-lg">
+                ⚠️ Incomplete Rows Found:
+              </h4>
               <table className="min-w-full table-auto">
                 <thead>
                   <tr className="border-b">
@@ -564,6 +577,30 @@ const Reports = () => {
           {/* Conditionally render selected row details */}
         </div>
       </div>
+      {/* Display the assigned person's ticket issuance percentage */}
+      <div className="mt-6 p-4 bg-gray-100 rounded overflow-y-auto max-h-80">
+        <h3 className="font-semibold text-lg mb-4">
+          Ticket Issuance Accuracy per Assigned Person
+        </h3>
+        <table className="min-w-full table-auto">
+          <thead>
+            <tr className="border-b">
+              <th className="px-4 py-2 text-left">Assigned Person</th>
+              <th className="px-4 py-2 text-left">Completion Percentage</th>
+            </tr>
+          </thead>
+          <tbody>
+            {Object.entries(percentagePerAssignedPerson).map(
+              ([person, percentage]) => (
+                <tr key={person} className="border-b">
+                  <td className="px-4 py-2">{person}</td>
+                  <td className="px-4 py-2">{percentage}%</td>
+                </tr>
+              )
+            )}
+          </tbody>
+        </table>
+      </div>
 
       <div className="mb-4 rounded flex space-x-4 mt-11">
         <div className="w-1/4">
@@ -590,60 +627,90 @@ const Reports = () => {
             {unmatchedRows.length > 0 && (
               <div className="mt-6 p-4 bg-red-100 rounded">
                 <h3 className="font-semibold text-lg mb-4 text-red-800">
-                ⚠️ Unmatched Rows Found:
+                  ⚠️ Unmatched Rows Found:
                 </h3>
                 <table className="min-w-full table-auto">
                   <thead>
                     <tr className="border-b">
                       <th className="px-4 py-2 text-left">Ticket Number</th>
+                      <th className="px-4 py-2 text-left">Resolved By</th>{" "}
                       <th className="px-4 py-2 text-left">Cause</th>
                       <th className="px-4 py-2 text-left">Reason for Outage</th>
-                      <th className="px-4 py-2 text-left">Resolved By</th>{" "}
                       {/* 👈 Add this */}
                     </tr>
                   </thead>
                   <tbody>
                     {unmatchedRows.map((row, idx) => (
-                      <tr key={idx} className="border-b">
+                      <tr
+                        key={idx}
+                        className="border-b cursor-pointer hover:bg-gray-100"
+                        onClick={() => setSelectedUnmatchedRow(row)}
+                      >
                         <td className="px-4 py-2">{row.number}</td>
-                        <td className="px-4 py-2">{row.cause || "Empty"}</td>
-                        <td className="px-4 py-2">{row.reason || "Empty"}</td>
                         <td className="px-4 py-2">
                           {row.resolvedBy || "Unassigned"}
                         </td>{" "}
+                        <td className="px-4 py-2">{row.cause || "Empty"}</td>
+                        <td className="px-4 py-2">{row.reason || "Empty"}</td>
                         {/* 👈 Display value */}
                       </tr>
                     ))}
                   </tbody>
                 </table>
+                {selectedUnmatchedRow && (
+                  <div className="mt-4 p-4 bg-white border rounded shadow">
+                    <h4 className="text-lg font-semibold mb-2 text-gray-800">
+                      Selected Row Details
+                    </h4>
+                    <p>
+                      <strong>Ticket Number:</strong>{" "}
+                      {selectedUnmatchedRow.number}
+                    </p>
+                    <p>
+                      <strong>Resolved By:</strong>{" "}
+                      {selectedUnmatchedRow.resolvedBy || "Unassigned"}
+                    </p>
+                    <p>
+                      <strong>Cause:</strong>{" "}
+                      {selectedUnmatchedRow.cause || "Empty"}
+                    </p>
+                    <p>
+                      <strong>Reason for Outage:</strong>{" "}
+                      {selectedUnmatchedRow.reason || "Empty"}
+                    </p>
+                  </div>
+                )}
               </div>
             )}
           </div>
         </div>
       </div>
-
-      {/* Display the assigned person's completion percentage */}
-      {/* <div className="mt-6 p-4 bg-gray-100 rounded overflow-y-auto max-h-80">
-        <h3 className="font-semibold text-lg mb-4">Completion Accuracy per Assigned Person</h3>
-        <table className="min-w-full table-auto">
-          <thead>
-            <tr className="border-b">
-              <th className="px-4 py-2 text-left">Assigned Person</th>
-              <th className="px-4 py-2 text-left">Completion Percentage</th>
-            </tr>
-          </thead>
-          <tbody>
-            {Object.entries(percentagePerAssignedPerson).map(
-              ([person, percentage]) => (
-                <tr key={person} className="border-b">
-                  <td className="px-4 py-2">{person}</td>
-                  <td className="px-4 py-2">{percentage}%</td>
-                </tr>
-              )
-            )}
-          </tbody>
-        </table>
-      </div> */}
+      <div>
+        <div className="mt-6 p-4 bg-gray-100 rounded overflow-y-auto max-h-80">
+          <h3 className="font-semibold text-lg mb-4">
+            Completion Accuracy per Assigned Person
+          </h3>
+          <table className="min-w-full table-auto">
+            <thead>
+              <tr className="border-b">
+                <th className="px-4 py-2 text-left">Assigned Person</th>
+                <th className="px-4 py-2 text-left">Completion Percentage</th>
+              </tr>
+            </thead>
+            <tbody>
+              {Object.entries(individualAccuracy).map(
+                ([person, percentage]) => (
+                  <tr key={person} className="border-b">
+                    <td className="px-4 py-2">{person}</td>
+                    <td className="px-4 py-2">{percentage}%</td>
+                  </tr>
+                )
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+      
 
       {/* Add here */}
     </div>
