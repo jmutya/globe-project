@@ -30,6 +30,7 @@ const Reports = () => {
   const [totalRows, setTotalRows] = useState(0); // Total rows
   const [accuracyPercentage, setAccuracyPercentage] = useState(0); // Accuracy percentage
   const [selectedRow, setSelectedRow] = useState(null);
+  const [closingAccuracy, setClosingAccuracy] = useState(0);
 
   const [percentagePerAssignedPerson, setPercentagePerAssignedPerson] =
     useState({}); // Store the percentages for each assigned person
@@ -193,10 +194,49 @@ const Reports = () => {
                   assignedPersonsData[assignedTo].completed += 1;
                 }
               }
+
+              const causeIndex = headers.indexOf("Cause");
+              const reasonIndex = headers.indexOf("Reason For Outage");
+              
+              let unmatchedCount = 0;
+let totalRows = 0;
+
+sheet.slice(1).forEach((row) => {
+  totalRows += 1;
+
+  const cause = row[causeIndex];
+  const reason = row[reasonIndex];
+
+  if (
+    !cause || !reason || // Check for missing values
+    typeof cause !== "string" || typeof reason !== "string"
+  ) {
+    unmatchedCount += 1;
+    return;
+  }
+
+  const reasonPrefix = reason.split("-")[0].trim().toLowerCase();
+  const causeText = cause.trim().toLowerCase();
+
+  if (reasonPrefix !== causeText) {
+    unmatchedCount += 1;
+  }
+});
+
+let closingAccuracy = 0;
+
+if (totalRows > 0) {
+  closingAccuracy = ((totalRows - unmatchedCount) / totalRows) * 100;
+}
+
+setClosingAccuracy(closingAccuracy.toFixed(2));
+
             }
           });
         }
       }
+
+      
 
       const percentageData = {};
       for (const [person, data] of Object.entries(assignedPersonsData)) {
@@ -515,10 +555,10 @@ const Reports = () => {
 
       <div className="mb-4 p-4 bg-gray-100 text-gray-800 rounded flex space-x-4">
         <div className="w-1/2">
-        <h3 className="text-lg font-semibold mr-4 ml-6 mt-4">
+          <h3 className="text-lg font-semibold mr-4 ml-6 mt-4">
             Overall Closing Accuracy:
           </h3>
-        <div className="w-60 h-60 mt-8 ml-12">
+          <div className="w-60 h-60 mt-8 ml-12">
             <CircularProgressbar
               value={parseFloat(accuracyPercentage)}
               text={`${accuracyPercentage}%`}
@@ -533,7 +573,15 @@ const Reports = () => {
           </div>
         </div>
 
-        <div className="w-1/2 max-h-4"></div>
+        <div className="w-1/2 max-h-4">
+          <div className="mt-6 p-4 bg-blue-100 rounded">
+            <h3 className="font-semibold text-lg mb-2">Closing Accuracy</h3>
+            <p>
+              {closingAccuracy}% of rows have matching Cause and Reason for
+              Outage.
+            </p>
+          </div>
+        </div>
       </div>
 
       {/* Display the assigned person's completion percentage */}
