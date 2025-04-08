@@ -31,6 +31,7 @@ const Reports = () => {
   const [accuracyPercentage, setAccuracyPercentage] = useState(0); // Accuracy percentage
   const [selectedRow, setSelectedRow] = useState(null);
   const [closingAccuracy, setClosingAccuracy] = useState(0);
+  const [unmatchedRows, setUnmatchedRows] = useState([]);
 
   const [percentagePerAssignedPerson, setPercentagePerAssignedPerson] =
     useState({}); // Store the percentages for each assigned person
@@ -197,46 +198,61 @@ const Reports = () => {
 
               const causeIndex = headers.indexOf("Cause");
               const reasonIndex = headers.indexOf("Reason For Outage");
-              
-              let unmatchedCount = 0;
-let totalRows = 0;
+              const resolvedByIndex = headers.indexOf("Resolved by"); // 👈 Add Resolved By index
+              const numberByIndex = headers.indexOf("Number"); // 👈 Add Number index
 
-sheet.slice(1).forEach((row) => {
-  totalRows += 1;
+              let unmatchedRows = [];
+              let totalRows = 0;
 
-  const cause = row[causeIndex];
-  const reason = row[reasonIndex];
+              sheet.slice(1).forEach((row, index) => {
+                totalRows += 1;
 
-  if (
-    !cause || !reason || // Check for missing values
-    typeof cause !== "string" || typeof reason !== "string"
-  ) {
-    unmatchedCount += 1;
-    return;
-  }
+                const cause = row[causeIndex];
+                const reason = row[reasonIndex];
+                const resolvedBy = row[resolvedByIndex]; // 👈 Fetch Resolved By
+                const number = row[numberByIndex]; // 👈 Fetch Number
 
-  const reasonPrefix = reason.split("-")[0].trim().toLowerCase();
-  const causeText = cause.trim().toLowerCase();
+                if (
+                  !cause ||
+                  !reason ||
+                  typeof cause !== "string" ||
+                  typeof reason !== "string"
+                ) {
+                  unmatchedRows.push({
+                    number: number,
+                    cause,
+                    reason,
+                    resolvedBy,
+                  }); // +2 for header row
+                  return;
+                }
 
-  if (reasonPrefix !== causeText) {
-    unmatchedCount += 1;
-  }
-});
+                const reasonPrefix = reason.split("-")[0].trim().toLowerCase();
+                const causeText = cause.trim().toLowerCase();
 
-let closingAccuracy = 0;
+                if (reasonPrefix !== causeText) {
+                  unmatchedRows.push({
+                    number: number,
+                    cause,
+                    reason,
+                    resolvedBy,
+                  });
+                }
+              });
 
-if (totalRows > 0) {
-  closingAccuracy = ((totalRows - unmatchedCount) / totalRows) * 100;
-}
+              let closingAccuracy = 0;
 
-setClosingAccuracy(closingAccuracy.toFixed(2));
+              if (totalRows > 0) {
+                closingAccuracy =
+                  ((totalRows - unmatchedRows.length) / totalRows) * 100;
+              }
 
+              setClosingAccuracy(closingAccuracy.toFixed(2));
+              setUnmatchedRows(unmatchedRows);
             }
           });
         }
       }
-
-      
 
       const percentageData = {};
       for (const [person, data] of Object.entries(assignedPersonsData)) {
@@ -461,7 +477,7 @@ setClosingAccuracy(closingAccuracy.toFixed(2));
       )}
 
       {/* Circular Progress Bar */}
-      <div className="mb-4 flex space-x-4">
+      <div className="mb-11 flex space-x-4">
         {/* Overall Ticket Issuance Accuracy */}
         <div className="w-1/4">
           <h3 className="text-lg font-semibold mr-4 ml-6 mt-4">
@@ -504,11 +520,7 @@ setClosingAccuracy(closingAccuracy.toFixed(2));
         </div>
 
         {/* Incomplete Rows */}
-        <div className="w-3/4 overflow-y-auto max-h-90">
-          {/* <div className="mt-4">
-            <h2 className="text-lg font-semibold">Incomplete Rows:</h2>
-          </div> */}
-
+        <div className="w-3/4 overflow-y-auto max-h-90 mb-11">
           {hasCompleteRows && (
             <div className="mt-4 p-4 bg-green-100 text-green-800 rounded">
               ✅ All required fields are complete in the uploaded Excel files.
@@ -517,7 +529,7 @@ setClosingAccuracy(closingAccuracy.toFixed(2));
 
           {!hasCompleteRows && incompleteRows.length > 0 && (
             <div className="mt-4 p-4 bg-yellow-100 text-yellow-800 rounded">
-              <h4 className="font-semibold mb-2">⚠️ Incomplete Rows Found:</h4>
+              <h4 className="font-semibold mb-4 text-lg">⚠️ Incomplete Rows Found:</h4>
               <table className="min-w-full table-auto">
                 <thead>
                   <tr className="border-b">
@@ -553,15 +565,15 @@ setClosingAccuracy(closingAccuracy.toFixed(2));
         </div>
       </div>
 
-      <div className="mb-4 p-4 bg-gray-100 text-gray-800 rounded flex space-x-4">
-        <div className="w-1/2">
+      <div className="mb-4 rounded flex space-x-4 mt-11">
+        <div className="w-1/4">
           <h3 className="text-lg font-semibold mr-4 ml-6 mt-4">
             Overall Closing Accuracy:
           </h3>
           <div className="w-60 h-60 mt-8 ml-12">
             <CircularProgressbar
-              value={parseFloat(accuracyPercentage)}
-              text={`${accuracyPercentage}%`}
+              value={parseFloat(closingAccuracy)}
+              text={`${closingAccuracy}%`}
               styles={buildStyles({
                 pathColor: "#4caf50", // Customize color of the progress
                 textColor: "#333", // Text color
@@ -573,13 +585,39 @@ setClosingAccuracy(closingAccuracy.toFixed(2));
           </div>
         </div>
 
-        <div className="w-1/2 max-h-4">
-          <div className="mt-6 p-4 bg-blue-100 rounded">
-            <h3 className="font-semibold text-lg mb-2">Closing Accuracy</h3>
-            <p>
-              {closingAccuracy}% of rows have matching Cause and Reason for
-              Outage.
-            </p>
+        <div className="w-3/4 max-h-4">
+          <div>
+            {unmatchedRows.length > 0 && (
+              <div className="mt-6 p-4 bg-red-100 rounded">
+                <h3 className="font-semibold text-lg mb-4 text-red-800">
+                ⚠️ Unmatched Rows Found:
+                </h3>
+                <table className="min-w-full table-auto">
+                  <thead>
+                    <tr className="border-b">
+                      <th className="px-4 py-2 text-left">Ticket Number</th>
+                      <th className="px-4 py-2 text-left">Cause</th>
+                      <th className="px-4 py-2 text-left">Reason for Outage</th>
+                      <th className="px-4 py-2 text-left">Resolved By</th>{" "}
+                      {/* 👈 Add this */}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {unmatchedRows.map((row, idx) => (
+                      <tr key={idx} className="border-b">
+                        <td className="px-4 py-2">{row.number}</td>
+                        <td className="px-4 py-2">{row.cause || "Empty"}</td>
+                        <td className="px-4 py-2">{row.reason || "Empty"}</td>
+                        <td className="px-4 py-2">
+                          {row.resolvedBy || "Unassigned"}
+                        </td>{" "}
+                        {/* 👈 Display value */}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </div>
         </div>
       </div>
