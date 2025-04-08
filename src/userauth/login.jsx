@@ -36,9 +36,8 @@ const Login = () => {
   };
 
   const checkActiveSession = async (uid) => {
-    const sessionRef = doc(db, "activeSessions", uid);
     const sessionSnapshot = await getDocs(query(collection(db, "activeSessions"), where("uid", "==", uid)));
-    return !sessionSnapshot.empty; // Returns true if user already has an active session
+    return !sessionSnapshot.empty;
   };
 
   const handleEmailLogin = async (e) => {
@@ -49,6 +48,7 @@ const Login = () => {
     try {
       const trimmedEmail = email.trim();
       const trimmedPassword = password.trim();
+
       if (!trimmedEmail || !trimmedPassword) {
         setError("Email and password cannot be empty.");
         setLoading(false);
@@ -100,8 +100,15 @@ const Login = () => {
   };
 
   return (
-    <div className="flex justify-center items-center h-screen bg-gray-100">
-      <div className="bg-white p-10 rounded-lg shadow-lg w-[500px] text-center">
+    <div className="relative flex justify-center items-center h-screen bg-[#0f172a] overflow-hidden">
+      {/* Random Animated Bubbles */}
+      <div className="absolute w-96 h-96 bg-blue-500 rounded-full opacity-30 blur-[100px] animate-float1" />
+      <div className="absolute w-80 h-80 bg-purple-500 rounded-full opacity-30 blur-[90px] animate-float2 top-1/4 right-10" />
+      <div className="absolute w-72 h-72 bg-pink-500 rounded-full opacity-30 blur-[80px] animate-float3 bottom-20 left-1/4" />
+      <div className="absolute w-64 h-64 bg-cyan-500 rounded-full opacity-30 blur-[90px] animate-float4 bottom-10 right-10" />
+
+      {/* 3D Login Box */}
+      <div className="z-10 bg-white p-10 rounded-xl w-[500px] text-center shadow-xl transition-transform duration-300">
         <div className="flex justify-center mb-6">
           <img src={logo} alt="Logo" className="w-32 h-auto" />
         </div>
@@ -148,7 +155,9 @@ const Login = () => {
           <button
             type="submit"
             className={`w-full p-3 rounded-md transition ${
-              loading ? "bg-gray-400 cursor-not-allowed" : "bg-blue-500 text-white hover:bg-blue-600"
+              loading
+                ? "bg-gray-400 cursor-not-allowed"
+                : "bg-blue-500 text-white hover:bg-blue-600"
             }`}
             disabled={loading}
           >
