@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from "react";
+import React, { useState, useCallback, Suspense, lazy } from "react";
 import { useNavigate } from "react-router-dom";
 import { Menu, MenuButton, MenuItem, MenuItems } from "@headlessui/react";
 import { getAuth, signOut } from "firebase/auth";
@@ -13,14 +13,13 @@ import {
 } from "@heroicons/react/24/outline";
 import { FaFacebook, FaInstagram, FaTwitter } from "react-icons/fa";
 import Alarms from "../content/alarm";
-import NetworkSurveillanceDashboard from "../content/dashboard";
-import AddEmail from "../content/addemail";
-import Reports from "../content/reports";
-import ExcelUploader from "../content/documents";
+const NetworkSurveillanceDashboard = lazy(() => import("../content/dashboard"));
+const Reports = lazy(() => import("../content/reports"));
+const AddEmail = lazy(() => import("../content/addemail"));
+const ExcelUploader = lazy(() => import("../content/documents"));
 import SearchBar from "../../main/searchbar/searchbar";
 import MainContent from "../../main/mainContent";
-import UserMenu from "../../main/logout/logout";
-import LogOut from "../../main/logout/logout";
+import Logo from "./navigation/logo";
 
 const navigation = [
   { name: "Dashboard", icon: ChartBarSquareIcon },
@@ -80,15 +79,30 @@ const Sidebar = ({ user }) => {
   const renderContent = () => {
     switch (selected) {
       case "Dashboard":
-        return <NetworkSurveillanceDashboard />;
-      case "Add Emails":
-        return <AddEmail />;
-      case "Alarms":
-        return <Alarms />;
-      case "Documents":
-        return <ExcelUploader />;
+        return (
+          <Suspense fallback={<div>Loading Dashboard...</div>}>
+            <NetworkSurveillanceDashboard />
+          </Suspense>
+        );
       case "Reports":
-        return <Reports />;
+        return (
+          <Suspense fallback={<div>Loading Report...</div>}>
+            <Reports />
+          </Suspense>
+        );
+      case "Documents":
+        return (
+          <Suspense fallback={<div>Loading Documents...</div>}>
+            <ExcelUploader />
+          </Suspense>
+        );
+      case "Add Emails":
+        return (
+          <Suspense fallback={<div>Loading Documents...</div>}>
+            <AddEmail />
+          </Suspense>
+        );
+
       default:
         return <div>Select an option from the sidebar.</div>;
     }
@@ -98,13 +112,7 @@ const Sidebar = ({ user }) => {
     <div className="flex h-screen bg-gray-100 overflow-hidden">
       {/* Sidebar */}
       <div className="flex flex-col w-64 bg-indigo-600 p-4 text-white h-screen overflow-y-auto">
-        <div className="flex items-center mb-6">
-          <img
-            alt="Your Company"
-            src="/src/assets/globe-logo-name.png"
-            className="h-12 w-auto filter brightness-0 invert"
-          />
-        </div>
+        <Logo />
         <nav className="space-y-2">
           {navigation.map((item) => (
             <NavigationItem
@@ -118,12 +126,7 @@ const Sidebar = ({ user }) => {
 
         {/* Social Media Links */}
         <div className="mt-auto pt-4">
-          <h2 className="mb-2 text-sm">Messaging Tools</h2>
-          <nav className="space-y-2">
-            {socialLinks.map((link) => (
-              <SocialLink key={link.name} link={link} />
-            ))}
-          </nav>
+          <h2 className="mb-2 text-sm">RSC MIN</h2>
           <a
             href="#"
             onClick={handleLogout}
@@ -138,30 +141,20 @@ const Sidebar = ({ user }) => {
       {/* Main Content */}
       <div className="flex-1 p-4">
         <div className="flex justify-between items-center mb-6">
-         
-        <SearchBar/>
+          <SearchBar />
           <div className="flex items-center space-x-4">
             <div className="w-4 h-4 rounded-full bg-green-500" />
-            <Menu as="div" className="relative">
-              <MenuButton className="flex items-center space-x-2">
-                <span>
-                  <p className="text-sm font-semibold">{user?.email?.split("@")[0]}</p>
-                </span>
-              </MenuButton>
-              <MenuItems
-                as="div"
-                className="absolute right-0 mt-2 w-48 bg-white border rounded-md shadow-lg"
-              >
-                <MenuItem>
-                  
-                  <LogOut handleLogout={handleLogout} />
-                </MenuItem>
-              </MenuItems>
-            </Menu>
+            <div className="flex items-center space-x-2">
+              <span>
+                <p className="text-sm font-semibold">
+                  {user?.email?.split("@")[0]}
+                </p>
+              </span>
+            </div>
           </div>
         </div>
 
-        <MainContent renderContent={renderContent}/>
+        <MainContent renderContent={renderContent} />
       </div>
     </div>
   );
