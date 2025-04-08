@@ -32,8 +32,10 @@
     "react-leaflet": "^5.0.0",
     "react-loading-skeleton": "^3.5.0",
     "react-router-dom": "^7.4.0",
+    "react-toastify": "^11.0.5",
     "react-window": "^1.8.11",
     "recharts": "^2.15.1",
+    "sweetalert2": "^11.17.2",
     "xlsx": "^0.18.5"
   },
   "devDependencies": {

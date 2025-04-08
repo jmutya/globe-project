@@ -78,69 +78,55 @@ const AddEmail = () => {
   <div className="flex flex-col md:flex-row p-4 gap-4 h-[calc(100vh-100px)]">
     
     {/* Left Panel: Add User */}
-    <div className="flex-1 border border-gray-300 rounded-xl bg-white p-6 flex flex-col shadow">
-      <h3 className="text-xl font-semibold text-indigo-800 mb-4">Add New User Email</h3>
-      
-      <div className="flex flex-col gap-3 mb-4">
-      <input
-        type="email"
-        value={email}
-        onChange={(e) => setEmail(e.target.value)}
-        placeholder="Enter email"
-        className="p-3 border border-gray-200 bg-white rounded-xl w-full placeholder-gray-400 shadow-md focus:outline-none focus:ring-2 focus:ring-indigo-400 transition"
-      />
-        {checkingEmail && <p className="text-sm text-gray-500">Checking email...</p>}
-        {emailCheckResult && (
-          <p className={`text-sm ${emailCheckResult.includes("✅") ? "text-green-600" : "text-red-500"}`}>
-            {emailCheckResult}
-          </p>
-        )}
-        <input
-          type="password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          placeholder="Enter password"
-          className="mb-4 p-3 border border-gray-200 bg-white rounded-xl w-full placeholder-gray-400 shadow-md focus:outline-none focus:ring-2 focus:ring-indigo-400 transition"
-        />
+    <div className="flex-1 p-8 border-2 border-indigo-400 rounded-xl bg-gradient-to-r from-blue-100 to-indigo-200 flex flex-col justify-center shadow-lg">
+        <h3 className="text-3xl font-bold mb-6 text-indigo-900">Add New User Email</h3>
+        <div className="flex flex-col mb-4 gap-2">
+          <input
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            placeholder="Enter email"
+            className="p-3 border border-gray-200 bg-white rounded-xl w-full placeholder-gray-400 shadow-md focus:outline-none focus:ring-2 focus:ring-indigo-400 transition"
+          />
+          {checkingEmail && <p className="text-gray-500">Checking email...</p>}
+          {emailCheckResult && <p className={`${emailCheckResult.includes("✅") ? "text-green-600" : "text-red-500"}`}>{emailCheckResult}</p>}
+        </div>
+          <input
+            type="password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            placeholder="Enter password"
+            className="mb-4 p-3 border border-gray-200 bg-white rounded-xl w-full placeholder-gray-400 shadow-md focus:outline-none focus:ring-2 focus:ring-indigo-400 transition"
+          />
+        <button
+          onClick={handleAddUser}
+          className={`px-6 py-3 bg-indigo-600 text-white rounded-xl shadow-lg transition-all ${loading ? "opacity-50 cursor-not-allowed animate-pulse" : "hover:bg-indigo-700"}`}
+          disabled={loading}
+        >
+          {loading ? "Adding..." : "Add User"}
+        </button>
       </div>
 
-      <button
-        onClick={handleAddUser}
-        disabled={loading}
-        className={`mt-auto py-3 px-4 rounded-lg text-white font-medium shadow-md ${
-          loading
-            ? "bg-indigo-400 opacity-50 cursor-not-allowed"
-            : "bg-indigo-600 hover:bg-indigo-700 transition"
-        }`}
-      >
-        {loading ? "Adding..." : "Add User"}
-      </button>
-    </div>
-
     {/* Right Panel: Email List */}
-    <div className="flex-1 border border-gray-300 rounded-xl bg-white p-6 overflow-y-auto shadow">
-      <h3 className="text-xl font-semibold text-indigo-800 mb-4">Added Emails</h3>
-
-      {loadingEmails ? (
-        <div className="flex items-center space-x-3">
-          <div className="animate-spin h-6 w-6 border-2 border-t-indigo-600 border-gray-200 rounded-full" />
-          <p className="text-gray-600 text-sm">Loading emails...</p>
-        </div>
-      ) : emails.length > 0 ? (
-        <ul className="space-y-2">
-          {emails.map((email, index) => (
-            <li
-              key={index}
-              className="p-3 border border-indigo-100 rounded-lg bg-indigo-50 text-indigo-700 shadow-sm hover:bg-indigo-100"
-            >
-              {email}
-            </li>
-          ))}
-        </ul>
-      ) : (
-        <p className="text-sm text-gray-500">No emails added yet.</p>
-      )}
-    </div>
+    <div className="flex-1 p-6 border-2 border-gray-400 rounded-xl bg-gray-50 overflow-auto shadow-lg">
+        <h3 className="text-3xl font-semibold mb-4 text-indigo-700">Added Emails:</h3>
+        {loadingEmails ? (
+          <div className="flex justify-center items-center py-4">
+            <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-indigo-500"></div>
+            <p className="ml-3 text-gray-600">Loading emails...</p>
+          </div>
+        ) : emails.length > 0 ? (
+          <ul className="space-y-3">
+            {emails.map((email, index) => (
+              <li key={index} className="p-3 border rounded-xl bg-indigo-100 text-indigo-800 px-4 py-2 shadow-md hover:bg-indigo-200">
+                {email}
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p className="text-gray-500">No emails added yet.</p>
+        )}
+      </div>
   </div>
 );
 
