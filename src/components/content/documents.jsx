@@ -138,7 +138,7 @@ const ExcelUploader = () => {
   return (
     <>
       {/* Toast notifications */}
-      <Toaster position="top-center" />
+      <Toaster position="bottom-right" />
       <div className="flex flex-col md:flex-row p-4 gap-4 h-[calc(100vh-100px)]">
         {/* File upload section */}
         <div className="w-full md:w-1/3 bg-white rounded-xl shadow-lg p-4 flex flex-col">
