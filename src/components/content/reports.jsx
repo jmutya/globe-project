@@ -197,69 +197,77 @@ const Reports = () => {
               }
 
               const causeIndex = headers.indexOf("Cause");
-const reasonIndex = headers.indexOf("Reason For Outage");
-const resolvedByIndex = headers.indexOf("Resolved by");
-const numberByIndex = headers.indexOf("Number");
+              const reasonIndex = headers.indexOf("Reason For Outage");
+              const resolvedByIndex = headers.indexOf("Resolved by");
+              const numberByIndex = headers.indexOf("Number");
 
-let unmatchedRows = [];
-let totalRows = 0;
-let resolverStats = {}; // Will track { totalResolved, errors }
+              let unmatchedRows = [];
+              let totalRows = 0;
+              let resolverStats = {}; // Will track { totalResolved, errors }
 
-// Process each row
-sheet.slice(1).forEach(row => {
-  totalRows += 1;
+              // Process each row
+              sheet.slice(1).forEach((row) => {
+                totalRows += 1;
 
-  const cause = row[causeIndex];
-  const reason = row[reasonIndex];
-  const resolvedBy = row[resolvedByIndex]?.trim();
-  const number = row[numberByIndex];
+                const cause = row[causeIndex];
+                const reason = row[reasonIndex];
+                const resolvedBy = row[resolvedByIndex]?.trim();
+                const number = row[numberByIndex];
 
-  // Initialize resolver if not exists
-  if (resolvedBy && !resolverStats[resolvedBy]) {
-    resolverStats[resolvedBy] = { totalResolved: 0, errors: 0 };
-  }
+                // Initialize resolver if not exists
+                if (resolvedBy && !resolverStats[resolvedBy]) {
+                  resolverStats[resolvedBy] = { totalResolved: 0, errors: 0 };
+                }
 
-  // Count this resolution
-  if (resolvedBy) {
-    resolverStats[resolvedBy].totalResolved += 1;
-  }
+                // Count this resolution
+                if (resolvedBy) {
+                  resolverStats[resolvedBy].totalResolved += 1;
+                }
 
-  // Check for errors
-  const hasError = !cause || !reason || 
-                  typeof cause !== "string" || 
+                // Check for errors
+                const hasError =
+                  !cause ||
+                  !reason ||
+                  typeof cause !== "string" ||
                   typeof reason !== "string" ||
-                  reason.split("-")[0].trim().toLowerCase() !== cause.trim().toLowerCase();
+                  reason.split("-")[0].trim().toLowerCase() !==
+                    cause.trim().toLowerCase();
 
-  if (hasError) {
-    unmatchedRows.push({ number, cause, reason, resolvedBy });
-    
-    if (resolvedBy) {
-      resolverStats[resolvedBy].errors += 1;
-    }
-  }
-});
+                if (hasError) {
+                  unmatchedRows.push({ number, cause, reason, resolvedBy });
 
-// Calculate overall accuracy
-const closingAccuracy = totalRows > 0 
-  ? ((totalRows - unmatchedRows.length) / totalRows * 100).toFixed(2)
-  : "0.00";
+                  if (resolvedBy) {
+                    resolverStats[resolvedBy].errors += 1;
+                  }
+                }
+              });
 
-// Calculate individual accuracy using the standard formula
-const individualAccuracy = {};
-Object.entries(resolverStats).forEach(([resolver, stats]) => {
-  if (stats.totalResolved > 0) {
-    individualAccuracy[resolver] = (
-      (stats.totalResolved - stats.errors) / 
-      stats.totalResolved * 100
-    ).toFixed(2);
-  } else {
-    individualAccuracy[resolver] = "0.00";
-  }
-});
+              // Calculate overall accuracy
+              const closingAccuracy =
+                totalRows > 0
+                  ? (
+                      ((totalRows - unmatchedRows.length) / totalRows) *
+                      100
+                    ).toFixed(2)
+                  : "0.00";
 
-setClosingAccuracy(closingAccuracy);
-setUnmatchedRows(unmatchedRows);
-setIndividualAccuracy(individualAccuracy);
+              // Calculate individual accuracy using the standard formula
+              const individualAccuracy = {};
+              Object.entries(resolverStats).forEach(([resolver, stats]) => {
+                if (stats.totalResolved > 0) {
+                  individualAccuracy[resolver] = (
+                    ((stats.totalResolved - stats.errors) /
+                      stats.totalResolved) *
+                    100
+                  ).toFixed(2);
+                } else {
+                  individualAccuracy[resolver] = "0.00";
+                }
+              });
+
+              setClosingAccuracy(closingAccuracy);
+              setUnmatchedRows(unmatchedRows);
+              setIndividualAccuracy(individualAccuracy);
             }
           });
         }
@@ -577,6 +585,7 @@ setIndividualAccuracy(individualAccuracy);
           {/* Conditionally render selected row details */}
         </div>
       </div>
+
       {/* Display the assigned person's ticket issuance percentage */}
       <div className="mt-6 p-4 bg-gray-100 rounded overflow-y-auto max-h-80">
         <h3 className="font-semibold text-lg mb-4">
@@ -620,10 +629,38 @@ setIndividualAccuracy(individualAccuracy);
               })}
             />
           </div>
+          <div>
+            {selectedUnmatchedRow && (
+              <div className="mt-4 p-4 bg-white border rounded shadow">
+                <h4 className="text-lg font-semibold mb-2 text-gray-800">
+                  Selected Row Details
+                </h4>
+                <p>
+                  <strong>Ticket Number:</strong> {selectedUnmatchedRow.number}
+                </p>
+                <p>
+                  <strong>Resolved By:</strong>{" "}
+                  {selectedUnmatchedRow.resolvedBy || "Unassigned"}
+                </p>
+                <p>
+                  <strong>Cause:</strong>{" "}
+                  {selectedUnmatchedRow.cause || "Empty"}
+                </p>
+                <p>
+                  <strong>Reason for Outage:</strong>{" "}
+                  {selectedUnmatchedRow.reason || "Empty"}
+                </p>
+                <p>
+                  <strong>Closing Accuracy:</strong>{" "}
+                  {individualAccuracy[selectedUnmatchedRow.resolvedBy]}
+                </p>
+              </div>
+            )}
+          </div>
         </div>
 
-        <div className="w-3/4 max-h-4">
-          <div>
+        <div className="w-3/4 max-h-90 mb-11">
+          <div className="max-h-90vh mb-11">
             {unmatchedRows.length > 0 && (
               <div className="mt-6 p-4 bg-red-100 rounded">
                 <h3 className="font-semibold text-lg mb-4 text-red-800">
@@ -657,29 +694,6 @@ setIndividualAccuracy(individualAccuracy);
                     ))}
                   </tbody>
                 </table>
-                {selectedUnmatchedRow && (
-                  <div className="mt-4 p-4 bg-white border rounded shadow">
-                    <h4 className="text-lg font-semibold mb-2 text-gray-800">
-                      Selected Row Details
-                    </h4>
-                    <p>
-                      <strong>Ticket Number:</strong>{" "}
-                      {selectedUnmatchedRow.number}
-                    </p>
-                    <p>
-                      <strong>Resolved By:</strong>{" "}
-                      {selectedUnmatchedRow.resolvedBy || "Unassigned"}
-                    </p>
-                    <p>
-                      <strong>Cause:</strong>{" "}
-                      {selectedUnmatchedRow.cause || "Empty"}
-                    </p>
-                    <p>
-                      <strong>Reason for Outage:</strong>{" "}
-                      {selectedUnmatchedRow.reason || "Empty"}
-                    </p>
-                  </div>
-                )}
               </div>
             )}
           </div>
@@ -710,7 +724,6 @@ setIndividualAccuracy(individualAccuracy);
           </table>
         </div>
       </div>
-      
 
       {/* Add here */}
     </div>
