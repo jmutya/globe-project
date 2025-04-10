@@ -5,7 +5,7 @@ import AccuracyProgress from "./reportComponents/AccuracyProgress";
 import IncompleteRowsTable from "./reportComponents/IncompleteRowsTable";
 import UnmatchedRowsTable from "./reportComponents/UnmatchedRowsTable";
 import AccuracyByPersonTable from "./reportComponents/AccuracyByPersonTable";
-import { CircularProgressbar, buildStyles } from "react-circular-progressbar"; // Still used for overall accuracy
+import { CircularProgressbar, buildStyles } from "react-circular-progressbar";
 import "react-circular-progressbar/dist/styles.css";
 import "react-loading-skeleton/dist/skeleton.css";
 import { MinusSmallIcon } from "@heroicons/react/20/solid";
@@ -17,15 +17,11 @@ const Reports = () => {
   const [sortBy, setSortBy] = useState("date");
   const [selectedRow, setSelectedRow] = useState(null);
   const [selectedUnmatchedRow, setSelectedUnmatchedRow] = useState(null);
+  const [selectedAccuracyView, setSelectedAccuracyView] = useState("ticketIssuance"); // NEW
+
   const colors = [
-    "#ff6384",
-    "#36a2eb",
-    "#ffce56",
-    "#4bc0c0",
-    "#9966ff",
-    "#ff9f40",
-    "#8b0000",
-    "#008000",
+    "#ff6384", "#36a2eb", "#ffce56", "#4bc0c0",
+    "#9966ff", "#ff9f40", "#8b0000", "#008000",
   ];
 
   const {
@@ -83,7 +79,6 @@ const Reports = () => {
                 ))}
               </select>
             )}
-
             <select
               className="p-2 border rounded-md"
               value={selectedYear}
@@ -107,6 +102,8 @@ const Reports = () => {
           <option value="date">Date</option>
           <option value="total">Total Alarms</option>
         </select>
+
+        
       </div>
 
       {isLoading ? (
@@ -117,69 +114,70 @@ const Reports = () => {
       ) : (
         <AlarmLineChart chartData={chartData} alarmTypes={alarmTypes} colors={colors} />
       )}
+      
+      {/* Accuracy View Toggle */}
+      <label>Accuracy View: </label>
+        <select
+          className="p-2 border rounded-md ml-4"
+          value={selectedAccuracyView}
+          onChange={(e) => setSelectedAccuracyView(e.target.value)}
+        >
+          <option value="ticketIssuance">Ticket Issuance</option>
+          <option value="closingAccuracy">Closing Accuracy</option>
+        </select>
 
-      <div className="mb-11 flex space-x-4">
-      <AccuracyProgress percentage={accuracyPercentage} title="Overall Ticket Issuance Accuracy" />
-        <div className="w-3/4 overflow-y-auto max-h-90 mb-11">
-          <IncompleteRowsTable incompleteRows={incompleteRows} onRowClick={setSelectedRow} />
-          {selectedRow?.assignedTo && percentagePerAssignedPerson[selectedRow.assignedTo] && (
-            <div className="mt-4 p-4 bg-gray-100 text-gray-800 rounded">
-              <h3 className="text-lg font-semibold">Selected Row Details</h3>
-              <p>
-                <strong>Ticket Number:</strong> {selectedRow.number}
-              </p>
-              <p>
-                <strong>Assigned To:</strong> {selectedRow.assignedTo || "Not Assigned"}
-              </p>
-              <p>
-                <strong>Missing Columns:</strong> {selectedRow.missingColumns.join(", ")}
-              </p>
-              <p>
-                <strong>Accuracy Percentage:</strong> {percentagePerAssignedPerson[selectedRow.assignedTo]}%
-              </p>
+      {/* Ticket Issuance View */}
+      {selectedAccuracyView === "ticketIssuance" && (
+        <>
+          <div className="mb-11 flex space-x-4">
+            <AccuracyProgress percentage={accuracyPercentage} title="Overall Ticket Issuance Accuracy" />
+            <div className="w-3/4 overflow-y-auto max-h-90 mb-11">
+              <IncompleteRowsTable incompleteRows={incompleteRows} onRowClick={setSelectedRow} />
+              {selectedRow?.assignedTo && percentagePerAssignedPerson[selectedRow.assignedTo] && (
+                <div className="mt-4 p-4 bg-gray-100 text-gray-800 rounded">
+                  <h3 className="text-lg font-semibold">Selected Row Details</h3>
+                  <p><strong>Ticket Number:</strong> {selectedRow.number}</p>
+                  <p><strong>Assigned To:</strong> {selectedRow.assignedTo || "Not Assigned"}</p>
+                  <p><strong>Missing Columns:</strong> {selectedRow.missingColumns.join(", ")}</p>
+                  <p><strong>Accuracy Percentage:</strong> {percentagePerAssignedPerson[selectedRow.assignedTo]}%</p>
+                </div>
+              )}
             </div>
-          )}
-        </div>
-      </div>
+          </div>
 
-      <AccuracyByPersonTable
-        accuracyData={percentagePerAssignedPerson}
-        title="Ticket Issuance Accuracy per Assigned Person"
-      />
+          <AccuracyByPersonTable
+            accuracyData={percentagePerAssignedPerson}
+            title="Ticket Issuance Accuracy per Assigned Person"
+          />
+        </>
+      )}
 
-      <div className="mb-4 rounded flex space-x-4 mt-11">
-        <AccuracyProgress percentage={closingAccuracy} title="Overall Closing Accuracy" />
-        <div className="w-3/4 max-h-90 mb-11">
-          <UnmatchedRowsTable unmatchedRows={unmatchedRows} onRowClick={setSelectedUnmatchedRow} />
-          {selectedUnmatchedRow && (
-            <div className="mt-4 p-4 bg-white border rounded shadow">
-              <h4 className="text-lg font-semibold mb-2 text-gray-800">
-                Selected Row Details
-              </h4>
-              <p>
-                <strong>Ticket Number:</strong> {selectedUnmatchedRow.number}
-              </p>
-              <p>
-                <strong>Resolved By:</strong> {selectedUnmatchedRow.resolvedBy || "Unassigned"}
-              </p>
-              <p>
-                <strong>Cause:</strong> {selectedUnmatchedRow.cause || "Empty"}
-              </p>
-              <p>
-                <strong>Reason for Outage:</strong> {selectedUnmatchedRow.reason || "Empty"}
-              </p>
-              <p>
-                <strong>Closing Accuracy:</strong> {individualAccuracy[selectedUnmatchedRow.resolvedBy] || "N/A"}%
-              </p>
+      {/* Closing Accuracy View */}
+      {selectedAccuracyView === "closingAccuracy" && (
+        <>
+          <div className="mb-4 rounded flex space-x-4">
+            <AccuracyProgress percentage={closingAccuracy} title="Overall Closing Accuracy" />
+            <div className="w-3/4 max-h-90 mb-11">
+              <UnmatchedRowsTable unmatchedRows={unmatchedRows} onRowClick={setSelectedUnmatchedRow} />
+              {selectedUnmatchedRow && (
+                <div className="mt-4 p-4 bg-white border rounded shadow">
+                  <h4 className="text-lg font-semibold mb-2 text-gray-800">Selected Row Details</h4>
+                  <p><strong>Ticket Number:</strong> {selectedUnmatchedRow.number}</p>
+                  <p><strong>Resolved By:</strong> {selectedUnmatchedRow.resolvedBy || "Unassigned"}</p>
+                  <p><strong>Cause:</strong> {selectedUnmatchedRow.cause || "Empty"}</p>
+                  <p><strong>Reason for Outage:</strong> {selectedUnmatchedRow.reason || "Empty"}</p>
+                  <p><strong>Closing Accuracy:</strong> {individualAccuracy[selectedUnmatchedRow.resolvedBy] || "N/A"}%</p>
+                </div>
+              )}
             </div>
-          )}
-        </div>
-      </div>
+          </div>
 
-      <AccuracyByPersonTable
-        accuracyData={individualAccuracy}
-        title="Completion Accuracy per Assigned Person"
-      />
+          <AccuracyByPersonTable
+            accuracyData={individualAccuracy}
+            title="Completion Accuracy per Assigned Person"
+          />
+        </>
+      )}
     </div>
   );
 };
