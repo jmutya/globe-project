@@ -15,6 +15,7 @@ import "react-circular-progressbar/dist/styles.css"; // Required for styling
 import "react-loading-skeleton/dist/skeleton.css";
 import { MinusSmallIcon } from "@heroicons/react/20/solid";
 
+
 const Reports = () => {
   const [chartData, setChartData] = useState([]);
   const [alarmTypes, setAlarmTypes] = useState([]);
@@ -410,6 +411,7 @@ const Reports = () => {
       className="p-4 bg-white shadow-lg rounded-lg overflow-y-auto"
       style={{ maxHeight: "88vh", height: "auto" }}
     >
+      
       <div className="mb-4 flex gap-4 items-center flex-wrap">
         <label>Time Range:</label>
         <select
@@ -698,7 +700,9 @@ const Reports = () => {
             )}
           </div>
         </div>
+        
       </div>
+      
       <div>
         <div className="mt-6 p-4 bg-gray-100 rounded overflow-y-auto max-h-80">
           <h3 className="font-semibold text-lg mb-4">
@@ -723,10 +727,15 @@ const Reports = () => {
             </tbody>
           </table>
         </div>
+        
       </div>
 
       {/* Add here */}
+      
+   
+      
     </div>
+    
   );
 };
 
