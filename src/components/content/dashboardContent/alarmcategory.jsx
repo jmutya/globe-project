@@ -5,10 +5,9 @@ import {
   Tooltip,
   Legend,
   Cell,
-  ResponsiveContainer
+  ResponsiveContainer,
 } from "recharts";
-import * as XLSX from "xlsx";
-import supabase from "../../../backend/supabase/supabase";
+import { fetchAlarmCategoryChartData } from "../../../backend/functions/alarmCategoryUtils"; // adjust the path as needed
 
 const AlarmCategory = () => {
   const [chartData, setChartData] = useState([]);
@@ -16,56 +15,15 @@ const AlarmCategory = () => {
   const [activeIndex, setActiveIndex] = useState(null);
 
   useEffect(() => {
-    fetchAndProcessFiles();
+    const loadChartData = async () => {
+      setIsLoading(true);
+      const data = await fetchAlarmCategoryChartData();
+      setChartData(data);
+      setIsLoading(false);
+    };
+
+    loadChartData();
   }, []);
-
-  const fetchAndProcessFiles = async () => {
-    try {
-      const { data: files, error } = await supabase.storage.from("uploads").list("excels");
-      if (error) throw error;
-
-      let territoryCounts = {};
-
-      for (const file of files) {
-        const { data: fileUrl } = supabase.storage.from("uploads").getPublicUrl(`excels/${file.name}`);
-        const response = await fetch(fileUrl.publicUrl);
-        const blob = await response.arrayBuffer();
-        const workbook = XLSX.read(blob, { type: "array" });
-        const sheetName = workbook.SheetNames[0];
-        const sheet = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName], {
-          header: 1,
-        });
-
-        if (sheet.length > 1) {
-          const headers = sheet[0];
-          const territoryIndex = headers.indexOf("Cause");
-
-          if (territoryIndex === -1) continue;
-
-          sheet.slice(1).forEach((row) => {
-            const territory = String(row[territoryIndex] || "").trim();
-            if (territory) {
-              territoryCounts[territory] = (territoryCounts[territory] || 0) + 1;
-            }
-          });
-        }
-      }
-
-      const formattedData = Object.entries(territoryCounts).map(([name, value], index) => ({
-        name,
-        value,
-        fill: colors[index % colors.length],
-      }));
-
-      setChartData(formattedData);
-      setIsLoading(false);
-    } catch (error) {
-      console.error("Error fetching or processing files:", error);
-      setIsLoading(false);
-    }
-  };
-
-  const colors = ["#FF5E5E", "#FFB84C", "#FFD93D", "#72D86B", "#2BA8FF", "#0087A5", "#9951FF", "#FF7BAC"];
 
   return (
     <div className="p-4 bg-white shadow-lg rounded-lg flex flex-col items-center">
@@ -82,12 +40,12 @@ const AlarmCategory = () => {
               data={chartData}
               cx="50%"
               cy="50%"
-              innerRadius={70} // Donut hole effect
+              innerRadius={70}
               outerRadius={120}
               fill="#8884d8"
               dataKey="value"
-              paddingAngle={5} // Small gaps between segments
-              cornerRadius={4} // Rounded edges
+              paddingAngle={5}
+              cornerRadius={4}
               activeIndex={activeIndex}
               onMouseEnter={(_, index) => setActiveIndex(index)}
               onMouseLeave={() => setActiveIndex(null)}
@@ -98,16 +56,17 @@ const AlarmCategory = () => {
                   fill={entry.fill}
                   stroke="#fff"
                   strokeWidth={2}
-                  // Apply transform only to the active (hovered) slice
-                  transform={activeIndex === index ? `translate(10, -10)` : ''}
+                  transform={activeIndex === index ? `translate(10, -10)` : ""}
                 />
               ))}
             </Pie>
-            <Tooltip formatter={(value, name) => {
-              const total = chartData.reduce((acc, curr) => acc + curr.value, 0);
-              const percentage = ((value / total) * 100).toFixed(1);
-              return [`${value} ( ${percentage}% )`, name];
-            }} />
+            <Tooltip
+              formatter={(value, name) => {
+                const total = chartData.reduce((acc, curr) => acc + curr.value, 0);
+                const percentage = ((value / total) * 100).toFixed(1);
+                return [`${value} ( ${percentage}% )`, name];
+              }}
+            />
             <Legend />
           </PieChart>
         </ResponsiveContainer>
