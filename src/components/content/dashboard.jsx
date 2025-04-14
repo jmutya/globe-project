@@ -1,4 +1,4 @@
-import React, { Suspense, lazy, useState, useEffect } from "react";
+import React, { Suspense, lazy, useState } from "react";
 
 // Lazy load the components
 const AlarmCount = lazy(() => import("./dashboardContent/alarmcount"));
@@ -9,55 +9,47 @@ const AlarmTypeBarGraph = lazy(() => import("./dashboardContent/bargraph"));
 const TerritoryGraph = lazy(() => import("./dashboardContent/territorygraph"));
 const AreaLineGraph = lazy(() => import("./dashboardContent/arealinegraph"));
 
-const LazyLoadWrapper = ({ children }) => {
-  const [isVisible, setIsVisible] = useState(false);
-  
-  useEffect(() => {
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (entry.isIntersecting) {
-          setIsVisible(true);
-          observer.disconnect();
-        }
-      },
-      { threshold: 0.5 }
-    );
-    observer.observe(document.getElementById("lazyLoadComponent"));
-    
-    return () => {
-      observer.disconnect();
-    };
-  }, []);
-  
-  return (
-    <div id="lazyLoadComponent">
-      {isVisible ? children : <div>Loading...</div>}
-    </div>
-  );
-};
+import LazyLoadWrapper from "./LazyLoadWrapper";
 
 const SeverityPieChart = () => {
+  const [loadedComponents, setLoadedComponents] = useState({
+    alarmCount: false,
+    alarmsSeverity: false,
+    alarmCategory: false,
+    alarmTypeLineGraph: false,
+    alarmTypeBarGraph: false,
+    territoryGraph: false,
+    areaLineGraph: false,
+  });
+
+  const handleComponentLoaded = (componentName) => {
+    setLoadedComponents((prevState) => ({
+      ...prevState,
+      [componentName]: true,
+    }));
+  };
+
   return (
     <div className="p-4 bg-white shadow-lg rounded-lg h-[88vh] overflow-y-auto">
       {/* First ROW */}
       <div className="mt-6 flex space-x-6">
         <div className="flex-1">
           <Suspense fallback={<div>Loading Alarm Count...</div>}>
-            <LazyLoadWrapper>
+            <LazyLoadWrapper onLoaded={() => handleComponentLoaded("alarmCount")}>
               <AlarmCount />
             </LazyLoadWrapper>
           </Suspense>
         </div>
         <div className="flex-1">
           <Suspense fallback={<div>Loading Alarms Severity...</div>}>
-            <LazyLoadWrapper>
+            <LazyLoadWrapper onLoaded={() => handleComponentLoaded("alarmsSeverity")}>
               <AlarmsSeverity />
             </LazyLoadWrapper>
           </Suspense>
         </div>
         <div className="flex-1">
           <Suspense fallback={<div>Loading Alarm Category...</div>}>
-            <LazyLoadWrapper>
+            <LazyLoadWrapper onLoaded={() => handleComponentLoaded("alarmCategory")}>
               <AlarmCategory />
             </LazyLoadWrapper>
           </Suspense>
@@ -67,7 +59,7 @@ const SeverityPieChart = () => {
       {/* Second ROW */}
       <div className="mt-6">
         <Suspense fallback={<div>Loading Alarm Type Line Graph...</div>}>
-          <LazyLoadWrapper>
+          <LazyLoadWrapper onLoaded={() => handleComponentLoaded("alarmTypeLineGraph")}>
             <AlarmTypeLineGraph />
           </LazyLoadWrapper>
         </Suspense>
@@ -77,24 +69,24 @@ const SeverityPieChart = () => {
       <div className="mt-6 flex space-x-6">
         <div className="flex-1">
           <Suspense fallback={<div>Loading Alarm Type Bar Graph...</div>}>
-            <LazyLoadWrapper>
+            <LazyLoadWrapper onLoaded={() => handleComponentLoaded("alarmTypeBarGraph")}>
               <AlarmTypeBarGraph />
             </LazyLoadWrapper>
           </Suspense>
         </div>
         <div className="flex-1 min-w-[400px]">
           <Suspense fallback={<div>Loading Territory Graph...</div>}>
-            <LazyLoadWrapper>
+            <LazyLoadWrapper onLoaded={() => handleComponentLoaded("territoryGraph")}>
               <TerritoryGraph />
             </LazyLoadWrapper>
           </Suspense>
         </div>
       </div>
-      
+
       {/* Fourth ROW */}
       <div className="mt-6">
         <Suspense fallback={<div>Loading Area Line Graph...</div>}>
-          <LazyLoadWrapper>
+          <LazyLoadWrapper onLoaded={() => handleComponentLoaded("areaLineGraph")}>
             <AreaLineGraph />
           </LazyLoadWrapper>
         </Suspense>
