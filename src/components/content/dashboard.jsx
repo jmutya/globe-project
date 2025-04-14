@@ -30,25 +30,28 @@ const SeverityPieChart = () => {
   };
 
   return (
-    <div className="p-4 bg-white shadow-lg rounded-lg h-[88vh] overflow-y-auto">
-      {/* First ROW */}
-      <div className="mt-6 flex space-x-6">
-        <div className="flex-1">
-          <Suspense fallback={<div>Loading Alarm Count...</div>}>
+    <div className="p-6 bg-white shadow-lg rounded-lg h-[88vh] overflow-y-auto space-y-6">
+      {/* First ROW: Three components */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div>
+          <Suspense fallback={<div className="loading-placeholder">Loading Alarm Count...</div>}>
             <LazyLoadWrapper onLoaded={() => handleComponentLoaded("alarmCount")}>
               <AlarmCount />
             </LazyLoadWrapper>
+            
           </Suspense>
         </div>
-        <div className="flex-1">
-          <Suspense fallback={<div>Loading Alarms Severity...</div>}>
+       
+        <div>
+          <Suspense fallback={<div className="loading-placeholder">Loading Alarms Severity...</div>}>
             <LazyLoadWrapper onLoaded={() => handleComponentLoaded("alarmsSeverity")}>
               <AlarmsSeverity />
             </LazyLoadWrapper>
           </Suspense>
         </div>
-        <div className="flex-1">
-          <Suspense fallback={<div>Loading Alarm Category...</div>}>
+       
+        <div>
+          <Suspense fallback={<div className="loading-placeholder">Loading Alarm Category...</div>}>
             <LazyLoadWrapper onLoaded={() => handleComponentLoaded("alarmCategory")}>
               <AlarmCategory />
             </LazyLoadWrapper>
@@ -56,26 +59,26 @@ const SeverityPieChart = () => {
         </div>
       </div>
 
-      {/* Second ROW */}
-      <div className="mt-6">
-        <Suspense fallback={<div>Loading Alarm Type Line Graph...</div>}>
+      {/* Second ROW: One component */}
+      <div>
+        <Suspense fallback={<div className="loading-placeholder">Loading Alarm Type Line Graph...</div>}>
           <LazyLoadWrapper onLoaded={() => handleComponentLoaded("alarmTypeLineGraph")}>
             <AlarmTypeLineGraph />
           </LazyLoadWrapper>
         </Suspense>
       </div>
 
-      {/* Third ROW */}
-      <div className="mt-6 flex space-x-6">
-        <div className="flex-1">
-          <Suspense fallback={<div>Loading Alarm Type Bar Graph...</div>}>
+      {/* Third ROW: Two components */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+        <div>
+          <Suspense fallback={<div className="loading-placeholder">Loading Alarm Type Bar Graph...</div>}>
             <LazyLoadWrapper onLoaded={() => handleComponentLoaded("alarmTypeBarGraph")}>
               <AlarmTypeBarGraph />
             </LazyLoadWrapper>
           </Suspense>
         </div>
-        <div className="flex-1 min-w-[400px]">
-          <Suspense fallback={<div>Loading Territory Graph...</div>}>
+        <div className="min-w-[400px]">
+          <Suspense fallback={<div className="loading-placeholder">Loading Territory Graph...</div>}>
             <LazyLoadWrapper onLoaded={() => handleComponentLoaded("territoryGraph")}>
               <TerritoryGraph />
             </LazyLoadWrapper>
@@ -83,9 +86,9 @@ const SeverityPieChart = () => {
         </div>
       </div>
 
-      {/* Fourth ROW */}
-      <div className="mt-6">
-        <Suspense fallback={<div>Loading Area Line Graph...</div>}>
+      {/* Fourth ROW: One component */}
+      <div>
+        <Suspense fallback={<div className="loading-placeholder">Loading Area Line Graph...</div>}>
           <LazyLoadWrapper onLoaded={() => handleComponentLoaded("areaLineGraph")}>
             <AreaLineGraph />
           </LazyLoadWrapper>

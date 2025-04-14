@@ -1,5 +1,6 @@
 // src/components/tables/IncompleteRowsTable.js
 import React from "react";
+import { UserCircleIcon } from "@heroicons/react/24/solid"; // Or any other user icon
 
 const IncompleteRowsTable = ({ incompleteRows, onRowClick }) => {
   if (!incompleteRows || incompleteRows.length === 0) {
@@ -11,36 +12,48 @@ const IncompleteRowsTable = ({ incompleteRows, onRowClick }) => {
   }
 
   return (
-    <div className="mt-4 p-4 bg-yellow-100 text-yellow-800 rounded overflow-y-auto max-h-90">
+    <div className="mt-4">
       <h4 className="font-semibold mb-4 text-lg">
         ⚠️ Incomplete Rows Found:
       </h4>
-      <table className="min-w-full table-auto">
-        <thead>
-          <tr className="border-b">
-            <th className="px-4 py-2 text-left">Ticket Number</th>
-            <th className="px-4 py-2 text-left">Assigned To</th>
-            <th className="px-4 py-2 text-left">Missing Columns</th>
-          </tr>
-        </thead>
-        <tbody>
-          {incompleteRows.map((row, idx) => (
-            <tr
-              key={idx}
-              className="border-b cursor-pointer hover:bg-gray-100"
-              onClick={() => onRowClick(row)}
-            >
-              <td className="px-4 py-2">{row.number}</td>
-              <td className="px-4 py-2">{row.assignedTo || "Not Assigned"}</td>
-              <td className="px-4 py-2">
-                {row.missingColumns.length > 0
-                  ? row.missingColumns.join(", ")
-                  : "None"}
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+      <ul className="space-y-4">
+        {incompleteRows.map((row, idx) => (
+          <li
+            key={idx}
+            className="bg-white shadow rounded-md p-4 cursor-pointer hover:bg-gray-50"
+            onClick={() => onRowClick(row)}
+          >
+            <div className="flex items-center space-x-4">
+              <div className="flex-shrink-0">
+                <UserCircleIcon className="h-8 w-8 text-gray-400" /> {/* Placeholder for user icon */}
+              </div>
+              <div className="flex-grow">
+                <div className="font-semibold">{row.number}</div>
+                <div className="text-sm text-gray-500">
+                  Assigned to: {row.assignedTo || "Not Assigned"}
+                </div>
+                {row.missingColumns.length > 0 && (
+                  <div className="text-sm text-red-500">
+                    Missing: {row.missingColumns.join(", ")}
+                  </div>
+                )}
+              </div>
+              <div className="ml-auto">
+                <button
+                  className="bg-indigo-500 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
+                  onClick={(e) => {
+                    e.stopPropagation(); // Prevent row click when button is clicked
+                    // You can add specific action for viewing details here
+                    console.log("View details for:", row);
+                  }}
+                >
+                  View
+                </button>
+              </div>
+            </div>
+          </li>
+        ))}
+      </ul>
     </div>
   );
 };

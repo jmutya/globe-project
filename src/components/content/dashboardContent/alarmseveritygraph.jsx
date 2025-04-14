@@ -15,9 +15,14 @@ const AlarmsSeverity = () => {
   const [latestMonth, setLatestMonth] = useState("");
 
   const colors = [
-    "#ff6384", "#36a2eb", "#ffce56",
-    "#4bc0c0", "#9966ff", "#ff9f40",
-    "#8b0000", "#008000"
+    "#60a5fa", // Blue 400
+    "#facc15", // Yellow 400
+    "#22c55e", // Green 500
+    "#ef4444", // Red 500
+    "#a855f7", // Purple 500
+    "#f97316", // Orange 500
+    "#e11d48", // Pink 600
+    "#0ea5e9", // Cyan 500
   ];
 
   useEffect(() => {
@@ -40,52 +45,57 @@ const AlarmsSeverity = () => {
   }, []);
 
   return (
-    <div className="p-4 bg-white shadow-lg rounded-lg flex flex-col items-center">
-      <h2 className="text-lg font-semibold mb-2 text-center">
-        Overall Alarm Severity Distribution as of {latestMonth || "Loading..."}
-      </h2>
+    <div className="bg-white rounded-md shadow overflow-hidden">
+      <div className="p-6">
+        <h2 className="text-lg font-semibold text-gray-800 mb-4 text-center">
+          Alarm Severity Distribution ({latestMonth || "Loading..."})
+        </h2>
 
-      {isLoading ? (
-        <div className="flex justify-center items-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-indigo-500"></div>
-          <p className="ml-3 text-gray-600">Generating Graph...</p>
-        </div>
-      ) : chartData.length > 0 ? (
-        <ResponsiveContainer width="100%" height={300}>
-          <PieChart>
-            <Pie
-              data={chartData}
-              cx="50%"
-              cy="50%"
-              innerRadius={70}
-              outerRadius={120}
-              fill="#8884d8"
-              dataKey="value"
-              paddingAngle={5}
-              cornerRadius={4}
-            >
-              {chartData.map((entry, index) => (
-                <Cell
-                  key={`cell-${index}`}
-                  fill={entry.fill}
-                  stroke="#fff"
-                  strokeWidth={2}
-                />
-              ))}
-            </Pie>
-            <Tooltip
-              formatter={(value, name) => {
-                const total = chartData.reduce((acc, curr) => acc + curr.value, 0);
-                const percentage = ((value / total) * 100).toFixed(1);
-                return [`${value} (${percentage}%)`, name];
-              }}
-            />
-            <Legend />
-          </PieChart>
-        </ResponsiveContainer>
-      ) : (
-        <p className="text-gray-600 text-center">No data available</p>
-      )}
+        {isLoading ? (
+          <div className="flex justify-center items-center py-8">
+            <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-500"></div>
+            <p className="ml-3 text-gray-600">Loading Graph...</p>
+          </div>
+        ) : chartData.length > 0 ? (
+          <ResponsiveContainer width="100%" height={300}>
+            <PieChart>
+              <Pie
+                data={chartData}
+                cx="50%"
+                cy="50%"
+                innerRadius={60}
+                outerRadius={100}
+                fill="#8884d8"
+                dataKey="value"
+                paddingAngle={2}
+                cornerRadius={6}
+              >
+                {chartData.map((entry, index) => (
+                  <Cell key={`cell-${index}`} fill={entry.fill} strokeWidth={0} />
+                ))}
+              </Pie>
+              <Tooltip
+                itemStyle={{ color: 'gray' }}
+                labelStyle={{ color: 'black', fontWeight: 'bold' }}
+                formatter={(value, name) => {
+                  const total = chartData.reduce((acc, curr) => acc + curr.value, 0);
+                  const percentage = ((value / total) * 100).toFixed(1);
+                  return [`${value} (${percentage}%)`, name];
+                }}
+              />
+              <Legend
+                layout="horizontal"
+                align="bottom"
+                wrapperStyle={{ paddingTop: 20 }}
+                iconSize={10}
+                textStyle={{ color: '#4b5563' }}
+              />
+            </PieChart>
+          </ResponsiveContainer>
+        ) : (
+          <p className="text-gray-600 text-center py-8">No alarm data available.</p>
+        )}
+      </div>
     </div>
   );
 };
