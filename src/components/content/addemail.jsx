@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { db, auth } from "../../backend/firebase/firebaseconfig";
 import { collection, addDoc, getDocs } from "firebase/firestore";
-import { fetchSignInMethodsForEmail, sendPasswordResetEmail } from "firebase/auth";
+import { fetchSignInMethodsForEmail, sendPasswordResetEmail, createUserWithEmailAndPassword } from "firebase/auth";
 import { FaKey } from "react-icons/fa"; // Icon for reset password
 import { ToastContainer, toast } from "react-toastify"; // Import Toast components
 import "react-toastify/dist/ReactToastify.css"; // Import toast styles
@@ -58,20 +58,35 @@ const AddEmail = () => {
       toast.error("Please enter both email and password.");
       return;
     }
+  
     setLoading(true);
+  
     try {
+      const response = await fetch("http://localhost:5000/api/create-user", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ email, password }),
+      });
+  
+      const data = await response.json();
+  
+      if (!response.ok) {
+        throw new Error(data.message);
+      }
+  
       await addDoc(collection(db, "authorizedUsers"), { email });
       setEmails([...emails, email]);
       setEmail("");
       setPassword("");
-      setEmailCheckResult("");
-      toast.success("User added successfully!");
+      toast.success("User created and added!");
     } catch (error) {
-      toast.error("Error adding user: " + error.message);
+      toast.error("Error: " + error.message);
     } finally {
       setLoading(false);
     }
-  };
+  };  
 
   const handlePasswordReset = async (emailToReset) => {
     try {
