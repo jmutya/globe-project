@@ -151,7 +151,7 @@ const Sidebar = ({ user }) => {
           onClick={() => setShowLogoutModal(false)} // Close the modal
           className="flex-1 px-6 py-3 text-gray-700 border border-gray-300 rounded-md transition duration-200 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-600"
         >
-          <FaTimes className="inline-block mr-2" /> Cancelssss
+          <FaTimes className="inline-block mr-2" /> Cancel
         </button>
         <button
           onClick={() => {
