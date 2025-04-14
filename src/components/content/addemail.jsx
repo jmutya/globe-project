@@ -4,7 +4,7 @@ import { collection, addDoc, getDocs } from "firebase/firestore";
 import { fetchSignInMethodsForEmail, sendPasswordResetEmail, createUserWithEmailAndPassword } from "firebase/auth";
 import { FaKey } from "react-icons/fa"; // Icon for reset password
 import { ToastContainer, toast } from "react-toastify"; // Import Toast components
-import "react-toastify/dist/ReactToastify.css"; // Import toast styles
+import "react-toastify/dist/ReactToastify.css"; // Import toast stylessss
 
 const AddEmail = () => {
   const [email, setEmail] = useState("");
