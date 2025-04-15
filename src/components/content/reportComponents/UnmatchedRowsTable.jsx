@@ -1,5 +1,5 @@
-// src/components/tables/UnmatchedRowsTable.js
 import React from "react";
+import { FaExclamationTriangle } from "react-icons/fa";
 
 const UnmatchedRowsTable = ({ unmatchedRows, onRowClick }) => {
   if (!unmatchedRows || unmatchedRows.length === 0) {
@@ -7,24 +7,25 @@ const UnmatchedRowsTable = ({ unmatchedRows, onRowClick }) => {
   }
 
   return (
-    <div className="mt-6 p-4 bg-red-100 rounded overflow-y-auto max-h-90">
-      <h3 className="font-semibold text-lg mb-4 text-red-800">
+    <div className="mt-6 p-4 bg-red-50 rounded-lg shadow-md max-h-90 overflow-y-auto">
+      <h3 className="font-semibold text-lg mb-4 text-red-800 flex items-center">
+        <FaExclamationTriangle className="mr-2 text-red-600" />
         ⚠️ Unmatched Rows Found:
       </h3>
       <table className="min-w-full table-auto">
         <thead>
-          <tr className="border-b">
-            <th className="px-4 py-2 text-left">Ticket Number</th>
-            <th className="px-4 py-2 text-left">Resolved By</th>
-            <th className="px-4 py-2 text-left">Cause</th>
-            <th className="px-4 py-2 text-left">Reason for Outage</th>
+          <tr className="border-b bg-red-200 text-red-800">
+            <th className="px-4 py-2 text-left font-medium">Ticket Number</th>
+            <th className="px-4 py-2 text-left font-medium">Resolved By</th>
+            <th className="px-4 py-2 text-left font-medium">Cause</th>
+            <th className="px-4 py-2 text-left font-medium">Reason for Outage</th>
           </tr>
         </thead>
         <tbody>
           {unmatchedRows.map((row, idx) => (
             <tr
               key={idx}
-              className="border-b cursor-pointer hover:bg-gray-100"
+              className="border-b cursor-pointer hover:bg-red-100 transition-colors duration-300"
               onClick={() => onRowClick(row)}
             >
               <td className="px-4 py-2">{row.number}</td>

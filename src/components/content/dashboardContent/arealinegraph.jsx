@@ -1,123 +1,109 @@
+// components/AreaLineGraph.jsx
 import React, { useState, useEffect } from "react";
-import { 
-  LineChart, Line, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer 
+import {
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  Tooltip,
+  Legend,
+  ResponsiveContainer,
+  CartesianGrid,
 } from "recharts";
-import * as XLSX from "xlsx";
-import supabase from "../../../backend/supabase/supabase";
 import Skeleton from 'react-loading-skeleton';
 import 'react-loading-skeleton/dist/skeleton.css';
+import { fetchAreaAlarmData } from "../../../backend/functions/alarmAreaLinegraphUtils";
 
 const AreaLineGraph = () => {
   const [chartData, setChartData] = useState([]);
   const [alarmTypes, setAlarmTypes] = useState([]);
-  const [isLoading, setIsLoading] = useState(true); // Added loading state
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    fetchAndProcessFiles();
+    const getData = async () => {
+      setIsLoading(true);
+      const { chartData, alarmTypes } = await fetchAreaAlarmData();
+      setChartData(chartData);
+      setAlarmTypes(alarmTypes);
+      setIsLoading(false);
+    };
+    getData();
   }, []);
 
-  const fetchAndProcessFiles = async () => {
-    try {
-      const { data: files, error } = await supabase.storage.from("uploads").list("excels");
-      if (error) throw error;
-
-      let alarmData = {};
-
-      for (const file of files) {
-        const { data: fileUrl } = supabase.storage.from("uploads").getPublicUrl(`excels/${file.name}`);
-        const response = await fetch(fileUrl.publicUrl);
-        const blob = await response.arrayBuffer();
-        const workbook = XLSX.read(blob, { type: "array" });
-        const sheetName = workbook.SheetNames[0];
-        const sheet = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName], { header: 1 });
-
-        if (sheet.length > 1) {
-          const headers = sheet[0];
-          const timestampIndex = headers.indexOf("Opened");
-          const alarmTypeIndex = headers.indexOf("AOR002");
-
-          if (timestampIndex === -1 || alarmTypeIndex === -1) return;
-
-          sheet.slice(1).forEach(row => {
-            let timestamp = row[timestampIndex];
-            const alarmType = row[alarmTypeIndex]?.trim();
-
-            if (timestamp && alarmType) {
-              let date = "";
-
-              if (typeof timestamp === "number") {
-                const excelEpoch = new Date(1899, 11, 30);
-                date = new Date(excelEpoch.getTime() + timestamp * 86400000)
-                  .toISOString()
-                  .split("T")[0];
-              } else if (typeof timestamp === "string") {
-                const parts = timestamp.split(" ")[0].split("/");
-                if (parts.length === 3) {
-                  const [month, day, year] = parts;
-                  date = `${year}-${month.padStart(2, "0")}-${day.padStart(2, "0")}`;
-                }
-              }
-
-              if (!date) return;
-
-              if (!alarmData[date]) {
-                alarmData[date] = {};
-              }
-              alarmData[date][alarmType] = (alarmData[date][alarmType] || 0) + 1;
-            }
-          });
-        }
-      }
-
-      const allAlarmTypes = new Set();
-      Object.values(alarmData).forEach(types => {
-        Object.keys(types).forEach(type => allAlarmTypes.add(type));
-      });
-
-      const formattedData = Object.entries(alarmData).map(([date, alarms]) => {
-        let entry = { date };
-        allAlarmTypes.forEach(type => {
-          entry[type] = alarms[type] || 0;
-        });
-        return entry;
-      });
-
-      formattedData.sort((a, b) => new Date(a.date) - new Date(b.date));
-
-      setChartData(formattedData);
-      setAlarmTypes([...allAlarmTypes]);
-      setIsLoading(false); // Set loading to false after data is fetched
-    } catch (error) {
-      console.error("Error fetching or processing files:", error);
-      setIsLoading(false); // Stop loading even if there is an error
-    }
-  };
-
-  const colors = ["#ff6384", "#36a2eb", "#ffce56", "#4bc0c0", "#9966ff", "#ff9f40", "#8b0000", "#008000"];
+  const colors = [
+    "#29ABE2", // Light Blue
+    "#F27059", // Coral
+    "#8E44AD", // Purple
+    "#27AE60", // Green
+    "#F39C12", // Orange
+    "#1ABC9C", // Turquoise
+    "#C0392B", // Red
+    "#34495E", // Dark Blue Gray
+  ];
 
   return (
-    <div className="p-4 bg-white shadow-lg rounded-lg">
-      <h2 className="text-lg font-semibold mb-2">Alarm Distribution by Area</h2>
+    <div className="p-6 bg-white rounded-md shadow">
+      <h2 className="text-xl font-semibold text-gray-800 mb-4">
+        Alarm Distribution by Area
+      </h2>
 
       {isLoading ? (
         <div className="flex justify-center items-center h-[300px]">
-          <div className="animate-spin rounded-full h-10 w-10 border-t-4 border-b-4 border-indigo-500"></div>
-          <p className="ml-3 text-gray-600">Generating Graph</p>
+          <div className="animate-spin rounded-full h-10 w-10 border-t-4 border-b-4 border-blue-500"></div>
+          <p className="ml-3 text-gray-600">Loading Alarm Data...</p>
         </div>
       ) : chartData.length > 0 ? (
-        <ResponsiveContainer width="100%" height={300}>
-          <LineChart data={chartData}>
-            <XAxis dataKey="date" tickFormatter={(date) => new Date(date).toLocaleDateString()} />
-            <YAxis allowDecimals={false} />
-            <Tooltip />
-            <Legend />
+        <ResponsiveContainer width="100%" height={350}>
+          <LineChart data={chartData} margin={{ top: 15, right: 20, left: 5, bottom: 30 }}>
+            <CartesianGrid stroke="#e0e0e0" strokeDasharray="2 2" />
+            <XAxis
+              dataKey="date"
+              stroke="#757575"
+              tick={{ fontSize: 12 }}
+              tickFormatter={(date) => new Date(date).toLocaleDateString()}
+              axisLine={false}
+            />
+            <YAxis
+              allowDecimals={false}
+              stroke="#757575"
+              tick={{ fontSize: 12 }}
+              axisLine={false}
+            />
+            <Tooltip
+              itemStyle={{ color: '#333', padding: 6 }}
+              labelStyle={{ color: '#000', fontWeight: 'bold', marginBottom: 4 }}
+              formatter={(value, name) => [`${value}`, name]}
+              labelFormatter={(label) => `Date: ${new Date(label).toLocaleDateString()}`}
+              wrapperStyle={{
+                backgroundColor: 'rgba(255, 255, 255, 0.9)',
+                padding: 10,
+                borderRadius: 4,
+                boxShadow: '0 2px 8px rgba(0, 0, 0, 0.15)',
+              }}
+            />
+            <Legend
+              align="right"
+              verticalAlign="top"
+              iconSize={8}
+              iconType="line" // Using 'line' icon for a flatter look
+              wrapperStyle={{ lineHeight: '20px' }}
+              textStyle={{ color: '#555' }}
+            />
             {alarmTypes.map((type, index) => (
-              <Line key={type} type="monotone" dataKey={type} stroke={colors[index % colors.length]} />
+              <Line
+                key={type}
+                type="monotone"
+                dataKey={type}
+                stroke={colors[index % colors.length]}
+                strokeWidth={2}
+                dot={false} // Removing dots for a cleaner, flatter line
+                activeDot={{ r: 4 }}
+              />
             ))}
           </LineChart>
         </ResponsiveContainer>
       ) : (
-        <p className="text-gray-600 text-center mt-4">No data available</p>
+        <p className="text-gray-600 text-center mt-6">No alarm data available for areas.</p>
       )}
     </div>
   );

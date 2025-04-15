@@ -1,4 +1,4 @@
-import React, { Suspense, lazy, useState, useEffect } from "react";
+import React, { Suspense, lazy, useState } from "react";
 
 // Lazy load the components
 const AlarmCount = lazy(() => import("./dashboardContent/alarmcount"));
@@ -9,93 +9,103 @@ const AlarmTypeBarGraph = lazy(() => import("./dashboardContent/bargraph"));
 const TerritoryGraph = lazy(() => import("./dashboardContent/territorygraph"));
 const AreaLineGraph = lazy(() => import("./dashboardContent/arealinegraph"));
 
-const LazyLoadWrapper = ({ children }) => {
-  const [isVisible, setIsVisible] = useState(false);
-  
-  useEffect(() => {
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (entry.isIntersecting) {
-          setIsVisible(true);
-          observer.disconnect();
-        }
-      },
-      { threshold: 0.5 }
-    );
-    observer.observe(document.getElementById("lazyLoadComponent"));
-    
-    return () => {
-      observer.disconnect();
-    };
-  }, []);
-  
-  return (
-    <div id="lazyLoadComponent">
-      {isVisible ? children : <div>Loading...</div>}
-    </div>
-  );
-};
+import Card from "./../card/Card"; // Assuming the path is correct for Card
+import LazyLoadWrapper from "./LazyLoadWrapper";
 
 const SeverityPieChart = () => {
+  const [loadedComponents, setLoadedComponents] = useState({
+    alarmCount: false,
+    alarmsSeverity: false,
+    alarmCategory: false,
+    alarmTypeLineGraph: false,
+    alarmTypeBarGraph: false,
+    territoryGraph: false,
+    areaLineGraph: false,
+  });
+
+  const handleComponentLoaded = (componentName) => {
+    setLoadedComponents((prevState) => ({
+      ...prevState,
+      [componentName]: true,
+    }));
+  };
+
   return (
-    <div className="p-4 bg-white shadow-lg rounded-lg h-[88vh] overflow-y-auto">
-      {/* First ROW */}
-      <div className="mt-6 flex space-x-6">
-        <div className="flex-1">
-          <Suspense fallback={<div>Loading Alarm Count...</div>}>
-            <LazyLoadWrapper>
-              <AlarmCount />
+    <div className="p-6 bg-white shadow-lg rounded-lg h-[88vh] overflow-y-auto space-y-6">
+      {/* First ROW: Three components */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div>
+          <Suspense fallback={<div className="loading-placeholder">Loading Alarm Count...</div>}>
+            <LazyLoadWrapper onLoaded={() => handleComponentLoaded("alarmCount")}>
+              <Card>
+                <AlarmCount />
+              </Card>
             </LazyLoadWrapper>
           </Suspense>
         </div>
-        <div className="flex-1">
-          <Suspense fallback={<div>Loading Alarms Severity...</div>}>
-            <LazyLoadWrapper>
-              <AlarmsSeverity />
+
+        <div>
+          <Suspense fallback={<div className="loading-placeholder">Loading Alarms Severity...</div>}>
+            <LazyLoadWrapper onLoaded={() => handleComponentLoaded("alarmsSeverity")}>
+              <Card>
+                <AlarmsSeverity />
+              </Card>
             </LazyLoadWrapper>
           </Suspense>
         </div>
-        <div className="flex-1">
-          <Suspense fallback={<div>Loading Alarm Category...</div>}>
-            <LazyLoadWrapper>
-              <AlarmCategory />
+
+        <div>
+          <Suspense fallback={<div className="loading-placeholder">Loading Alarm Category...</div>}>
+            <LazyLoadWrapper onLoaded={() => handleComponentLoaded("alarmCategory")}>
+              <Card>
+                <AlarmCategory />
+              </Card>
             </LazyLoadWrapper>
           </Suspense>
         </div>
       </div>
 
-      {/* Second ROW */}
-      <div className="mt-6">
-        <Suspense fallback={<div>Loading Alarm Type Line Graph...</div>}>
-          <LazyLoadWrapper>
-            <AlarmTypeLineGraph />
+      {/* Second ROW: One component */}
+      <div>
+        <Suspense fallback={<div className="loading-placeholder">Loading Alarm Type Line Graph...</div>}>
+          <LazyLoadWrapper onLoaded={() => handleComponentLoaded("alarmTypeLineGraph")}>
+            <Card>
+              <AlarmTypeLineGraph />
+            </Card>
           </LazyLoadWrapper>
         </Suspense>
       </div>
 
-      {/* Third ROW */}
-      <div className="mt-6 flex space-x-6">
-        <div className="flex-1">
-          <Suspense fallback={<div>Loading Alarm Type Bar Graph...</div>}>
-            <LazyLoadWrapper>
-              <AlarmTypeBarGraph />
+      {/* Third ROW: Two components */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+        <div>
+          <Suspense fallback={<div className="loading-placeholder">Loading Alarm Type Bar Graph...</div>}>
+            <LazyLoadWrapper onLoaded={() => handleComponentLoaded("alarmTypeBarGraph")}>
+              <Card>
+                <AlarmTypeBarGraph />
+              </Card>
             </LazyLoadWrapper>
           </Suspense>
         </div>
-        <div className="flex-1 min-w-[400px]">
-          <Suspense fallback={<div>Loading Territory Graph...</div>}>
-            <LazyLoadWrapper>
-              <TerritoryGraph />
+
+        <div className="min-w-[400px]">
+          <Suspense fallback={<div className="loading-placeholder">Loading Territory Graph...</div>}>
+            <LazyLoadWrapper onLoaded={() => handleComponentLoaded("territoryGraph")}>
+              <Card>
+                <TerritoryGraph />
+              </Card>
             </LazyLoadWrapper>
           </Suspense>
         </div>
       </div>
-      
-      {/* Fourth ROW */}
-      <div className="mt-6">
-        <Suspense fallback={<div>Loading Area Line Graph...</div>}>
-          <LazyLoadWrapper>
-            <AreaLineGraph />
+
+      {/* Fourth ROW: One component */}
+      <div>
+        <Suspense fallback={<div className="loading-placeholder">Loading Area Line Graph...</div>}>
+          <LazyLoadWrapper onLoaded={() => handleComponentLoaded("areaLineGraph")}>
+            <Card>
+              <AreaLineGraph />
+            </Card>
           </LazyLoadWrapper>
         </Suspense>
       </div>

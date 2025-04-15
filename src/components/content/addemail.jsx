@@ -1,73 +1,72 @@
 import React, { useState, useEffect } from "react";
 import { db, auth } from "../../backend/firebase/firebaseconfig";
-import { collection, addDoc, getDocs } from "firebase/firestore";
-import { fetchSignInMethodsForEmail, sendPasswordResetEmail } from "firebase/auth";
-import { FaKey } from "react-icons/fa"; // Icon for reset password
-import { ToastContainer, toast } from "react-toastify"; // Import Toast components
-import "react-toastify/dist/ReactToastify.css"; // Import toast styles
+import { collection, addDoc, getDocs, deleteDoc, doc } from "firebase/firestore";
+import { sendPasswordResetEmail } from "firebase/auth";
+import { FaKey, FaPlus, FaTrash } from "react-icons/fa";
+import { ToastContainer, toast } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 
 const AddEmail = () => {
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
   const [emails, setEmails] = useState([]);
-  const [loading, setLoading] = useState(false);
-  const [emailCheckResult, setEmailCheckResult] = useState("");
-  const [checkingEmail, setCheckingEmail] = useState(false);
   const [loadingEmails, setLoadingEmails] = useState(true);
+  const [showModal, setShowModal] = useState(false);
+  const [newEmail, setNewEmail] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [role, setRole] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [deletingId, setDeletingId] = useState(null);
 
   useEffect(() => {
     const fetchEmails = async () => {
       try {
         const querySnapshot = await getDocs(collection(db, "authorizedUsers"));
-        const emailList = querySnapshot.docs.map((doc) => doc.data().email);
+        const emailList = querySnapshot.docs.map((doc) => ({
+          id: doc.id,
+          ...doc.data(),
+        }));
         setEmails(emailList);
       } catch (error) {
-        console.error("Error fetching emails:", error);
+        toast.error("Error fetching emails: " + error.message);
       } finally {
         setLoadingEmails(false);
       }
     };
+
     fetchEmails();
   }, []);
 
-  const checkEmailInAuth = async (emailToCheck) => {
-    if (!emailToCheck) {
-      setEmailCheckResult("");
-      return;
-    }
-    setCheckingEmail(true);
-    try {
-      const methods = await fetchSignInMethodsForEmail(auth, emailToCheck);
-      setEmailCheckResult(methods.length > 0 ? "✅ Email exists in Firebase Authentication." : "❌ Email not found.");
-    } catch (error) {
-      setEmailCheckResult("⚠️ Invalid email format or error checking email.");
-    } finally {
-      setCheckingEmail(false);
-    }
-  };
-
-  useEffect(() => {
-    const timeout = setTimeout(() => {
-      if (email) checkEmailInAuth(email);
-    }, 800);
-    return () => clearTimeout(timeout);
-  }, [email]);
-
   const handleAddUser = async () => {
-    if (!email || !password) {
-      toast.error("Please enter both email and password.");
+    if (!newEmail || !newPassword || !role) {
+      toast.error("Please fill in all fields.");
       return;
     }
+
     setLoading(true);
+
     try {
-      await addDoc(collection(db, "authorizedUsers"), { email });
-      setEmails([...emails, email]);
-      setEmail("");
-      setPassword("");
-      setEmailCheckResult("");
+      const response = await fetch("http://localhost:5000/api/create-user", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: newEmail, password: newPassword }),
+      });
+
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.message);
+
+      const docRef = await addDoc(collection(db, "authorizedUsers"), {
+        email: newEmail,
+        role: role,
+        createdAt: new Date(),
+      });
+
+      setEmails([...emails, { id: docRef.id, email: newEmail, role }]);
       toast.success("User added successfully!");
+      setShowModal(false);
+      setNewEmail("");
+      setNewPassword("");
+      setRole("");
     } catch (error) {
-      toast.error("Error adding user: " + error.message);
+      toast.error("Error: " + error.message);
     } finally {
       setLoading(false);
     }
@@ -78,74 +77,155 @@ const AddEmail = () => {
       await sendPasswordResetEmail(auth, emailToReset);
       toast.success(`Password reset link sent to ${emailToReset}`);
     } catch (error) {
-      toast.error("Error sending password reset link: " + error.message);
+      toast.error("Error sending reset link: " + error.message);
+    }
+  };
+
+  const handleDeleteUser = async (id, email) => {
+    setDeletingId(id);
+
+    try {
+      const response = await fetch("http://localhost:5000/api/delete-user", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email }),
+      });
+
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.message);
+
+      await deleteDoc(doc(db, "authorizedUsers", id));
+      setEmails(emails.filter((user) => user.id !== id));
+
+      toast.success("User access revoked and deleted from auth.");
+    } catch (error) {
+      toast.error("Error revoking access: " + error.message);
+    } finally {
+      setDeletingId(null);
     }
   };
 
   return (
-    <div className="flex flex-col md:flex-row p-6 gap-6 h-[calc(100vh-100px)]">
-      {/* Left Panel: Add User */}
-      <div className="flex-1 p-6 bg-gradient-to-r from-blue-100 to-indigo-200 rounded-lg shadow-xl flex flex-col justify-center">
-        <h3 className="text-3xl font-bold text-indigo-900 mb-4">Add New User Email</h3>
-        <div className="flex flex-col mb-4 gap-3">
-          <input
-            type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            placeholder="Enter email"
-            className="p-4 border border-indigo-300 rounded-lg focus:ring-2 focus:ring-indigo-400 focus:outline-none transition-shadow"
-          />
-          {checkingEmail && <p className="text-gray-500">Checking email...</p>}
-          {emailCheckResult && (
-            <p className={`text-sm font-semibold ${emailCheckResult.includes("✅") ? "text-green-600" : "text-red-500"}`}>
-              {emailCheckResult}
-            </p>
-          )}
-        </div>
-        <input
-          type="password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          placeholder="Enter password"
-          className="p-4 border border-indigo-300 rounded-lg mb-6 focus:ring-2 focus:ring-indigo-400 focus:outline-none transition-shadow"
-        />
+    <div className="p-6 h-[calc(100vh-100px)] flex flex-col bg-gray-50">
+      {/* Header */}
+      <div className="flex justify-between items-center mb-6">
+        <h3 className="text-3xl font-semibold text-indigo-700">Authorized Users</h3>
         <button
-          onClick={handleAddUser}
-          className={`w-full p-4 text-white rounded-lg shadow-md bg-indigo-600 transition-all ${loading ? "opacity-50 cursor-not-allowed" : "hover:bg-indigo-700"}`}
-          disabled={loading}
+          onClick={() => setShowModal(true)}
+          className="flex items-center gap-2 bg-indigo-600 text-white px-4 py-2 rounded-xl hover:bg-indigo-700 transition"
         >
-          {loading ? "Adding..." : "Add User"}
+          <FaPlus /> Add User
         </button>
       </div>
 
-      {/* Right Panel: Email List */}
-      <div className="flex-1 p-6 bg-white border border-gray-200 rounded-lg shadow-lg overflow-auto">
-        <h3 className="text-3xl font-semibold text-indigo-700 mb-6">Added Emails</h3>
+      {/* Email List */}
+      <div className="flex-1 overflow-auto border border-gray-200 rounded-xl bg-white p-6 shadow-sm">
         {loadingEmails ? (
-          <div className="flex justify-center items-center py-8">
-            <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-indigo-500"></div>
-            <p className="ml-4 text-gray-600">Loading emails...</p>
+          <div className="flex flex-col items-center justify-center h-full">
+            <div className="animate-spin h-8 w-8 border-t-2 border-indigo-500 rounded-full mb-4" />
+            <p className="text-gray-500">Loading emails...</p>
           </div>
         ) : emails.length > 0 ? (
-          <ul className="space-y-4">
-            {emails.map((email, index) => (
-              <li key={index} className="flex justify-between items-center p-4 border rounded-lg bg-indigo-50 text-indigo-700 shadow-md hover:bg-indigo-100">
-                <span>{email}</span>
-                <button
-                  onClick={() => handlePasswordReset(email)}
-                  className="text-indigo-600 hover:text-indigo-800"
+          <div>
+            {/* List Header */}
+            <div className="grid grid-cols-12 gap-4 pb-3 border-b border-gray-300 text-gray-600 text-sm font-medium">
+              <div className="col-span-5">Email</div>
+              <div className="col-span-3">Role</div>
+              <div className="col-span-4 text-center">Actions</div>
+            </div>
+
+            {/* List Items */}
+            <ul className="divide-y divide-gray-100 mt-2">
+              {emails.map((user) => (
+                <li
+                  key={user.id}
+                  className="grid grid-cols-12 gap-4 py-4 items-center hover:bg-indigo-50 transition rounded-lg px-2"
                 >
-                  <FaKey size={20} />
-                </button>
-              </li>
-            ))}
-          </ul>
+                  <div className="col-span-5 text-indigo-800">{user.email}</div>
+                  <div className="col-span-3 text-gray-600 capitalize">{user.role}</div>
+                  <div className="col-span-4 flex justify-center gap-4">
+                    {deletingId === user.id ? (
+                      <div className="w-5 h-5 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin" />
+                    ) : (
+                      <>
+                        <button
+                          onClick={() => handlePasswordReset(user.email)}
+                          className="text-indigo-600 hover:text-indigo-800"
+                          title="Send Password Reset"
+                        >
+                          <FaKey size={18} />
+                        </button>
+                        <button
+                          onClick={() => handleDeleteUser(user.id, user.email)}
+                          className="text-red-500 hover:text-red-700"
+                          title="Revoke Access"
+                        >
+                          <FaTrash size={18} />
+                        </button>
+                      </>
+                    )}
+                  </div>
+                </li>
+              ))}
+            </ul>
+          </div>
         ) : (
-          <p className="text-gray-500">No emails added yet.</p>
+          <p className="text-gray-500 text-center">No users added yet.</p>
         )}
       </div>
 
-      {/* Toast Notification Container */}
+      {/* Modal */}
+      {showModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
+          <div className="bg-white rounded-xl shadow-lg p-6 w-full max-w-md">
+            <h3 className="text-xl font-semibold text-indigo-700 mb-4">Add New User</h3>
+            <div className="space-y-4">
+              <input
+                type="email"
+                placeholder="Email"
+                value={newEmail}
+                onChange={(e) => setNewEmail(e.target.value)}
+                className="w-full p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-400"
+              />
+              <input
+                type="password"
+                placeholder="Password"
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                className="w-full p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-400"
+              />
+              <select
+                value={role}
+                onChange={(e) => setRole(e.target.value)}
+                className="w-full p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-400"
+              >
+                <option value="">Select Role</option>
+                <option value="admin">Admin</option>
+                <option value="user">User</option>
+              </select>
+            </div>
+
+            <div className="flex justify-end mt-6 gap-3">
+              <button
+                onClick={() => setShowModal(false)}
+                className="px-4 py-2 border rounded-lg text-gray-600 hover:bg-gray-100"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleAddUser}
+                disabled={loading}
+                className={`px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 ${
+                  loading ? "opacity-50 cursor-not-allowed" : ""
+                }`}
+              >
+                {loading ? "Adding..." : "Add User"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <ToastContainer position="bottom-right" />
     </div>
   );

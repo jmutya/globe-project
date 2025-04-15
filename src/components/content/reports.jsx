@@ -57,6 +57,7 @@ const Reports = () => {
       </div>
     );
   }
+  const [showIssuanceDetails, setShowIssuanceDetails] = useState(false);
 
   return (
     <div
@@ -116,8 +117,6 @@ const Reports = () => {
           <option value="date">Date</option>
           <option value="total">Total Alarms</option>
         </select>
-
-        
       </div>
 
       {isLoading ? (
@@ -133,10 +132,13 @@ const Reports = () => {
         />
       )}
 
+<<<<<<< HEAD
 <div className="mt-4 flex items-center gap-2">
           <FilterData />
         </div>
 
+=======
+>>>>>>> 195d2331709553974a796cd30882b3333a336229
       {/* Accuracy View Toggle */}
       <label>Accuracy View: </label>
       <select
@@ -152,6 +154,7 @@ const Reports = () => {
       {selectedAccuracyView === "ticketIssuance" && (
         <>
           <div className="mb-11 flex space-x-4">
+<<<<<<< HEAD
             <AccuracyProgress
               percentage={accuracyPercentage}
               title="Overall Ticket Issuance Accuracy"
@@ -184,13 +187,46 @@ const Reports = () => {
                     </p>
                   </div>
                 )}
+=======
+            <div>
+              <AccuracyProgress
+                percentage={accuracyPercentage}
+                title="Overall Ticket Issuance Accuracy"
+              />
+              {/* Toggle checkbox */}
+              <div className="mt-6 flex items-center space-x-4">
+                <span className="text-lg font-semibold text-gray-800">
+                  Show Accuracy by Person
+                </span>
+                <label className="relative inline-flex items-center cursor-pointer">
+                  <input
+                    type="checkbox"
+                    className="sr-only peer"
+                    checked={showIssuanceDetails}
+                    onChange={(e) => setShowIssuanceDetails(e.target.checked)}
+                  />
+                  <div className="w-11 h-6 bg-gray-300 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-indigo-500 rounded-full peer dark:bg-gray-600 peer-checked:bg-indigo-600 transition-all duration-300"></div>
+                  <div className="absolute left-0.5 top-0.5 w-5 h-5 bg-white rounded-full transition-transform duration-300 transform peer-checked:translate-x-full"></div>
+                </label>
+              </div>
+            </div>
+
+            <div className="w-3/4 overflow-y-auto max-h-90 mb-11 space-y-6">
+              <IncompleteRowsTable
+                incompleteRows={incompleteRows}
+                onRowClick={setSelectedRow}
+                percentagePerAssignedPerson={percentagePerAssignedPerson}
+              />
+>>>>>>> 195d2331709553974a796cd30882b3333a336229
             </div>
           </div>
 
-          <AccuracyByPersonTable
-            accuracyData={percentagePerAssignedPerson}
-            title="Ticket Issuance Accuracy per Assigned Person"
-          />
+          {showIssuanceDetails && (
+            <AccuracyByPersonTable
+              accuracyData={percentagePerAssignedPerson}
+              title="Ticket Issuance Accuracy per Assigned Person"
+            />
+          )}
         </>
       )}
 

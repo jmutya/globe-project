@@ -10,111 +10,83 @@ import {
   ResponsiveContainer,
   Cell,
 } from "recharts";
-import * as XLSX from "xlsx";
-import supabase from "../../../backend/supabase/supabase";
+import { fetchTerritoryGraphData } from "../../../backend/functions/alarmTerritoryGraph"; // Adjust path if needed
 
 const TerritoryGraph = () => {
   const [chartData, setChartData] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    fetchAndProcessFiles();
+    const loadData = async () => {
+      setIsLoading(true);
+      const data = await fetchTerritoryGraphData();
+      const totalCount = data.reduce((sum, item) => sum + item.count, 0);
+      const dataWithPercentage = data.map((item, index) => ({
+        ...item,
+        fill: `hsl(${(index * 50) % 360}, 60%, 50%)`,
+        percentage: totalCount > 0 ? (item.count / totalCount) * 100 : 0, // Calculate percentage
+      }));
+      setChartData(dataWithPercentage);
+      setIsLoading(false);
+    };
+
+    loadData();
   }, []);
 
-  const fetchAndProcessFiles = async () => {
-    try {
-      const { data: files, error } = await supabase.storage
-        .from("uploads")
-        .list("excels");
-      if (error) throw error;
-
-      let territoryCounts = {};
-      let totalAlarms = 0;
-
-      for (const file of files) {
-        const { data: fileUrl } = supabase.storage
-          .from("uploads")
-          .getPublicUrl(`excels/${file.name}`);
-        const response = await fetch(fileUrl.publicUrl);
-        const blob = await response.arrayBuffer();
-        const workbook = XLSX.read(blob, { type: "array" });
-        const sheetName = workbook.SheetNames[0];
-        const sheet = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName], {
-          header: 1,
-        });
-
-        if (sheet.length > 1) {
-          const headers = sheet[0];
-          const territoryIndex = headers.indexOf("Territory");
-
-          if (territoryIndex === -1) {
-            continue;
-          }
-
-          sheet.slice(1).forEach((row) => {
-            const territory = String(row[territoryIndex] || "").trim();
-            if (territory) {
-              territoryCounts[territory] =
-                (territoryCounts[territory] || 0) + 1;
-              totalAlarms++;
-            }
-          });
-        }
-      }
-
-      const formattedData = Object.entries(territoryCounts).map(
-        ([category, count], index) => ({
-          category,
-          count,
-          percentage: ((count / totalAlarms) * 100).toFixed(1),
-          fill: colors[index % colors.length],
-        })
-      );
-
-      setChartData(formattedData);
-      setIsLoading(false);
-    } catch (error) {
-      console.error("Error fetching or processing files:", error);
-      setIsLoading(false);
-    }
-  };
-
-  const colors = [
-    "#ff6384",
-    "#36a2eb",
-    "#ffce56",
-    "#4bc0c0",
-    "#9966ff",
-    "#ff9f40",
-    "#8b0000",
-    "#008000",
-  ];
-
   return (
-    <div
-      className="p-4 bg-white shadow-lg rounded-lg"
-      style={{ maxHeight: "400px" }}
-    >
-      <h2 className="text-lg font-semibold mb-2">Alarm Distribution by Territory </h2>
+    <div className="p-6 bg-white rounded-md shadow" style={{ maxHeight: "450px" }}>
+      <h2 className="text-xl font-semibold text-gray-800 mb-4">
+        Alarm Distribution by Territory
+      </h2>
       {isLoading ? (
-        <div className="flex justify-center items-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-indigo-500"></div>
-          <p className="ml-3 text-gray-600">Generating Graph</p>
+        <div className="flex justify-center items-center py-8">
+          <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-500"></div>
+          <p className="ml-3 text-gray-600">Loading Graph...</p>
         </div>
       ) : chartData.length > 0 ? (
-        <ResponsiveContainer width="100%" height={300}>
-          <BarChart data={chartData} layout="horizontal" barSize={50}>
-            <CartesianGrid strokeDasharray="3 3" />
-            <XAxis dataKey="category" type="category" />
-            <YAxis type="number" allowDecimals={false} />
+        <ResponsiveContainer width="100%" height={350}>
+          <BarChart
+            data={chartData}
+            layout="horizontal"
+            barCategoryGap={15}
+            margin={{ top: 20, right: 30, left: 10, bottom: 5 }}
+          >
+            <CartesianGrid stroke="#e0e0e0" strokeDasharray="2 2" />
+            <XAxis
+              type="category"
+              dataKey="category"
+              stroke="#757575"
+              tick={{ fontSize: 12 }}
+              axisLine={false}
+              tickLine={false}
+            />
+            <YAxis
+              type="number"
+              allowDecimals={false}
+              stroke="#757575"
+              tick={{ fontSize: 12 }}
+              axisLine={false}
+              tickLine={false}
+              domain={[0, Math.max(...chartData.map((item) => item.count)) * 1.2]}
+            />
             <Tooltip
-              formatter={(value, name, props) =>
-                [`${value} (${props.payload.percentage}%)`, "Count"]
-              }
+              cursor={{ fill: 'rgba(0, 0, 0, 0.05)' }}
+              itemStyle={{ color: '#333' }}
+              labelStyle={{ color: '#000', fontWeight: 'bold' }}
+              formatter={(value, name, props) => [
+                `${value} (${props.payload.percentage ? props.payload.percentage.toFixed(1) : 0}%)`,
+                "Alarms",
+              ]}
             />
             <Legend
+              align="right"
+              verticalAlign="top"
+              wrapperStyle={{ lineHeight: '24px' }}
+              iconSize={14}
+              iconType="square"
+              textStyle={{ color: '#4a5568' }}
               payload={chartData.map((entry) => ({
-                value: "Territory - " + entry.category,
+                value: `Territory - ${entry.category}`,
                 type: "square",
                 color: entry.fill,
               }))}
@@ -127,7 +99,7 @@ const TerritoryGraph = () => {
           </BarChart>
         </ResponsiveContainer>
       ) : (
-        <p className="text-gray-600">No data available</p>
+        <p className="text-gray-600 py-8 text-center">No alarm data available for territories.</p>
       )}
     </div>
   );
