@@ -7,10 +7,7 @@ import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 
 const AddEmail = () => {
-  // Simulate current logged-in user role
   const [currentUserRole, setCurrentUserRole] = useState(null);
-
-  // State variables
   const [emails, setEmails] = useState([]);
   const [loadingEmails, setLoadingEmails] = useState(true);
   const [showModal, setShowModal] = useState(false);
@@ -23,7 +20,6 @@ const AddEmail = () => {
   const [viewMode, setViewMode] = useState("list");
   const [searchTerm, setSearchTerm] = useState("");
 
-  // Fetch users from Firestore on mount
   useEffect(() => {
     const fetchEmails = async () => {
       try {
@@ -50,22 +46,17 @@ const AddEmail = () => {
         try {
           const querySnapshot = await getDocs(collection(db, "authorizedUsers"));
           const matchedDoc = querySnapshot.docs.find(doc => doc.data().email === user.email);
-          if (matchedDoc) {
-            setCurrentUserRole(matchedDoc.data().role);
-          } else {
-            setCurrentUserRole("user"); // default fallback
-          }
+          setCurrentUserRole(matchedDoc ? matchedDoc.data().role : "user");
         } catch (error) {
           console.error("Failed to fetch user role:", error);
           toast.error("Failed to fetch your role.");
         }
       }
     };
-  
+
     fetchUserRole();
   }, []);
 
-  // Add new user
   const handleAddUser = async () => {
     if (!newEmail || !newPassword || !role) {
       toast.error("Please fill in all fields.");
@@ -107,8 +98,16 @@ const AddEmail = () => {
     }
   };
 
-  // Send password reset email
-  const handlePasswordReset = async (emailToReset) => {
+  const handlePasswordReset = async (emailToReset, role) => {
+    if (role === "admin") {
+      toast.error("Cannot reset another admin’s password.");
+      return;
+    }
+    if (currentUserRole !== "admin") {
+      toast.error("You do not have permission to reset passwords.");
+      return;
+    }
+
     try {
       await sendPasswordResetEmail(auth, emailToReset);
       toast.success(`Password reset link sent to ${emailToReset}`);
@@ -117,10 +116,14 @@ const AddEmail = () => {
     }
   };
 
-  // Delete user from Firebase Auth and Firestore
-  const handleDeleteUser = async (id, email) => {
+  const handleDeleteUser = async (id, email, role) => {
+    if (role === "admin") {
+      toast.error("Cannot revoke access from another admin.");
+      return;
+    }
+
     if (currentUserRole !== "admin") {
-      toast.error("You do not have permission to delete users.");
+      toast.error("You do not have permission to revoke access.");
       return;
     }
 
@@ -145,18 +148,15 @@ const AddEmail = () => {
     }
   };
 
-  // Filter and search users
   const filteredEmails = emails
     .filter((user) => filterRole === "all" || user.role === filterRole)
     .filter((user) => user.email.toLowerCase().includes(searchTerm.toLowerCase()));
 
   return (
     <div className="p-6 h-[calc(100vh-100px)] flex flex-col bg-gray-50">
-      {/* Top bar with filters and add button */}
       <div className="flex justify-between items-center mb-6">
         <h3 className="text-3xl font-semibold text-indigo-700">Authorized Users</h3>
         <div className="flex items-center gap-3">
-          {/* Role Filter */}
           <select
             value={filterRole}
             onChange={(e) => setFilterRole(e.target.value)}
@@ -167,7 +167,6 @@ const AddEmail = () => {
             <option value="user">User</option>
           </select>
 
-          {/* Search Box */}
           <input
             type="text"
             placeholder="Search by email..."
@@ -176,7 +175,6 @@ const AddEmail = () => {
             className="p-2 border rounded-md text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-400"
           />
 
-          {/* View Mode Toggle */}
           <button
             onClick={() => setViewMode("list")}
             className={`p-2 rounded-md ${viewMode === "list" ? "bg-indigo-200 text-indigo-700" : "bg-white border"}`}
@@ -192,19 +190,21 @@ const AddEmail = () => {
             <FaThLarge />
           </button>
 
-          {/* Add Button (Admin only) */}
-          {currentUserRole === "admin" && (
-            <button
-              onClick={() => setShowModal(true)}
-              className="flex items-center gap-2 bg-indigo-600 text-white px-4 py-2 rounded-xl hover:bg-indigo-700 transition"
-            >
-              <FaPlus /> Add User
-            </button>
-          )}
+          <button
+            onClick={() => {
+              if (currentUserRole !== "admin") {
+                toast.error("You do not have permission to add users.");
+                return;
+              }
+              setShowModal(true);
+            }}
+            className="flex items-center gap-2 bg-indigo-600 text-white px-4 py-2 rounded-xl hover:bg-indigo-700 transition"
+          >
+            <FaPlus /> Add User
+          </button>
         </div>
       </div>
 
-      {/* User List or Grid */}
       <div className="flex-1 border border-gray-200 rounded-xl bg-white p-6 shadow-sm">
         <div className="max-h-[500px] overflow-y-auto pr-2">
           {loadingEmails ? (
@@ -217,14 +217,12 @@ const AddEmail = () => {
           ) : filteredEmails.length > 0 ? (
             viewMode === "list" ? (
               <>
-                {/* Header Row */}
                 <div className="grid grid-cols-12 gap-4 pb-3 border-b border-gray-300 text-gray-700 font-semibold text-sm px-4">
                   <div className="col-span-6">Email</div>
                   <div className="col-span-3">Role</div>
                   <div className="col-span-3 text-right">Actions</div>
                 </div>
 
-                {/* User List */}
                 <ul className="divide-y divide-gray-100 mt-2">
                   {filteredEmails.map((user) => (
                     <li
@@ -235,21 +233,19 @@ const AddEmail = () => {
                       <div className="col-span-3 text-sm text-gray-600 capitalize">{user.role}</div>
                       <div className="col-span-3 flex justify-end gap-4">
                         <button
-                          onClick={() => handlePasswordReset(user.email)}
+                          onClick={() => handlePasswordReset(user.email, user.role)}
                           className="text-indigo-600 hover:text-indigo-800"
                           title="Send Password Reset"
                         >
                           <FaKey size={16} />
                         </button>
-                        {currentUserRole === "admin" && (
-                          <button
-                            onClick={() => handleDeleteUser(user.id, user.email)}
-                            className="text-red-500 hover:text-red-700"
-                            title="Revoke Access"
-                          >
-                            <FaTrash size={16} />
-                          </button>
-                        )}
+                        <button
+                          onClick={() => handleDeleteUser(user.id, user.email, user.role)}
+                          className="text-red-500 hover:text-red-700"
+                          title="Revoke Access"
+                        >
+                          <FaTrash size={16} />
+                        </button>
                       </div>
                     </li>
                   ))}
@@ -266,21 +262,19 @@ const AddEmail = () => {
                     <div className="text-sm text-gray-600 mb-3 capitalize">Role: {user.role}</div>
                     <div className="flex justify-end gap-3">
                       <button
-                        onClick={() => handlePasswordReset(user.email)}
+                        onClick={() => handlePasswordReset(user.email, user.role)}
                         className="text-indigo-600 hover:text-indigo-800"
                         title="Send Password Reset"
                       >
                         <FaKey size={16} />
                       </button>
-                      {currentUserRole === "admin" && (
-                        <button
-                          onClick={() => handleDeleteUser(user.id, user.email)}
-                          className="text-red-500 hover:text-red-700"
-                          title="Revoke Access"
-                        >
-                          <FaTrash size={16} />
-                        </button>
-                      )}
+                      <button
+                        onClick={() => handleDeleteUser(user.id, user.email, user.role)}
+                        className="text-red-500 hover:text-red-700"
+                        title="Revoke Access"
+                      >
+                        <FaTrash size={16} />
+                      </button>
                     </div>
                   </div>
                 ))}
@@ -292,7 +286,6 @@ const AddEmail = () => {
         </div>
       </div>
 
-      {/* Add User Modal */}
       {showModal && (
         <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
           <div className="bg-white rounded-xl shadow-lg p-6 w-full max-w-md">
