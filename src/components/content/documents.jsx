@@ -188,7 +188,7 @@ const ExcelUploader = () => {
                 {files.map((file, index) => (
                   <div 
                     key={index} 
-                    className="relative flex items-center justify-between px-4 py-3 bg-white border border-gray-200 rounded-lg shadow-sm hover:bg-indigo-50 transition duration-200"
+                    className="relative flex items-center justify-between px-4 py-3 bg-white border border-gray-200 rounded-lg shadow-sm transition duration-200"
                   >
                     <div className="flex items-start gap-2 w-full pr-10">
                       <FaFileExcel className="text-green-600 mt-1" />
