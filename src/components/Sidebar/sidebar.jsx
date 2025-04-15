@@ -56,7 +56,7 @@ const Sidebar = ({ user }) => {
         const SelectedComponent = componentMap[selected];
         if (SelectedComponent) {
             return (
-                <Suspense fallback={<div>Loading {selected}...</div>}>
+                <Suspense fallback={<div>Loading {selected}....</div>}>
                     <SelectedComponent />
                 </Suspense>
             );
