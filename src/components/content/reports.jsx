@@ -155,10 +155,12 @@ const Reports = () => {
               title="Overall Ticket Issuance Accuracy"
             />
             <div className="w-3/4 overflow-y-auto max-h-90 mb-11">
-              <IncompleteRowsTable
-                incompleteRows={incompleteRows}
-                onRowClick={setSelectedRow}
-              />
+            <IncompleteRowsTable
+  incompleteRows={incompleteRows}
+  onRowClick={setSelectedRow}
+  percentagePerAssignedPerson={percentagePerAssignedPerson}
+/>
+
               {selectedRow?.assignedTo &&
                 percentagePerAssignedPerson[selectedRow.assignedTo] && (
                   <div className="mt-4 p-4 bg-gray-100 text-gray-800 rounded">
