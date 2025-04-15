@@ -17,11 +17,18 @@ const Reports = () => {
   const [sortBy, setSortBy] = useState("date");
   const [selectedRow, setSelectedRow] = useState(null);
   const [selectedUnmatchedRow, setSelectedUnmatchedRow] = useState(null);
-  const [selectedAccuracyView, setSelectedAccuracyView] = useState("ticketIssuance"); // NEW
+  const [selectedAccuracyView, setSelectedAccuracyView] =
+    useState("ticketIssuance"); // NEW
 
   const colors = [
-    "#ff6384", "#36a2eb", "#ffce56", "#4bc0c0",
-    "#9966ff", "#ff9f40", "#8b0000", "#008000",
+    "#ff6384",
+    "#36a2eb",
+    "#ffce56",
+    "#4bc0c0",
+    "#9966ff",
+    "#ff9f40",
+    "#8b0000",
+    "#008000",
   ];
 
   const {
@@ -41,8 +48,13 @@ const Reports = () => {
   } = useReportData(timeRange, selectedMonth, selectedYear, sortBy);
 
   if (error) {
-    return <div className="p-4 text-red-500">Error loading data: {error.message}</div>;
+    return (
+      <div className="p-4 text-red-500">
+        Error loading data: {error.message}
+      </div>
+    );
   }
+  const [showIssuanceDetails, setShowIssuanceDetails] = useState(false);
 
   return (
     <div
@@ -102,8 +114,6 @@ const Reports = () => {
           <option value="date">Date</option>
           <option value="total">Total Alarms</option>
         </select>
-
-        
       </div>
 
       {isLoading ? (
@@ -112,43 +122,66 @@ const Reports = () => {
           <p className="ml-3 text-gray-600">Generating Graph</p>
         </div>
       ) : (
-        <AlarmLineChart chartData={chartData} alarmTypes={alarmTypes} colors={colors} />
+        <AlarmLineChart
+          chartData={chartData}
+          alarmTypes={alarmTypes}
+          colors={colors}
+        />
       )}
-      
+
       {/* Accuracy View Toggle */}
       <label>Accuracy View: </label>
-        <select
-          className="p-2 border rounded-md ml-4"
-          value={selectedAccuracyView}
-          onChange={(e) => setSelectedAccuracyView(e.target.value)}
-        >
-          <option value="ticketIssuance">Ticket Issuance</option>
-          <option value="closingAccuracy">Closing Accuracy</option>
-        </select>
+      <select
+        className="p-2 border rounded-md ml-4"
+        value={selectedAccuracyView}
+        onChange={(e) => setSelectedAccuracyView(e.target.value)}
+      >
+        <option value="ticketIssuance">Ticket Issuance</option>
+        <option value="closingAccuracy">Closing Accuracy</option>
+      </select>
 
       {/* Ticket Issuance View */}
       {selectedAccuracyView === "ticketIssuance" && (
         <>
           <div className="mb-11 flex space-x-4">
-            <AccuracyProgress percentage={accuracyPercentage} title="Overall Ticket Issuance Accuracy" />
-            <div className="w-3/4 overflow-y-auto max-h-90 mb-11">
-              <IncompleteRowsTable incompleteRows={incompleteRows} onRowClick={setSelectedRow} />
-              {selectedRow?.assignedTo && percentagePerAssignedPerson[selectedRow.assignedTo] && (
-                <div className="mt-4 p-4 bg-gray-100 text-gray-800 rounded">
-                  <h3 className="text-lg font-semibold">Selected Row Details</h3>
-                  <p><strong>Ticket Number:</strong> {selectedRow.number}</p>
-                  <p><strong>Assigned To:</strong> {selectedRow.assignedTo || "Not Assigned"}</p>
-                  <p><strong>Missing Columns:</strong> {selectedRow.missingColumns.join(", ")}</p>
-                  <p><strong>Accuracy Percentage:</strong> {percentagePerAssignedPerson[selectedRow.assignedTo]}%</p>
-                </div>
-              )}
+            <div>
+              <AccuracyProgress
+                percentage={accuracyPercentage}
+                title="Overall Ticket Issuance Accuracy"
+              />
+              {/* Toggle checkbox */}
+              <div className="mt-6 flex items-center space-x-4">
+                <span className="text-lg font-semibold text-gray-800">
+                  Show Accuracy by Person
+                </span>
+                <label className="relative inline-flex items-center cursor-pointer">
+                  <input
+                    type="checkbox"
+                    className="sr-only peer"
+                    checked={showIssuanceDetails}
+                    onChange={(e) => setShowIssuanceDetails(e.target.checked)}
+                  />
+                  <div className="w-11 h-6 bg-gray-300 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-indigo-500 rounded-full peer dark:bg-gray-600 peer-checked:bg-indigo-600 transition-all duration-300"></div>
+                  <div className="absolute left-0.5 top-0.5 w-5 h-5 bg-white rounded-full transition-transform duration-300 transform peer-checked:translate-x-full"></div>
+                </label>
+              </div>
+            </div>
+
+            <div className="w-3/4 overflow-y-auto max-h-90 mb-11 space-y-6">
+              <IncompleteRowsTable
+                incompleteRows={incompleteRows}
+                onRowClick={setSelectedRow}
+                percentagePerAssignedPerson={percentagePerAssignedPerson}
+              />
             </div>
           </div>
 
-          <AccuracyByPersonTable
-            accuracyData={percentagePerAssignedPerson}
-            title="Ticket Issuance Accuracy per Assigned Person"
-          />
+          {showIssuanceDetails && (
+            <AccuracyByPersonTable
+              accuracyData={percentagePerAssignedPerson}
+              title="Ticket Issuance Accuracy per Assigned Person"
+            />
+          )}
         </>
       )}
 
@@ -156,17 +189,42 @@ const Reports = () => {
       {selectedAccuracyView === "closingAccuracy" && (
         <>
           <div className="mb-4 rounded flex space-x-4">
-            <AccuracyProgress percentage={closingAccuracy} title="Overall Closing Accuracy" />
+            <AccuracyProgress
+              percentage={closingAccuracy}
+              title="Overall Closing Accuracy"
+            />
             <div className="w-3/4 max-h-90 mb-11">
-              <UnmatchedRowsTable unmatchedRows={unmatchedRows} onRowClick={setSelectedUnmatchedRow} />
+              <UnmatchedRowsTable
+                unmatchedRows={unmatchedRows}
+                onRowClick={setSelectedUnmatchedRow}
+              />
               {selectedUnmatchedRow && (
                 <div className="mt-4 p-4 bg-white border rounded shadow">
-                  <h4 className="text-lg font-semibold mb-2 text-gray-800">Selected Row Details</h4>
-                  <p><strong>Ticket Number:</strong> {selectedUnmatchedRow.number}</p>
-                  <p><strong>Resolved By:</strong> {selectedUnmatchedRow.resolvedBy || "Unassigned"}</p>
-                  <p><strong>Cause:</strong> {selectedUnmatchedRow.cause || "Empty"}</p>
-                  <p><strong>Reason for Outage:</strong> {selectedUnmatchedRow.reason || "Empty"}</p>
-                  <p><strong>Closing Accuracy:</strong> {individualAccuracy[selectedUnmatchedRow.resolvedBy] || "N/A"}%</p>
+                  <h4 className="text-lg font-semibold mb-2 text-gray-800">
+                    Selected Row Details
+                  </h4>
+                  <p>
+                    <strong>Ticket Number:</strong>{" "}
+                    {selectedUnmatchedRow.number}
+                  </p>
+                  <p>
+                    <strong>Resolved By:</strong>{" "}
+                    {selectedUnmatchedRow.resolvedBy || "Unassigned"}
+                  </p>
+                  <p>
+                    <strong>Cause:</strong>{" "}
+                    {selectedUnmatchedRow.cause || "Empty"}
+                  </p>
+                  <p>
+                    <strong>Reason for Outage:</strong>{" "}
+                    {selectedUnmatchedRow.reason || "Empty"}
+                  </p>
+                  <p>
+                    <strong>Closing Accuracy:</strong>{" "}
+                    {individualAccuracy[selectedUnmatchedRow.resolvedBy] ||
+                      "N/A"}
+                    %
+                  </p>
                 </div>
               )}
             </div>

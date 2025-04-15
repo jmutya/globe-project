@@ -36,7 +36,7 @@ const AlarmCount = () => {
           </svg>
         </div>
         <h2 className="text-sm font-semibold text-gray-700 ml-3 uppercase tracking-wider">
-          Active Tickets
+          Ticket Count
         </h2>
       </div>
 

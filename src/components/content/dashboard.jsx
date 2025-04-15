@@ -9,6 +9,7 @@ const AlarmTypeBarGraph = lazy(() => import("./dashboardContent/bargraph"));
 const TerritoryGraph = lazy(() => import("./dashboardContent/territorygraph"));
 const AreaLineGraph = lazy(() => import("./dashboardContent/arealinegraph"));
 
+import Card from "./../card/Card"; // Assuming the path is correct for Card
 import LazyLoadWrapper from "./LazyLoadWrapper";
 
 const SeverityPieChart = () => {
@@ -36,24 +37,29 @@ const SeverityPieChart = () => {
         <div>
           <Suspense fallback={<div className="loading-placeholder">Loading Alarm Count...</div>}>
             <LazyLoadWrapper onLoaded={() => handleComponentLoaded("alarmCount")}>
-              <AlarmCount />
+              <Card>
+                <AlarmCount />
+              </Card>
             </LazyLoadWrapper>
-            
           </Suspense>
         </div>
-       
+
         <div>
           <Suspense fallback={<div className="loading-placeholder">Loading Alarms Severity...</div>}>
             <LazyLoadWrapper onLoaded={() => handleComponentLoaded("alarmsSeverity")}>
-              <AlarmsSeverity />
+              <Card>
+                <AlarmsSeverity />
+              </Card>
             </LazyLoadWrapper>
           </Suspense>
         </div>
-       
+
         <div>
           <Suspense fallback={<div className="loading-placeholder">Loading Alarm Category...</div>}>
             <LazyLoadWrapper onLoaded={() => handleComponentLoaded("alarmCategory")}>
-              <AlarmCategory />
+              <Card>
+                <AlarmCategory />
+              </Card>
             </LazyLoadWrapper>
           </Suspense>
         </div>
@@ -63,7 +69,9 @@ const SeverityPieChart = () => {
       <div>
         <Suspense fallback={<div className="loading-placeholder">Loading Alarm Type Line Graph...</div>}>
           <LazyLoadWrapper onLoaded={() => handleComponentLoaded("alarmTypeLineGraph")}>
-            <AlarmTypeLineGraph />
+            <Card>
+              <AlarmTypeLineGraph />
+            </Card>
           </LazyLoadWrapper>
         </Suspense>
       </div>
@@ -73,14 +81,19 @@ const SeverityPieChart = () => {
         <div>
           <Suspense fallback={<div className="loading-placeholder">Loading Alarm Type Bar Graph...</div>}>
             <LazyLoadWrapper onLoaded={() => handleComponentLoaded("alarmTypeBarGraph")}>
-              <AlarmTypeBarGraph />
+              <Card>
+                <AlarmTypeBarGraph />
+              </Card>
             </LazyLoadWrapper>
           </Suspense>
         </div>
+
         <div className="min-w-[400px]">
           <Suspense fallback={<div className="loading-placeholder">Loading Territory Graph...</div>}>
             <LazyLoadWrapper onLoaded={() => handleComponentLoaded("territoryGraph")}>
-              <TerritoryGraph />
+              <Card>
+                <TerritoryGraph />
+              </Card>
             </LazyLoadWrapper>
           </Suspense>
         </div>
@@ -90,7 +103,9 @@ const SeverityPieChart = () => {
       <div>
         <Suspense fallback={<div className="loading-placeholder">Loading Area Line Graph...</div>}>
           <LazyLoadWrapper onLoaded={() => handleComponentLoaded("areaLineGraph")}>
-            <AreaLineGraph />
+            <Card>
+              <AreaLineGraph />
+            </Card>
           </LazyLoadWrapper>
         </Suspense>
       </div>
