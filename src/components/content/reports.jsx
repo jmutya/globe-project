@@ -9,6 +9,9 @@ import { CircularProgressbar, buildStyles } from "react-circular-progressbar";
 import "react-circular-progressbar/dist/styles.css";
 import "react-loading-skeleton/dist/skeleton.css";
 import { MinusSmallIcon } from "@heroicons/react/20/solid";
+import { Select } from "@headlessui/react";
+import { Filter } from "lucide-react";
+import FilterData from "./reportComponents/filter";
 
 const Reports = () => {
   const [timeRange, setTimeRange] = useState("daily");
@@ -54,7 +57,6 @@ const Reports = () => {
       </div>
     );
   }
-  const [showIssuanceDetails, setShowIssuanceDetails] = useState(false);
 
   return (
     <div
@@ -129,6 +131,10 @@ const Reports = () => {
         />
       )}
 
+      <div className="mt-4 flex items-center gap-2">
+        <FilterData />
+      </div>
+
       {/* Accuracy View Toggle */}
       <label>Accuracy View: </label>
       <select
@@ -144,44 +150,45 @@ const Reports = () => {
       {selectedAccuracyView === "ticketIssuance" && (
         <>
           <div className="mb-11 flex space-x-4">
-            <div>
-              <AccuracyProgress
-                percentage={accuracyPercentage}
-                title="Overall Ticket Issuance Accuracy"
-              />
-              {/* Toggle checkbox */}
-              <div className="mt-6 flex items-center space-x-4">
-                <span className="text-lg font-semibold text-gray-800">
-                  Show Accuracy by Person
-                </span>
-                <label className="relative inline-flex items-center cursor-pointer">
-                  <input
-                    type="checkbox"
-                    className="sr-only peer"
-                    checked={showIssuanceDetails}
-                    onChange={(e) => setShowIssuanceDetails(e.target.checked)}
-                  />
-                  <div className="w-11 h-6 bg-gray-300 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-indigo-500 rounded-full peer dark:bg-gray-600 peer-checked:bg-indigo-600 transition-all duration-300"></div>
-                  <div className="absolute left-0.5 top-0.5 w-5 h-5 bg-white rounded-full transition-transform duration-300 transform peer-checked:translate-x-full"></div>
-                </label>
-              </div>
-            </div>
-
-            <div className="w-3/4 overflow-y-auto max-h-90 mb-11 space-y-6">
+            <AccuracyProgress
+              percentage={accuracyPercentage}
+              title="Overall Ticket Issuance Accuracy"
+            />
+            <div className="w-3/4 overflow-y-auto max-h-90 mb-11">
               <IncompleteRowsTable
                 incompleteRows={incompleteRows}
                 onRowClick={setSelectedRow}
-                percentagePerAssignedPerson={percentagePerAssignedPerson}
               />
+              {selectedRow?.assignedTo &&
+                percentagePerAssignedPerson[selectedRow.assignedTo] && (
+                  <div className="mt-4 p-4 bg-gray-100 text-gray-800 rounded">
+                    <h3 className="text-lg font-semibold">
+                      Selected Row Details
+                    </h3>
+                    <p>
+                      <strong>Ticket Number:</strong> {selectedRow.number}
+                    </p>
+                    <p>
+                      <strong>Assigned To:</strong>{" "}
+                      {selectedRow.assignedTo || "Not Assigned"}
+                    </p>
+                    <p>
+                      <strong>Missing Columns:</strong>{" "}
+                      {selectedRow.missingColumns.join(", ")}
+                    </p>
+                    <p>
+                      <strong>Accuracy Percentage:</strong>{" "}
+                      {percentagePerAssignedPerson[selectedRow.assignedTo]}%
+                    </p>
+                  </div>
+                )}
             </div>
           </div>
 
-          {showIssuanceDetails && (
-            <AccuracyByPersonTable
-              accuracyData={percentagePerAssignedPerson}
-              title="Ticket Issuance Accuracy per Assigned Person"
-            />
-          )}
+          <AccuracyByPersonTable
+            accuracyData={percentagePerAssignedPerson}
+            title="Ticket Issuance Accuracy per Assigned Person"
+          />
         </>
       )}
 
