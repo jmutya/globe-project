@@ -18,7 +18,6 @@ const Reports = () => {
   const [showAccuracyTable, setShowAccuracyTable] = useState(false);
   const [showAccuracyByPersonTable, setShowAccuracyByPersonTable] = useState(false);
 
-
   const colors = [
     "#ff6384", "#36a2eb", "#ffce56", "#4bc0c0",
     "#9966ff", "#ff9f40", "#8b0000", "#008000",
@@ -46,82 +45,92 @@ const Reports = () => {
   return (
     <div className="p-6 bg-white shadow-md rounded-lg overflow-y-auto" style={{ maxHeight: "88vh" }}>
       
-      {/* Filter Section */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
-        <div>
-          <label className="block mb-1 font-medium">Time Range</label>
-          <select className="w-full p-2 border rounded-md" value={timeRange} onChange={(e) => setTimeRange(e.target.value)}>
-            <option value="daily">Daily</option>
-            <option value="weekly">Weekly</option>
-            <option value="monthly">Monthly</option>
-            <option value="yearly">Yearly</option>
-          </select>
-        </div>
-
-        {timeRange === "monthly" && (
+      {/* === Filters Section === */}
+      <div className="bg-gray-50 p-4 rounded-lg border border-gray-200 mb-6">
+        <h2 className="text-lg font-semibold text-gray-800 mb-4">Filters</h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           <div>
-            <label className="block mb-1 font-medium">Month</label>
-            <select className="w-full p-2 border rounded-md" value={selectedMonth} onChange={(e) => setSelectedMonth(parseInt(e.target.value))}>
-              {[...Array(12)].map((_, i) => (
-                <option key={i + 1} value={i + 1}>
-                  {new Date(0, i).toLocaleString("default", { month: "long" })}
-                </option>
-              ))}
+            <label className="block mb-1 font-medium">Time Range</label>
+            <select className="w-full p-2 border rounded-md" value={timeRange} onChange={(e) => setTimeRange(e.target.value)}>
+              <option value="daily">Daily</option>
+              <option value="weekly">Weekly</option>
+              <option value="monthly">Monthly</option>
+              <option value="yearly">Yearly</option>
             </select>
           </div>
-        )}
 
-        {(timeRange === "monthly" || timeRange === "yearly") && (
+          {timeRange === "monthly" && (
+            <div>
+              <label className="block mb-1 font-medium">Month</label>
+              <select className="w-full p-2 border rounded-md" value={selectedMonth} onChange={(e) => setSelectedMonth(parseInt(e.target.value))}>
+                {[...Array(12)].map((_, i) => (
+                  <option key={i + 1} value={i + 1}>
+                    {new Date(0, i).toLocaleString("default", { month: "long" })}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+
+          {(timeRange === "monthly" || timeRange === "yearly") && (
+            <div>
+              <label className="block mb-1 font-medium">Year</label>
+              <select className="w-full p-2 border rounded-md" value={selectedYear} onChange={(e) => setSelectedYear(parseInt(e.target.value))}>
+                {availableYears.map((year) => (
+                  <option key={year} value={year}>{year}</option>
+                ))}
+              </select>
+            </div>
+          )}
+
           <div>
-            <label className="block mb-1 font-medium">Year</label>
-            <select className="w-full p-2 border rounded-md" value={selectedYear} onChange={(e) => setSelectedYear(parseInt(e.target.value))}>
-              {availableYears.map((year) => (
-                <option key={year} value={year}>{year}</option>
-              ))}
+            <label className="block mb-1 font-medium">Sort By</label>
+            <select className="w-full p-2 border rounded-md" value={sortBy} onChange={(e) => setSortBy(e.target.value)}>
+              <option value="date">Date</option>
+              <option value="total">Total Alarms</option>
             </select>
           </div>
-        )}
-
-        <div>
-          <label className="block mb-1 font-medium">Sort By</label>
-          <select className="w-full p-2 border rounded-md" value={sortBy} onChange={(e) => setSortBy(e.target.value)}>
-            <option value="date">Date</option>
-            <option value="total">Total Alarms</option>
-          </select>
         </div>
       </div>
 
-      {/* Chart or Loader */}
-      {isLoading ? (
-        <div className="flex justify-center items-center h-[300px]">
-          <div className="animate-spin rounded-full h-10 w-10 border-t-4 border-b-4 border-indigo-500"></div>
-          <p className="ml-3 text-gray-600">Generating Graph</p>
-        </div>
-      ) : (
-        <AlarmLineChart chartData={chartData} alarmTypes={alarmTypes} colors={colors} />
-      )}
+      {/* === Alarm Overview Section === */}
+      <div className="bg-gray-50 p-4 rounded-lg border border-gray-200 mb-6">
+        <h2 className="text-lg font-semibold text-gray-800 mb-4">Alarm Overview</h2>
+        {isLoading ? (
+          <div className="flex justify-center items-center h-[300px]">
+            <div className="animate-spin rounded-full h-10 w-10 border-t-4 border-b-4 border-indigo-500"></div>
+            <p className="ml-3 text-gray-600">Generating Graph</p>
+          </div>
+        ) : (
+          <AlarmLineChart chartData={chartData} alarmTypes={alarmTypes} colors={colors} />
+        )}
+      </div>
 
-      {/* Filter Component */}
-      <div className="mt-6">
+      {/* === Custom Filters === */}
+      <div className="bg-gray-50 p-4 rounded-lg border border-gray-200 mb-6">
+        <h2 className="text-lg font-semibold text-gray-800 mb-4">Advanced Filter</h2>
         <FilterData />
       </div>
 
-      {/* Accuracy View Switch */}
-      <div className="mt-8 flex items-center gap-4">
-        <label className="font-semibold">Accuracy View:</label>
-        <select className="p-2 border rounded-md" value={selectedAccuracyView} onChange={(e) => setSelectedAccuracyView(e.target.value)}>
-          <option value="ticketIssuance">Ticket Issuance</option>
-          <option value="closingAccuracy">Closing Accuracy</option>
-        </select>
+      {/* === Accuracy View Switcher === */}
+      <div className="bg-gray-50 p-4 rounded-lg border border-gray-200 mb-6">
+        <h2 className="text-lg font-semibold text-gray-800 mb-2">Select Accuracy View</h2>
+        <div className="flex items-center gap-4">
+          <label className="text-sm font-medium text-gray-700">Accuracy View:</label>
+          <select
+            className="w-full sm:w-auto p-3 text-sm text-gray-900 bg-white border border-gray-300 rounded-md shadow-sm"
+            value={selectedAccuracyView}
+            onChange={(e) => setSelectedAccuracyView(e.target.value)}
+          >
+            <option value="ticketIssuance">Ticket Issuance</option>
+            <option value="closingAccuracy">Closing Accuracy</option>
+          </select>
+        </div>
       </div>
 
-      {/* Ticket Issuance Accuracy */}
+      {/* === Ticket Issuance Accuracy View === */}
       {selectedAccuracyView === "ticketIssuance" && (
-        <>
-          {/* Toggle Show Accuracy Table */}
-          
-
-          {/* Progress + Incomplete Table */}
+        <div className="mb-10">
           <div className="flex flex-col lg:flex-row gap-6">
             <AccuracyProgress
               percentage={accuracyPercentage}
@@ -136,6 +145,7 @@ const Reports = () => {
               />
             </div>
           </div>
+
           <div className="flex items-center space-x-2 mt-6 mb-4">
             <input
               type="checkbox"
@@ -148,7 +158,7 @@ const Reports = () => {
               Show Accuracy per Assigned Person
             </label>
           </div>
-          {/* Conditionally Show Accuracy Table */}
+
           {showAccuracyTable && (
             <div className="mt-6">
               <AccuracyByPersonTable
@@ -157,62 +167,60 @@ const Reports = () => {
               />
             </div>
           )}
-        </>
+        </div>
       )}
 
-      {/* Closing Accuracy */}
+      {/* === Closing Accuracy View === */}
       {selectedAccuracyView === "closingAccuracy" && (
-  <>
-    <div className="flex flex-col lg:flex-row gap-6 mt-6">
-      <AccuracyProgress
-        percentage={closingAccuracy}
-        title="Overall Closing Accuracy"
-      />
+        <div className="mb-10">
+          <div className="flex flex-col lg:flex-row gap-6 mt-6">
+            <AccuracyProgress
+              percentage={closingAccuracy}
+              title="Overall Closing Accuracy"
+            />
 
-      <div className="flex-1">
-        <UnmatchedRowsTable
-          unmatchedRows={unmatchedRows}
-          onRowClick={setSelectedUnmatchedRow}
-        />
+            <div className="flex-1">
+              <UnmatchedRowsTable
+                unmatchedRows={unmatchedRows}
+                onRowClick={setSelectedUnmatchedRow}
+              />
 
-        {selectedUnmatchedRow && (
-          <div className="mt-4 p-4 bg-white border rounded shadow">
-            <h4 className="text-lg font-semibold mb-2 text-gray-800">Selected Row Details</h4>
-            <p><strong>Ticket Number:</strong> {selectedUnmatchedRow.number}</p>
-            <p><strong>Resolved By:</strong> {selectedUnmatchedRow.resolvedBy || "Unassigned"}</p>
-            <p><strong>Cause:</strong> {selectedUnmatchedRow.cause || "Empty"}</p>
-            <p><strong>Reason for Outage:</strong> {selectedUnmatchedRow.reason || "Empty"}</p>
-            <p><strong>Closing Accuracy:</strong> {individualAccuracy[selectedUnmatchedRow.resolvedBy] || "N/A"}%</p>
+              {selectedUnmatchedRow && (
+                <div className="mt-4 p-4 bg-white border rounded shadow">
+                  <h4 className="text-lg font-semibold mb-2 text-gray-800">Selected Row Details</h4>
+                  <p><strong>Ticket Number:</strong> {selectedUnmatchedRow.number}</p>
+                  <p><strong>Resolved By:</strong> {selectedUnmatchedRow.resolvedBy || "Unassigned"}</p>
+                  <p><strong>Cause:</strong> {selectedUnmatchedRow.cause || "Empty"}</p>
+                  <p><strong>Reason for Outage:</strong> {selectedUnmatchedRow.reason || "Empty"}</p>
+                  <p><strong>Closing Accuracy:</strong> {individualAccuracy[selectedUnmatchedRow.resolvedBy] || "N/A"}%</p>
+                </div>
+              )}
+            </div>
           </div>
-        )}
-      </div>
-    </div>
 
-    {/* Toggle to show/hide AccuracyByPersonTable */}
-    <div className="mt-4">
-      <input
-        type="checkbox"
-        id="toggleAccuracyByPerson"
-        checked={showAccuracyByPersonTable}
-        onChange={() => setShowAccuracyByPersonTable(!showAccuracyByPersonTable)}
-        className="w-5 h-5 text-blue-600 border-gray-300 rounded"
-      />
-      <label htmlFor="toggleAccuracyByPerson" className="ml-2 text-sm text-gray-700 font-medium">
-        Show Completion Accuracy per Assigned Person
-      </label>
-    </div>
+          <div className="mt-4 flex items-center">
+            <input
+              type="checkbox"
+              id="toggleAccuracyByPerson"
+              checked={showAccuracyByPersonTable}
+              onChange={() => setShowAccuracyByPersonTable(!showAccuracyByPersonTable)}
+              className="w-5 h-5 text-blue-600 border-gray-300 rounded"
+            />
+            <label htmlFor="toggleAccuracyByPerson" className="ml-2 text-sm text-gray-700 font-medium">
+              Show Completion Accuracy per Assigned Person
+            </label>
+          </div>
 
-    {/* Closing Accuracy Table (conditionally rendered) */}
-    {showAccuracyByPersonTable && (
-      <div className="mt-6">
-        <AccuracyByPersonTable
-          accuracyData={individualAccuracy}
-          title="Completion Accuracy per Assigned Person"
-        />
-      </div>
-    )}
-  </>
-)}
+          {showAccuracyByPersonTable && (
+            <div className="mt-6">
+              <AccuracyByPersonTable
+                accuracyData={individualAccuracy}
+                title="Completion Accuracy per Assigned Person"
+              />
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 };
