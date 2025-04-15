@@ -16,6 +16,7 @@ const Reports = () => {
   const [selectedUnmatchedRow, setSelectedUnmatchedRow] = useState(null);
   const [selectedAccuracyView, setSelectedAccuracyView] = useState("ticketIssuance");
   const [showAccuracyTable, setShowAccuracyTable] = useState(false);
+  const [showAccuracyByPersonTable, setShowAccuracyByPersonTable] = useState(false);
 
 
   const colors = [
@@ -118,18 +119,7 @@ const Reports = () => {
       {selectedAccuracyView === "ticketIssuance" && (
         <>
           {/* Toggle Show Accuracy Table */}
-          <div className="flex items-center space-x-2 mt-6 mb-4">
-            <input
-              type="checkbox"
-              checked={showAccuracyTable}
-              onChange={() => setShowAccuracyTable(!showAccuracyTable)}
-              id="toggleAccuracyTable"
-              className="w-5 h-5 text-blue-600 border-gray-300 rounded"
-            />
-            <label htmlFor="toggleAccuracyTable" className="text-sm text-gray-700 font-medium">
-              Show Accuracy per Assigned Person
-            </label>
-          </div>
+          
 
           {/* Progress + Incomplete Table */}
           <div className="flex flex-col lg:flex-row gap-6">
@@ -146,7 +136,18 @@ const Reports = () => {
               />
             </div>
           </div>
-
+          <div className="flex items-center space-x-2 mt-6 mb-4">
+            <input
+              type="checkbox"
+              checked={showAccuracyTable}
+              onChange={() => setShowAccuracyTable(!showAccuracyTable)}
+              id="toggleAccuracyTable"
+              className="w-5 h-5 text-blue-600 border-gray-300 rounded"
+            />
+            <label htmlFor="toggleAccuracyTable" className="text-sm text-gray-700 font-medium">
+              Show Accuracy per Assigned Person
+            </label>
+          </div>
           {/* Conditionally Show Accuracy Table */}
           {showAccuracyTable && (
             <div className="mt-6">
@@ -161,41 +162,57 @@ const Reports = () => {
 
       {/* Closing Accuracy */}
       {selectedAccuracyView === "closingAccuracy" && (
-        <>
-          <div className="flex flex-col lg:flex-row gap-6 mt-6">
-            <AccuracyProgress
-              percentage={closingAccuracy}
-              title="Overall Closing Accuracy"
-            />
+  <>
+    <div className="flex flex-col lg:flex-row gap-6 mt-6">
+      <AccuracyProgress
+        percentage={closingAccuracy}
+        title="Overall Closing Accuracy"
+      />
 
-            <div className="flex-1">
-              <UnmatchedRowsTable
-                unmatchedRows={unmatchedRows}
-                onRowClick={setSelectedUnmatchedRow}
-              />
+      <div className="flex-1">
+        <UnmatchedRowsTable
+          unmatchedRows={unmatchedRows}
+          onRowClick={setSelectedUnmatchedRow}
+        />
 
-              {selectedUnmatchedRow && (
-                <div className="mt-4 p-4 bg-white border rounded shadow">
-                  <h4 className="text-lg font-semibold mb-2 text-gray-800">Selected Row Details</h4>
-                  <p><strong>Ticket Number:</strong> {selectedUnmatchedRow.number}</p>
-                  <p><strong>Resolved By:</strong> {selectedUnmatchedRow.resolvedBy || "Unassigned"}</p>
-                  <p><strong>Cause:</strong> {selectedUnmatchedRow.cause || "Empty"}</p>
-                  <p><strong>Reason for Outage:</strong> {selectedUnmatchedRow.reason || "Empty"}</p>
-                  <p><strong>Closing Accuracy:</strong> {individualAccuracy[selectedUnmatchedRow.resolvedBy] || "N/A"}%</p>
-                </div>
-              )}
-            </div>
+        {selectedUnmatchedRow && (
+          <div className="mt-4 p-4 bg-white border rounded shadow">
+            <h4 className="text-lg font-semibold mb-2 text-gray-800">Selected Row Details</h4>
+            <p><strong>Ticket Number:</strong> {selectedUnmatchedRow.number}</p>
+            <p><strong>Resolved By:</strong> {selectedUnmatchedRow.resolvedBy || "Unassigned"}</p>
+            <p><strong>Cause:</strong> {selectedUnmatchedRow.cause || "Empty"}</p>
+            <p><strong>Reason for Outage:</strong> {selectedUnmatchedRow.reason || "Empty"}</p>
+            <p><strong>Closing Accuracy:</strong> {individualAccuracy[selectedUnmatchedRow.resolvedBy] || "N/A"}%</p>
           </div>
+        )}
+      </div>
+    </div>
 
-          {/* Closing Accuracy Table */}
-          <div className="mt-6">
-            <AccuracyByPersonTable
-              accuracyData={individualAccuracy}
-              title="Completion Accuracy per Assigned Person"
-            />
-          </div>
-        </>
-      )}
+    {/* Toggle to show/hide AccuracyByPersonTable */}
+    <div className="mt-4">
+      <input
+        type="checkbox"
+        id="toggleAccuracyByPerson"
+        checked={showAccuracyByPersonTable}
+        onChange={() => setShowAccuracyByPersonTable(!showAccuracyByPersonTable)}
+        className="w-5 h-5 text-blue-600 border-gray-300 rounded"
+      />
+      <label htmlFor="toggleAccuracyByPerson" className="ml-2 text-sm text-gray-700 font-medium">
+        Show Completion Accuracy per Assigned Person
+      </label>
+    </div>
+
+    {/* Closing Accuracy Table (conditionally rendered) */}
+    {showAccuracyByPersonTable && (
+      <div className="mt-6">
+        <AccuracyByPersonTable
+          accuracyData={individualAccuracy}
+          title="Completion Accuracy per Assigned Person"
+        />
+      </div>
+    )}
+  </>
+)}
     </div>
   );
 };

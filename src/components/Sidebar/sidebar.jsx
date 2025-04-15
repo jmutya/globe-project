@@ -15,14 +15,14 @@ const componentMap = {
     Dashboard: lazy(() => import("../content/dashboard")),
     Reports: lazy(() => import("../content/reports")),
     Documents: lazy(() => import("../content/documents")),
-    "Add Emails": lazy(() => import("../content/addemail")),
+    "Users": lazy(() => import("../content/addemail")),
 };
 
 const navigationItems = [
     { name: "Dashboard", icon: ChartBarSquareIcon },
     { name: "Reports", icon: ChartBarSquareIcon },
     { name: "Documents", icon: DocumentIcon },
-    { name: "Add Emails", icon: UsersIcon },
+    { name: "Users", icon: UsersIcon },
 ];
 
 const SocialLink = memo(({ link }) => (
