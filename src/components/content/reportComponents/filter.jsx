@@ -1,6 +1,14 @@
 import React, { useEffect, useState } from "react";
 import * as XLSX from "xlsx";
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend } from "recharts";
+import {
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+} from "recharts";
 import supabase from "../../../backend/supabase/supabase";
 
 const FilterData = () => {
@@ -11,6 +19,21 @@ const FilterData = () => {
   const [structuredData, setStructuredData] = useState([]);
   const [error, setError] = useState(null);
   const [chartData, setChartData] = useState([]);
+
+  const convertExcelDate = (value) => {
+    if (typeof value === "number") {
+      const millisecondsPerDay = 86400000;
+      const excelEpoch = new Date(Date.UTC(1899, 11, 30));
+      const date = new Date(excelEpoch.getTime() + value * millisecondsPerDay);
+      return date.toISOString().split("T")[0];
+    } else if (typeof value === "string") {
+      const date = new Date(value);
+      if (!isNaN(date)) {
+        return date.toISOString().split("T")[0];
+      }
+    }
+    return "";
+  };
 
   const processExcelData = async (fileUrl) => {
     const response = await fetch(fileUrl);
@@ -46,6 +69,9 @@ const FilterData = () => {
         .map((row) => {
           const desc = row["Short description"];
           const match = desc?.match(/\(([^)]+)\)/);
+          const rawDate = row["Opened"];
+          const date = convertExcelDate(rawDate);
+
           if (match) {
             const parts = match[1].split("-");
             if (parts.length >= 5) {
@@ -55,6 +81,7 @@ const FilterData = () => {
                 territory: parts[3],
                 province: parts[4],
                 reason: row["Reason for Outage"] || "Unknown",
+                date,
               };
             }
           }
@@ -122,56 +149,47 @@ const FilterData = () => {
 
   const handleGenerateChart = () => {
     let filtered = [...structuredData];
-
-    if (selectRegion) filtered = filtered.filter((item) => item.region === selectRegion);
-    if (selectTerritory) filtered = filtered.filter((item) => item.territory === selectTerritory);
-    if (selectedArea) filtered = filtered.filter((item) => item.area === selectedArea);
-    if (selectedProvince) filtered = filtered.filter((item) => item.province === selectedProvince);
-
-    let chart = [];
-
-    if (selectedProvince) {
-      // Show counts of "Reason for Outage"
-      const grouped = {};
-      filtered.forEach((item) => {
-        grouped[item.reason] = (grouped[item.reason] || 0) + 1;
-      });
-      chart = Object.entries(grouped).map(([key, value]) => ({
-        name: key,
-        count: value,
-      }));
-    } else if (selectedArea) {
-      const grouped = {};
-      filtered.forEach((item) => {
-        grouped[item.province] = (grouped[item.province] || 0) + 1;
-      });
-      chart = Object.entries(grouped).map(([key, value]) => ({
-        name: key,
-        count: value,
-      }));
-    } else if (selectTerritory) {
-      const grouped = {};
-      filtered.forEach((item) => {
-        grouped[item.area] = (grouped[item.area] || 0) + 1;
-      });
-      chart = Object.entries(grouped).map(([key, value]) => ({
-        name: key,
-        count: value,
-      }));
-    } else if (selectRegion) {
-      const grouped = {};
-      filtered.forEach((item) => {
-        grouped[item.territory] = (grouped[item.territory] || 0) + 1;
-      });
-      chart = Object.entries(grouped).map(([key, value]) => ({
-        name: key,
-        count: value,
-      }));
-    }
-
-    setChartData(chart);
+  
+    if (selectRegion)
+      filtered = filtered.filter((item) => item.region === selectRegion);
+    if (selectTerritory)
+      filtered = filtered.filter((item) => item.territory === selectTerritory);
+    if (selectedArea)
+      filtered = filtered.filter((item) => item.area === selectedArea);
+    if (selectedProvince)
+      filtered = filtered.filter((item) => item.province === selectedProvince);
+  
+    // Determine grouping level
+    let groupKey = "territory"; // default
+    if (selectTerritory && !selectedArea) groupKey = "area";
+    else if (selectTerritory && selectedArea && !selectedProvince)
+      groupKey = "province";
+    else if (selectedProvince) groupKey = "reason";
+  
+    let grouped = {};
+  
+    filtered.forEach((item) => {
+      const keyGroup = item[groupKey] || "Unknown";
+      const keyDate = item.date || "Unknown";
+  
+      if (!grouped[keyGroup]) grouped[keyGroup] = {};
+      grouped[keyGroup][keyDate] = (grouped[keyGroup][keyDate] || 0) + 1;
+    });
+  
+    const dates = Array.from(
+      new Set(filtered.map((item) => item.date).filter(Boolean))
+    ).sort();
+  
+    const finalChartData = dates.map((date) => {
+      const entry = { date };
+      for (const key in grouped) {
+        entry[key] = grouped[key][date] || 0;
+      }
+      return entry;
+    });
+  
+    setChartData(finalChartData);
   };
-
   return (
     <div>
       <div className="mb-4 flex gap-4 items-center flex-wrap">
@@ -256,7 +274,7 @@ const FilterData = () => {
               onClick={handleGenerateChart}
               className="ml-2 px-4 py-2 bg-blue-500 text-white rounded-md shadow hover:bg-blue-600 transition"
             >
-              Generate Report
+              Generate Graph
             </button>
           </div>
         )}
@@ -264,19 +282,34 @@ const FilterData = () => {
 
       {/* Line Chart */}
       {chartData.length > 0 && (
-        <div className="mt-8">
+        <div className="mt-8 overflow-x-auto">
           <LineChart
-            width={800}
+            width={1000}
             height={400}
             data={chartData}
             margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
           >
             <CartesianGrid strokeDasharray="3 3" />
-            <XAxis dataKey="name" />
+            <XAxis dataKey="date" />
             <YAxis />
             <Tooltip />
             <Legend />
-            <Line type="monotone" dataKey="count" stroke="#8884d8" />
+            {Object.keys(chartData[0])
+              .filter((key) => key !== "date")
+              .map((key, index) => (
+                <Line
+                  key={key}
+                  type="monotone"
+                  dataKey={key}
+                  stroke={
+                    ["#8884d8", "#82ca9d", "#ff7300", "#ff4f81", "#0088FE"][
+                      index % 5
+                    ]
+                  }
+                  strokeWidth={2}
+                  dot={{ r: 3 }}
+                />
+              ))}
           </LineChart>
         </div>
       )}

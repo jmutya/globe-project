@@ -158,6 +158,7 @@ const Reports = () => {
               <IncompleteRowsTable
                 incompleteRows={incompleteRows}
                 onRowClick={setSelectedRow}
+                percentagePerAssignedPerson={percentagePerAssignedPerson}
               />
               {selectedRow?.assignedTo &&
                 percentagePerAssignedPerson[selectedRow.assignedTo] && (
