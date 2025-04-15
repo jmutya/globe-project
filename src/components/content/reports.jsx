@@ -15,7 +15,8 @@ const Reports = () => {
   const [selectedRow, setSelectedRow] = useState(null);
   const [selectedUnmatchedRow, setSelectedUnmatchedRow] = useState(null);
   const [selectedAccuracyView, setSelectedAccuracyView] = useState("ticketIssuance");
-  const [showAccuracyTable, setShowAccuracyTable] = useState(true);
+  const [showAccuracyTable, setShowAccuracyTable] = useState(false);
+
 
   const colors = [
     "#ff6384", "#36a2eb", "#ffce56", "#4bc0c0",
