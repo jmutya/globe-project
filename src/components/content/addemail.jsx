@@ -7,6 +7,7 @@ import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 
 const AddEmail = () => {
+  // State declarations
   const [currentUserRole, setCurrentUserRole] = useState(null);
   const [emails, setEmails] = useState([]);
   const [loadingEmails, setLoadingEmails] = useState(true);
@@ -20,14 +21,12 @@ const AddEmail = () => {
   const [viewMode, setViewMode] = useState("list");
   const [searchTerm, setSearchTerm] = useState("");
 
+  // Fetch all authorized users from Firestore on component mount
   useEffect(() => {
     const fetchEmails = async () => {
       try {
         const querySnapshot = await getDocs(collection(db, "authorizedUsers"));
-        const emailList = querySnapshot.docs.map((doc) => ({
-          id: doc.id,
-          ...doc.data(),
-        }));
+        const emailList = querySnapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
         setEmails(emailList);
       } catch (error) {
         toast.error("Error fetching emails: " + error.message);
@@ -39,6 +38,7 @@ const AddEmail = () => {
     fetchEmails();
   }, []);
 
+  // Get the current user's role
   useEffect(() => {
     const fetchUserRole = async () => {
       const user = auth.currentUser;
@@ -57,6 +57,7 @@ const AddEmail = () => {
     fetchUserRole();
   }, []);
 
+  // Add new user by calling backend API and storing in Firestore
   const handleAddUser = async () => {
     if (!newEmail || !newPassword || !role) {
       toast.error("Please fill in all fields.");
@@ -70,6 +71,7 @@ const AddEmail = () => {
 
     setLoading(true);
     try {
+      // Call custom backend API to create user in Firebase Auth
       const response = await fetch("http://localhost:5000/api/create-user", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -79,6 +81,7 @@ const AddEmail = () => {
       const data = await response.json();
       if (!response.ok) throw new Error(data.message);
 
+      // Add user to Firestore collection
       const docRef = await addDoc(collection(db, "authorizedUsers"), {
         email: newEmail,
         role,
@@ -98,6 +101,7 @@ const AddEmail = () => {
     }
   };
 
+  // Handle sending password reset link
   const handlePasswordReset = async (emailToReset, role) => {
     if (role === "admin") {
       toast.error("Cannot reset another admin’s password.");
@@ -116,6 +120,7 @@ const AddEmail = () => {
     }
   };
 
+  // Handle deleting user from Firestore and backend
   const handleDeleteUser = async (id, email, role) => {
     if (role === "admin") {
       toast.error("Cannot revoke access from another admin.");
@@ -148,12 +153,15 @@ const AddEmail = () => {
     }
   };
 
+  // Filter and search functionality
   const filteredEmails = emails
     .filter((user) => filterRole === "all" || user.role === filterRole)
     .filter((user) => user.email.toLowerCase().includes(searchTerm.toLowerCase()));
 
+  // JSX return includes UI for list/grid view, modals, and controls
   return (
     <div className="p-6 h-[calc(100vh-100px)] flex flex-col bg-gray-50">
+      {/* Header and controls */}
       <div className="flex justify-between items-center mb-6">
         <h3 className="text-3xl font-semibold text-indigo-700">Authorized Users</h3>
         <div className="flex items-center gap-3">
@@ -205,6 +213,7 @@ const AddEmail = () => {
         </div>
       </div>
 
+      {/* Email List */}
       <div className="flex-1 border border-gray-200 rounded-xl bg-white p-6 shadow-sm">
         <div className="max-h-[500px] overflow-y-auto pr-2">
           {loadingEmails ? (
@@ -216,6 +225,7 @@ const AddEmail = () => {
             </div>
           ) : filteredEmails.length > 0 ? (
             viewMode === "list" ? (
+              // List View
               <>
                 <div className="grid grid-cols-12 gap-4 pb-3 border-b border-gray-300 text-gray-700 font-semibold text-sm px-4">
                   <div className="col-span-6">Email</div>
@@ -252,6 +262,7 @@ const AddEmail = () => {
                 </ul>
               </>
             ) : (
+              // Grid View
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
                 {filteredEmails.map((user) => (
                   <div
@@ -286,6 +297,7 @@ const AddEmail = () => {
         </div>
       </div>
 
+      {/* Add User Modal */}
       {showModal && (
         <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
           <div className="bg-white rounded-xl shadow-lg p-6 w-full max-w-md">
