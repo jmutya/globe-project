@@ -17,4 +17,4 @@ admin.initializeApp({
 });
 
 const auth = admin.auth();
-export { auth };
+export { auth, admin }; // 👈 add admin here
