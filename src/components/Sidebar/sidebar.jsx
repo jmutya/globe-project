@@ -15,14 +15,14 @@ const componentMap = {
     Dashboard: lazy(() => import("../content/dashboard")),
     Reports: lazy(() => import("../content/reports")),
     Documents: lazy(() => import("../content/documents")),
-    "Add Emails": lazy(() => import("../content/addemail")),
+    "Users": lazy(() => import("../content/addemail")),
 };
 
 const navigationItems = [
     { name: "Dashboard", icon: ChartBarSquareIcon },
     { name: "Reports", icon: ChartBarSquareIcon },
     { name: "Documents", icon: DocumentIcon },
-    { name: "Add Emails", icon: UsersIcon },
+    { name: "Users", icon: UsersIcon },
 ];
 
 const SocialLink = memo(({ link }) => (
@@ -102,19 +102,23 @@ const Sidebar = ({ user }) => {
 
             {/* Main Content */}
             <div className="flex-1 p-4">
-                <div className="flex justify-between items-center mb-6">
-                    <SearchBar />
-                    <div className="flex items-center space-x-4">
-                        <div className="w-4 h-4 rounded-full bg-green-500" />
-                        <div className="flex items-center space-x-2">
-                            <span>
-                                <p className="text-sm font-semibold">
-                                    {user?.email?.split("@")[0]}
-                                </p>
-                            </span>
-                        </div>
-                    </div>
-                </div>
+               <div className="flex justify-between items-center mb-6">
+    <h1 className="text-3xl font-semibold text-gray-900 tracking-tight capitalize font-poppins">
+        {selected}
+    </h1>
+
+    <div className="flex items-center space-x-4">
+        <div className="w-4 h-4 rounded-full bg-green-500" />
+        <div className="flex items-center space-x-2">
+            <span>
+                <p className="text-sm font-medium text-gray-700 font-poppins">
+                    {user?.email?.split("@")[0]}
+                </p>
+            </span>
+        </div>
+    </div>
+</div>
+
                 <MainContent renderContent={renderContent} />
             </div>
 

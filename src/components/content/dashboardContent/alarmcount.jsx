@@ -17,24 +17,26 @@ const AlarmCount = () => {
   }, []);
 
   return (
-    <div className="bg-white rounded-lg shadow-md p-6 w-full max-w-sm">
+    <div className="bg-white rounded-lg shadow-md p-8 w-full max-w-sm">
       <div className="flex items-center mb-4">
-        <div className="rounded-lg bg-green-500 h-12 w-12 flex items-center justify-center">
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            fill="none"
-            viewBox="0 0 24 24"
-            strokeWidth={1.5}
-            stroke="white"
-            className="w-7 h-7"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              d="M15.75 5.25a3 3 0 013 3V15a3 3 0 01-3 3m-6-3h.008v.008H9v.008m6-3h.008v.008H15v.008m-3-3h.008v.008H12v.008"
-            />
-          </svg>
-        </div>
+      <div className="rounded-lg bg-green-500 h-12 w-12 flex items-center justify-center">
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    fill="none"
+    viewBox="0 0 24 24"
+    strokeWidth={1.5}
+    stroke="white"
+    className="w-7 h-7"
+  >
+    <path
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      d="M9 7h6m-9 3v-6a2 2 0 012-2h10a2 2 0 012 2v6m-9 3h6m-3-3h.008v.008H12V10.008m-3-3h.008v.008H9V7.008m6 6h.008v.008H15V16.008" // Example ticket path - REPLACE THIS!
+    />
+  </svg>
+
+ 
+</div>
         <h2 className="text-sm font-semibold text-gray-700 ml-3 uppercase tracking-wider">
           Ticket Count
         </h2>
@@ -56,9 +58,16 @@ const AlarmCount = () => {
         <p className="text-xs text-gray-500">
           See ticket details which require immediate attention.
         </p>
+
+        
+
       </div>
+      
     </div>
+    
   );
+
+
 };
 
 export default AlarmCount;
