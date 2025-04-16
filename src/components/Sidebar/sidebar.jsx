@@ -32,7 +32,9 @@ const navigationItems = [
     name: "Dashboard",
     icon: ChartBarSquareIcon,
     subItems: [
+
       { name: "Dashboard" }, // 👈 include itself here
+
       { name: "Reports" },
       { name: "Summary" },
       { name: "Mean Time To Ticket" },
