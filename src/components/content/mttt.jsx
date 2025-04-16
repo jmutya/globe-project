@@ -162,16 +162,14 @@ const ReportedCreatedTable = () => {
 
   return (
     <>
-
-
       <div className="max-h-[1100px] overflow-auto border rounded p-4">
 
-      <div className="mt-10 overflow-y-auto max-h-[300px] border rounded p-4">
-        <p className="mt-4 font-semibold text-xl">
+      <div className=" overflow-y-auto max-h-[300px] border rounded p-4">
+        <p className="mt-4 font-semibold text-2xl">
           Overall Average MTTT: {averageFormatted}
         </p>
       </div>
-      
+
         {/* <div className="max-h-[600px] overflow-auto border rounded p-4 mb-10">
           <h3 className="text-lg font-semibold mb-4">
             Reported, Created, and MTTT (with time)
@@ -202,7 +200,7 @@ const ReportedCreatedTable = () => {
           </table>
         </div> */}
 
-        <div className=" overflow-y-auto max-h-[800px] border rounded p-4">
+        <div className=" overflow-y-auto max-h-[700px] border rounded p-4">
           <h3 className="text-lg font-semibold mb-2">MTTT by Caller</h3>
           <table className="min-w-full table-auto border-collapse border border-gray-300">
             <thead>
