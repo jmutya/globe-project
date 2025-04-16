@@ -10,7 +10,7 @@ import {
   CartesianGrid,
 } from "recharts";
 import { fetchAlarmTypeLineData } from "../../../backend/functions/alarmAORMinUtils";
-import 'react-loading-skeleton/dist/skeleton.css';
+import "react-loading-skeleton/dist/skeleton.css";
 
 const AlarmTypeLineGraph = () => {
   const [chartData, setChartData] = useState([]);
@@ -42,9 +42,28 @@ const AlarmTypeLineGraph = () => {
 
   return (
     <div className="p-6 bg-white rounded-md shadow">
-      <h2 className="text-xl font-semibold text-gray-800 mb-4">
-        Overall Alarm Trends in Mindanao
-      </h2>
+     <div className="flex items-center mb-4">
+  <div className="rounded-lg bg-blue-500 h-12 w-12 flex items-center justify-center">
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      fill="none"
+      viewBox="0 0 24 24"
+      strokeWidth={1.5}
+      stroke="white"
+      className="w-7 h-7"
+    >
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        d="M3 12l5 5L12 9l4 4 5-5" // Line chart with increasing trend
+      />
+    </svg>
+  </div>
+  <h2 className="text-sm font-semibold text-gray-700 ml-3 uppercase tracking-wider">
+    Overall Alarm Trends in Mindanao
+  </h2>
+</div>
+
 
       {isLoading ? (
         <div className="flex justify-center items-center h-[300px]">
@@ -53,7 +72,10 @@ const AlarmTypeLineGraph = () => {
         </div>
       ) : chartData.length > 0 ? (
         <ResponsiveContainer width="100%" height={350}>
-          <LineChart data={chartData} margin={{ top: 15, right: 20, left: 5, bottom: 30 }}>
+          <LineChart
+            data={chartData}
+            margin={{ top: 15, right: 20, left: 5, bottom: 30 }}
+          >
             <CartesianGrid stroke="#e0e0e0" strokeDasharray="2 2" />
             <XAxis
               dataKey="date"
@@ -69,15 +91,21 @@ const AlarmTypeLineGraph = () => {
               axisLine={false}
             />
             <Tooltip
-              itemStyle={{ color: '#333', padding: 4 }}
-              labelStyle={{ color: '#000', fontWeight: 'bold', marginBottom: 4 }}
+              itemStyle={{ color: "#333", padding: 4 }}
+              labelStyle={{
+                color: "#000",
+                fontWeight: "bold",
+                marginBottom: 4,
+              }}
               formatter={(value, name) => [`${value}`, name]}
-              labelFormatter={(label) => `Date: ${new Date(label).toLocaleDateString()}`}
+              labelFormatter={(label) =>
+                `Date: ${new Date(label).toLocaleDateString()}`
+              }
               wrapperStyle={{
-                backgroundColor: 'rgba(255, 255, 255, 0.9)',
+                backgroundColor: "rgba(255, 255, 255, 0.9)",
                 padding: 10,
                 borderRadius: 4,
-                boxShadow: '0 2px 8px rgba(0, 0, 0, 0.15)',
+                boxShadow: "0 2px 8px rgba(0, 0, 0, 0.15)",
               }}
             />
             <Legend
@@ -85,8 +113,8 @@ const AlarmTypeLineGraph = () => {
               verticalAlign="top"
               iconSize={8}
               iconType="circle"
-              wrapperStyle={{ lineHeight: '20px' }}
-              textStyle={{ color: '#555' }}
+              wrapperStyle={{ lineHeight: "20px" }}
+              textStyle={{ color: "#555" }}
             />
             {alarmTypes.map((type, index) => (
               <Line
@@ -102,7 +130,9 @@ const AlarmTypeLineGraph = () => {
           </LineChart>
         </ResponsiveContainer>
       ) : (
-        <p className="text-gray-600 text-center mt-6">No alarm data available for Mindanao.</p>
+        <p className="text-gray-600 text-center mt-6">
+          No alarm data available for Mindanao.
+        </p>
       )}
     </div>
   );

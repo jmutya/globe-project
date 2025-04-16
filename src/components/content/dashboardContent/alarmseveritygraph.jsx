@@ -47,27 +47,28 @@ const AlarmsSeverity = () => {
   return (
     <div className="bg-white rounded-md shadow overflow-hidden">
       <div className="p-6">
-        <div className="flex items-center justify-left mb-4">
-          <div className="rounded-lg bg-red-500 h-10 w-10 flex items-center justify-center mr-3">
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              fill="none"
-              viewBox="0 0 24 24"
-              strokeWidth={1.5}
-              stroke="white"
-              className="w-6 h-6"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="M12 3c-3.866 0-7 3.134-7 7v4.586l-.707.707A1 1 0 006 17h12a1 1 0 00.707-1.707L18 14.586V10c0-3.866-3.134-7-7-7zM12 21a2 2 0 002-2h-4a2 2 0 002 2z"
-              />
-            </svg>
-          </div>
-          <h2 className="text-lg font-semibold text-gray-800 text-center">
-            Alarm Severity Distribution ({latestMonth || "Loading..."})
-          </h2>
-        </div>
+      <div className="flex items-center justify-left mb-4">
+  <div className="rounded-lg bg-red-500 h-10 w-10 flex items-center justify-center mr-3">
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      fill="none"
+      viewBox="0 0 24 24"
+      strokeWidth={1.5}
+      stroke="white"
+      className="w-6 h-6"
+    >
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        d="M11.25 3.75a8.25 8.25 0 1 0 8.25 8.25h-8.25V3.75z"
+      />
+    </svg>
+  </div>
+  <h2 className="text-lg font-semibold text-gray-800 text-center">
+    Alarm Severity Distribution ({latestMonth || "Loading..."})
+  </h2>
+</div>
+
 
         {isLoading ? (
           <div className="flex justify-center items-center py-8">
