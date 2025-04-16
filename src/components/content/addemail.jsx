@@ -1,13 +1,27 @@
 import React, { useState, useEffect } from "react";
 import { db, auth } from "../../backend/firebase/firebaseconfig";
-import { collection, addDoc, getDocs, deleteDoc, doc } from "firebase/firestore";
+import {
+  collection,
+  addDoc,
+  getDocs,
+  deleteDoc,
+  doc,
+} from "firebase/firestore";
 import { sendPasswordResetEmail } from "firebase/auth";
-import { FaKey, FaPlus, FaTrash, FaThLarge, FaList } from "react-icons/fa";
+import {
+  FaKey,
+  FaPlus,
+  FaTrash,
+  FaThLarge,
+  FaList,
+  FaSortAlphaDown,
+  FaSortAlphaUp,
+  FaSortAmountDown,
+} from "react-icons/fa";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 
 const AddEmail = () => {
-  // State declarations
   const [currentUserRole, setCurrentUserRole] = useState(null);
   const [emails, setEmails] = useState([]);
   const [loadingEmails, setLoadingEmails] = useState(true);
@@ -20,13 +34,16 @@ const AddEmail = () => {
   const [filterRole, setFilterRole] = useState("all");
   const [viewMode, setViewMode] = useState("list");
   const [searchTerm, setSearchTerm] = useState("");
+  const [sortOption, setSortOption] = useState("recent");
 
-  // Fetch all authorized users from Firestore on component mount
   useEffect(() => {
     const fetchEmails = async () => {
       try {
         const querySnapshot = await getDocs(collection(db, "authorizedUsers"));
-        const emailList = querySnapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+        const emailList = querySnapshot.docs.map((doc) => ({
+          id: doc.id,
+          ...doc.data(),
+        }));
         setEmails(emailList);
       } catch (error) {
         toast.error("Error fetching emails: " + error.message);
@@ -34,18 +51,18 @@ const AddEmail = () => {
         setLoadingEmails(false);
       }
     };
-
     fetchEmails();
   }, []);
 
-  // Get the current user's role
   useEffect(() => {
     const fetchUserRole = async () => {
       const user = auth.currentUser;
       if (user) {
         try {
           const querySnapshot = await getDocs(collection(db, "authorizedUsers"));
-          const matchedDoc = querySnapshot.docs.find(doc => doc.data().email === user.email);
+          const matchedDoc = querySnapshot.docs.find(
+            (doc) => doc.data().email === user.email
+          );
           setCurrentUserRole(matchedDoc ? matchedDoc.data().role : "user");
         } catch (error) {
           console.error("Failed to fetch user role:", error);
@@ -53,11 +70,9 @@ const AddEmail = () => {
         }
       }
     };
-
     fetchUserRole();
   }, []);
 
-  // Add new user by calling backend API and storing in Firestore
   const handleAddUser = async () => {
     if (!newEmail || !newPassword || !role) {
       toast.error("Please fill in all fields.");
@@ -71,7 +86,6 @@ const AddEmail = () => {
 
     setLoading(true);
     try {
-      // Call custom backend API to create user in Firebase Auth
       const response = await fetch("http://localhost:5000/api/create-user", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -81,7 +95,6 @@ const AddEmail = () => {
       const data = await response.json();
       if (!response.ok) throw new Error(data.message);
 
-      // Add user to Firestore collection
       const docRef = await addDoc(collection(db, "authorizedUsers"), {
         email: newEmail,
         role,
@@ -101,7 +114,6 @@ const AddEmail = () => {
     }
   };
 
-  // Handle sending password reset link
   const handlePasswordReset = async (emailToReset, role) => {
     if (role === "admin") {
       toast.error("Cannot reset another admin’s password.");
@@ -120,7 +132,6 @@ const AddEmail = () => {
     }
   };
 
-  // Handle deleting user from Firestore and backend
   const handleDeleteUser = async (id, email, role) => {
     if (role === "admin") {
       toast.error("Cannot revoke access from another admin.");
@@ -153,15 +164,44 @@ const AddEmail = () => {
     }
   };
 
-  // Filter and search functionality
+  const toggleSort = () => {
+    if (sortOption === "az") {
+      setSortOption("za");
+    } else if (sortOption === "za") {
+      setSortOption("az");
+    } else {
+      setSortOption("az");
+    }
+  };
+
   const filteredEmails = emails
     .filter((user) => filterRole === "all" || user.role === filterRole)
-    .filter((user) => user.email.toLowerCase().includes(searchTerm.toLowerCase()));
+    .filter((user) =>
+      user.email.toLowerCase().includes(searchTerm.toLowerCase())
+    )
+    .sort((a, b) => {
+      if (sortOption === "recent") {
+        return (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0);
+      } else if (sortOption === "az") {
+        return a.email.localeCompare(b.email);
+      } else if (sortOption === "za") {
+        return b.email.localeCompare(a.email);
+      }
+      return 0;
+    });
 
-  // JSX return includes UI for list/grid view, modals, and controls
+  const getSortIcon = () => {
+    return (
+      <button onClick={toggleSort} className="ml-2 text-gray-600 hover:text-indigo-600" title="Toggle Sort">
+        {sortOption === "az" && <FaSortAlphaDown className="text-sm" />}
+        {sortOption === "za" && <FaSortAlphaUp className="text-sm" />}
+        {sortOption === "recent" && <FaSortAmountDown className="text-sm" />}
+      </button>
+    );
+  };
+
   return (
     <div className="p-6 h-[calc(100vh-100px)] flex flex-col bg-gray-50">
-      {/* Header and controls */}
       <div className="flex justify-between items-center mb-6">
         <h3 className="text-3xl font-semibold text-indigo-700">Authorized Users</h3>
         <div className="flex items-center gap-3">
@@ -174,7 +214,6 @@ const AddEmail = () => {
             <option value="admin">Admin</option>
             <option value="user">User</option>
           </select>
-
           <input
             type="text"
             placeholder="Search by email..."
@@ -182,7 +221,6 @@ const AddEmail = () => {
             onChange={(e) => setSearchTerm(e.target.value)}
             className="p-2 border rounded-md text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-400"
           />
-
           <button
             onClick={() => setViewMode("list")}
             className={`p-2 rounded-md ${viewMode === "list" ? "bg-indigo-200 text-indigo-700" : "bg-white border"}`}
@@ -197,7 +235,6 @@ const AddEmail = () => {
           >
             <FaThLarge />
           </button>
-
           <button
             onClick={() => {
               if (currentUserRole !== "admin") {
@@ -213,7 +250,6 @@ const AddEmail = () => {
         </div>
       </div>
 
-      {/* Email List */}
       <div className="flex-1 border border-gray-200 rounded-xl bg-white p-6 shadow-sm">
         <div className="max-h-[500px] overflow-y-auto pr-2">
           {loadingEmails ? (
@@ -225,22 +261,26 @@ const AddEmail = () => {
             </div>
           ) : filteredEmails.length > 0 ? (
             viewMode === "list" ? (
-              // List View
               <>
                 <div className="grid grid-cols-12 gap-4 pb-3 border-b border-gray-300 text-gray-700 font-semibold text-sm px-4">
-                  <div className="col-span-6">Email</div>
+                  <div className="col-span-6 flex items-center">
+                    Email {getSortIcon()}
+                  </div>
                   <div className="col-span-3">Role</div>
                   <div className="col-span-3 text-right">Actions</div>
                 </div>
-
                 <ul className="divide-y divide-gray-100 mt-2">
                   {filteredEmails.map((user) => (
                     <li
                       key={user.id}
                       className="grid grid-cols-12 gap-4 py-3 items-center hover:bg-indigo-50 transition rounded-lg px-4"
                     >
-                      <div className="col-span-6 text-sm text-indigo-900 font-medium">{user.email}</div>
-                      <div className="col-span-3 text-sm text-gray-600 capitalize">{user.role}</div>
+                      <div className="col-span-6 text-sm text-indigo-900 font-medium">
+                        {user.email}
+                      </div>
+                      <div className="col-span-3 text-sm text-gray-600 capitalize">
+                        {user.role}
+                      </div>
                       <div className="col-span-3 flex justify-end gap-4">
                         <button
                           onClick={() => handlePasswordReset(user.email, user.role)}
@@ -262,15 +302,18 @@ const AddEmail = () => {
                 </ul>
               </>
             ) : (
-              // Grid View
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
                 {filteredEmails.map((user) => (
                   <div
                     key={user.id}
                     className="border p-4 rounded-lg shadow-sm hover:shadow-md transition bg-gray-50"
                   >
-                    <div className="text-indigo-800 font-semibold text-sm mb-1">{user.email}</div>
-                    <div className="text-sm text-gray-600 mb-3 capitalize">Role: {user.role}</div>
+                    <div className="text-indigo-800 font-semibold text-sm mb-1">
+                      {user.email}
+                    </div>
+                    <div className="text-sm text-gray-600 mb-3 capitalize">
+                      Role: {user.role}
+                    </div>
                     <div className="flex justify-end gap-3">
                       <button
                         onClick={() => handlePasswordReset(user.email, user.role)}
@@ -297,11 +340,12 @@ const AddEmail = () => {
         </div>
       </div>
 
-      {/* Add User Modal */}
       {showModal && (
         <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
           <div className="bg-white rounded-xl shadow-lg p-6 w-full max-w-md">
-            <h3 className="text-xl font-semibold text-indigo-700 mb-4">Add New User</h3>
+            <h3 className="text-xl font-semibold text-indigo-700 mb-4">
+              Add New User
+            </h3>
             <div className="space-y-4">
               <input
                 type="email"

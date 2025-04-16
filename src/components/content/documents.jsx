@@ -1,273 +1,281 @@
-import React, { useState, useEffect, useRef } from "react"; // Importing React hooks for managing state, effects, and references
-import * as XLSX from "xlsx"; // Importing XLSX library to read and parse Excel files
-import supabase from "../../backend/supabase/supabase"; // Importing supabase instance for file storage handling
-import { FaFileExcel, FaUpload, FaSpinner, FaEye, FaTrash } from "react-icons/fa"; // Importing React Icons for UI elements
-import toast, { Toaster } from "react-hot-toast"; // Importing the toast notifications library
+import React, { useState, useEffect } from "react";
+import {
+  FaUpload,
+  FaFileExcel,
+  FaTrash,
+  FaSpinner,
+} from "react-icons/fa";
+import toast, { Toaster } from "react-hot-toast";
+import supabase from "../../backend/supabase/supabase";
 
 const ExcelUploader = () => {
-  // State variables to manage different functionalities in the app
-  const [uploading, setUploading] = useState(false); // Track upload progress
-  const [uploadProgress, setUploadProgress] = useState(0); // Track the percentage of upload completion
-  const [files, setFiles] = useState([]); // List of files uploaded to the server
-  const [parsedData, setParsedData] = useState([]); // Data parsed from the Excel file
-  const [loadingFilesUploaded, setLoadingFilesUploaded] = useState(false); // Loading state for fetching files
-  const fileInputRef = useRef(null); // Ref for the file input
-  const [dragOver, setDragOver] = useState(false); // Track drag-over state for file drop area
-  const [fileToDelete, setFileToDelete] = useState(null); // Track the file selected for deletion
-  const [showDeleteModal, setShowDeleteModal] = useState(false); // Track the visibility of the delete confirmation modal
+  const [uploading, setUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [files, setFiles] = useState([]);
+  const [loadingFiles, setLoadingFiles] = useState(false);
+  const [showUploadModal, setShowUploadModal] = useState(false);
+  const [selectedFiles, setSelectedFiles] = useState([]);
+  const [fileToDelete, setFileToDelete] = useState(null);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
 
-  // Fetch uploaded files when the component is mounted
   useEffect(() => {
     fetchUploadedFiles();
   }, []);
 
-  // Event handler when a file is dragged over the drop area
-  const handleDragOver = (e) => {
-    e.preventDefault();
-    setDragOver(true); // Change the state to show drag-over effect
-  };
-
-  // Event handler when a file is dragged out of the drop area
-  const handleDragLeave = () => {
-    setDragOver(false); // Reset drag-over state
-  };
-
-  // Event handler when a file is dropped into the drop area
-  const handleDrop = (e) => {
-    e.preventDefault();
-    setDragOver(false); // Reset drag-over state
-    const file = e.dataTransfer.files[0]; // Get the file from the drop event
-    if (file) {
-      handleFileUpload({ target: { files: [file] } }); // Proceed to upload the dropped file
-    }
-  };
-
-  // Event handler to upload a selected file
-  const handleFileUpload = async (event) => {
-    const file = event.target.files[0]; // Get the file from the input field
-    if (!file) {
-      toast.error("No file selected!"); // Show error if no file is selected
-      return;
-    }
-
-    setUploading(true); // Set uploading state to true
-    setUploadProgress(10); // Set initial upload progress to 10%
-
+  const fetchUploadedFiles = async () => {
+    setLoadingFiles(true);
     try {
-      // Upload the file to Supabase storage
+      const { data, error } = await supabase.storage
+        .from("uploads")
+        .list("excels", { limit: 100 });
+
+      if (error) throw error;
+
+      const validFiles = data.filter((file) => !file.name.startsWith("."));
+      setFiles(
+        validFiles.map((file) => ({
+          name: file.name,
+          date: new Date().toLocaleDateString(), // Placeholder date
+          url: supabase.storage
+            .from("uploads")
+            .getPublicUrl(`excels/${file.name}`).data.publicUrl,
+        }))
+      );
+    } catch (error) {
+      console.error("Failed to fetch files:", error);
+      toast.error("Error fetching files");
+    } finally {
+      setLoadingFiles(false);
+    }
+  };
+
+  const handleUploadClick = () => {
+    setShowUploadModal(true);
+    setSelectedFiles([]);
+    setUploadProgress(0);
+  };
+
+  const handleFilesSelected = (e) => {
+    setSelectedFiles(Array.from(e.target.files));
+  };
+
+  const handleUploadFile = async () => {
+    if (selectedFiles.length === 0) return;
+    setUploading(true);
+    setUploadProgress(0);
+
+    let uploadedCount = 0;
+    for (let i = 0; i < selectedFiles.length; i++) {
+      const file = selectedFiles[i];
+      try {
+        const { error } = await supabase.storage
+          .from("uploads")
+          .upload(`excels/${file.name}`, file, {
+            cacheControl: "3600",
+            upsert: true,
+          });
+
+        if (error) throw error;
+        uploadedCount++;
+        setUploadProgress(Math.round((uploadedCount / selectedFiles.length) * 100));
+      } catch (error) {
+        console.error("Upload failed:", error);
+        toast.error(`Failed to upload ${file.name}`);
+      }
+    }
+
+    toast.success("Upload completed");
+    setUploading(false);
+    setShowUploadModal(false);
+    fetchUploadedFiles();
+  };
+
+  const confirmDelete = (fileName) => {
+    setFileToDelete(fileName);
+    setShowDeleteModal(true);
+  };
+
+  const handleDeleteFile = async () => {
+    if (!fileToDelete) return;
+    try {
       const { error } = await supabase.storage
         .from("uploads")
-        .upload(`excels/${file.name}`, file, { cacheControl: "3600", upsert: true });
+        .remove([`excels/${fileToDelete}`]);
 
-      if (error) throw error; // Handle any errors during upload
-      setUploadProgress(50); // Update upload progress to 50% after successful upload
-      fetchUploadedFiles(); // Fetch the list of uploaded files
-      setUploadProgress(100); // Set progress to 100% once upload is complete
-      toast.success("File uploaded successfully!"); // Show success notification
+      if (error) throw error;
+      toast.success("File deleted");
+      fetchUploadedFiles();
     } catch (error) {
-      console.error("Upload failed:", error);
-      toast.error("Upload failed!"); // Show error notification if upload fails
+      console.error("Delete failed:", error);
+      toast.error("Failed to delete file");
     } finally {
-      setUploading(false); // Reset the uploading state
-    }
-  };
-
-  // Fetch the list of files that have been uploaded to Supabase storage
-  const fetchUploadedFiles = async () => {
-    setLoadingFilesUploaded(true); // Set loading state to true while fetching files
-    try {
-      // Fetch the files list from Supabase
-      const { data, error } = await supabase.storage.from("uploads").list("excels", { limit: 100 });
-      if (error) throw error; // Handle any errors during fetching
-
-      const validFiles = data.filter(file => !file.name.startsWith(".")); // Filter out any hidden files
-      setFiles(validFiles.map(file => ({
-        name: file.name,
-        url: supabase.storage.from("uploads").getPublicUrl(`excels/${file.name}`).data.publicUrl,
-      }))); // Update the files state with the valid files
-    } catch (error) {
-      console.error("Error fetching files:", error);
-      toast.error("Failed to load files."); // Show error if fetching files fails
-    } finally {
-      setLoadingFilesUploaded(false); // Reset loading state once fetching is complete
-    }
-  };
-
-  // View an uploaded Excel file and parse its content
-  const viewExcelFile = async (fileUrl) => {
-    try {
-      const response = await fetch(fileUrl); // Fetch the file
-      const blob = await response.blob(); // Convert the response to a blob
-      const reader = new FileReader(); // Create a FileReader to read the file content
-      reader.onload = (e) => {
-        const workbook = XLSX.read(e.target.result, { type: "binary" }); // Parse the Excel file
-        const sheet = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]]); // Convert the first sheet to JSON
-        setParsedData(sheet); // Store the parsed data in the state
-      };
-      reader.readAsBinaryString(blob); // Start reading the file as binary string
-    } catch (error) {
-      console.error("Error reading Excel file:", error);
-      toast.error("Failed to read file."); // Show error notification if reading fails
-    }
-  };
-
-  // Confirm file deletion
-  const confirmDelete = (fileName) => {
-    setFileToDelete(fileName); // Set the file to delete in state
-    setShowDeleteModal(true); // Show the delete confirmation modal
-  };
-
-  // Handle the file deletion
-  const handleDeleteFile = async () => {
-    if (!fileToDelete) return; // Exit if no file is selected to delete
-    try {
-      // Delete the file from Supabase storage
-      const { error } = await supabase.storage.from("uploads").remove([`excels/${fileToDelete}`]);
-      if (error) throw error; // Handle any errors during deletion
-      toast.success("File deleted successfully."); // Show success notification
-      fetchUploadedFiles(); // Fetch updated list of files
-    } catch (error) {
-      console.error("Error deleting file:", error);
-      toast.error("Failed to delete the file."); // Show error notification if deletion fails
-    } finally {
-      setShowDeleteModal(false); // Hide the delete confirmation modal
-      setFileToDelete(null); // Reset the file to delete state
+      setShowDeleteModal(false);
+      setFileToDelete(null);
     }
   };
 
   return (
     <>
-      {/* Toast notifications */}
       <Toaster position="bottom-right" />
-      <div className="flex flex-col md:flex-row p-4 gap-4 h-[calc(100vh-100px)]">
-        {/* File upload section */}
-        <div className="w-full md:w-1/3 bg-white rounded-xl shadow-lg p-4 flex flex-col">
-          {/* Drag & drop area with file input */}
-          <label
-            ref={fileInputRef}
-            className={`flex flex-col items-center justify-center w-full h-32 border-2 border-dashed rounded-lg cursor-pointer transition ${
-              dragOver ? "bg-blue-50 border-blue-400" : "border-gray-300 hover:bg-gray-100"
-            }`}
-            onDragOver={handleDragOver}
-            onDragLeave={handleDragLeave}
-            onDrop={handleDrop}
+      <div className="flex flex-col p-4 h-[calc(100vh-100px)] max-w-5xl mx-auto">
+        <div className="flex justify-between items-center mb-4">
+          <h2 className="text-xl font-bold">Files</h2>
+          <button
+            onClick={handleUploadClick}
+            className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl shadow"
           >
-            <input
-              type="file"
-              accept=".xlsx, .xls"
-              onChange={handleFileUpload}
-              ref={fileInputRef}
-              className="hidden"
-            />
-            <FaUpload className="text-gray-400 text-3xl mb-2" />
-            <span className="text-gray-600">Drag & Drop or <span className="text-blue-600 font-semibold">Click to Upload</span></span>
-          </label>
-
-          {/* Upload progress bar */}
-          {uploading && (
-            <div className="relative w-full bg-gray-200 rounded-full h-4 mt-4">
-              <div 
-                className="absolute top-0 left-0 bg-blue-500 h-4 rounded-full text-white text-xs flex items-center justify-center"
-                style={{ width: `${uploadProgress}%` }}
-              >
-                {uploadProgress}%
-              </div>
-            </div>
-          )}
-
-          {/* Display list of uploaded files */}
-          <div className="mt-4 overflow-y-auto max-h-[calc(100vh-300px)]">
-            <h3 className="text-md font-semibold mb-3">Uploaded Files</h3>
-            {loadingFilesUploaded ? (
-              <div className="flex justify-center items-center py-4">
-                <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-indigo-500"></div>
-                <p className="ml-3 text-gray-600">Loading files...</p>
-              </div>
-            ) : files.length > 0 ? (
-              <div className="flex flex-col gap-3">
-                {files.map((file, index) => (
-                  <div 
-                    key={index} 
-                    className="relative flex items-center justify-between px-4 py-3 bg-white border border-gray-200 rounded-lg shadow-sm transition duration-200"
-                  >
-                    <div className="flex items-start gap-2 w-full pr-10">
-                      <FaFileExcel className="text-green-600 mt-1" />
-                      <button 
-                        onClick={() => viewExcelFile(file.url)}
-                        className="text-indigo-700 text-sm text-left break-words w-full"
-                      >
-                        {file.name}
-                      </button>
-                    </div>
-
-                    {/* Delete button */}
-                    <button 
-                      onClick={() => confirmDelete(file.name)}
-                      className="absolute right-2 top-1/2 transform -translate-y-1/2 text-red-600 hover:text-red-800 text-2xl"
-                      title="Delete file"
-                    >
-                      <FaTrash />
-                    </button>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <p className="text-center text-gray-500">No files uploaded.</p>
-            )}
-          </div>
+            <FaUpload />
+            Upload File
+          </button>
         </div>
 
-        {/* Display parsed data from the Excel file */}
-        <div className="flex-1 p-4 bg-white rounded-xl shadow-lg overflow-hidden">
-          {parsedData.length > 0 ? (
-            <div className="max-h-full overflow-auto border border-gray-300 rounded-lg">
-              <table className="min-w-full table-fixed border-collapse border border-gray-300">
-                <thead>
-                  <tr className="bg-indigo-600 text-white">
-                    {Object.keys(parsedData[0]).map((key) => (
-                      <th key={key} className="border border-gray-300 px-3 py-2 text-sm text-left bg-indigo-600 text-white">{key}</th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {parsedData.map((row, index) => (
-                    <tr key={index} className={index % 2 === 0 ? "bg-gray-50" : "bg-white"}>
-                      {Object.entries(row).map(([key, value], idx) => (
-                        <td 
-                          key={idx} 
-                          className={`border border-gray-300 px-3 py-2 text-sm text-left`}
-                        >
-                          {value}
-                        </td>
-                      ))}
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+        <div className="bg-white rounded-xl shadow border border-gray-200 overflow-hidden">
+          {loadingFiles ? (
+            <div className="flex items-center justify-center py-10 text-gray-500">
+              <FaSpinner className="animate-spin text-xl mr-2" />
+              Loading files...
             </div>
           ) : (
-            <div className="flex flex-col items-center justify-center text-gray-500 p-8 h-full">
-              <FaEye className="text-4xl text-gray-400" />
-              <p className="text-lg font-semibold mt-2">No file selected.</p>
-              <p className="text-sm text-gray-400">Upload or select a file to display data.</p>
-            </div>
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gray-100 text-gray-700 text-sm">
+                <tr>
+                  <th className="px-6 py-3 text-left font-medium">File</th>
+                  <th className="px-6 py-3 text-left font-medium">Date</th>
+                  <th className="px-6 py-3 text-center font-medium">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="text-gray-800 text-sm divide-y divide-gray-100">
+                {files.length > 0 ? (
+                  files.map((file, index) => (
+                    <tr key={index} className="hover:bg-gray-50">
+                      <td className="px-6 py-3 flex items-center gap-2">
+                        <FaFileExcel className="text-green-600" />
+                        <a
+                          href={file.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="hover:underline"
+                        >
+                          {file.name}
+                        </a>
+                      </td>
+                      <td className="px-6 py-3">{file.date}</td>
+                      <td className="px-6 py-3 text-center">
+                        <button
+                          onClick={() => confirmDelete(file.name)}
+                          className="text-red-600 hover:text-red-800"
+                          title="Delete"
+                        >
+                          <FaTrash />
+                        </button>
+                      </td>
+                    </tr>
+                  ))
+                ) : (
+                  <tr>
+                    <td colSpan="3" className="text-center py-10 text-gray-500">
+                      No files uploaded yet.
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
           )}
         </div>
+      </div>
 
-        {/* Delete confirmation modal */}
-        {showDeleteModal && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-30">
-            <div className="bg-white rounded-xl p-6 shadow-lg w-full max-w-md">
-              <h2 className="text-lg font-semibold mb-4">Delete File</h2>
-              <p className="text-sm text-gray-700 mb-6">Are you sure you want to delete <strong>{fileToDelete}</strong>?</p>
-              <div className="flex justify-end gap-3">
-                <button onClick={() => setShowDeleteModal(false)} className="px-4 py-2 rounded bg-gray-200 text-gray-800 hover:bg-gray-300">Cancel</button>
-                <button onClick={handleDeleteFile} className="px-4 py-2 rounded bg-red-600 text-white hover:bg-red-700">Delete</button>
+      {/* Upload Modal */}
+      {showUploadModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-50">
+          <div className="bg-white p-6 rounded-xl shadow-lg w-full max-w-md">
+            <h3 className="text-lg font-semibold mb-4">Upload Excel File(s)</h3>
+
+            <div
+              onDrop={(e) => {
+                e.preventDefault();
+                setSelectedFiles(Array.from(e.dataTransfer.files));
+              }}
+              onDragOver={(e) => e.preventDefault()}
+              className="border-2 border-dashed border-gray-300 hover:border-indigo-500 rounded-lg p-6 text-center text-gray-500 cursor-pointer transition mb-3"
+              onClick={() => document.getElementById("fileInput").click()}
+            >
+              <input
+                id="fileInput"
+                type="file"
+                multiple
+                accept=".xlsx,.xls"
+                onChange={handleFilesSelected}
+                className="hidden"
+              />
+              <div className="flex flex-col items-center gap-2">
+                <FaUpload className="text-indigo-500 text-3xl" />
+                <p className="text-sm">Drag & drop your Excel files here</p>
+                <p className="text-xs text-gray-400">or click to browse</p>
               </div>
             </div>
+
+            {selectedFiles.length > 0 && (
+              <ul className="text-sm text-gray-700 mb-3 space-y-1 max-h-24 overflow-y-auto">
+                {selectedFiles.map((file, index) => (
+                  <li key={index}>• {file.name}</li>
+                ))}
+              </ul>
+            )}
+
+            {uploading && (
+              <div className="w-full bg-gray-200 rounded h-2 mb-4 overflow-hidden">
+                <div
+                  className="bg-indigo-600 h-full transition-all duration-200"
+                  style={{ width: `${uploadProgress}%` }}
+                ></div>
+              </div>
+            )}
+
+            <div className="flex justify-end gap-3">
+              <button
+                onClick={() => setShowUploadModal(false)}
+                className="px-4 py-2 rounded bg-gray-200 text-gray-800 hover:bg-gray-300"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleUploadFile}
+                disabled={uploading || selectedFiles.length === 0}
+                className="px-4 py-2 rounded bg-indigo-600 text-white hover:bg-indigo-700 flex items-center gap-2 disabled:opacity-50"
+              >
+                {uploading && <FaSpinner className="animate-spin" />}
+                {uploading ? "Uploading..." : "Upload"}
+              </button>
+            </div>
           </div>
-        )}
-      </div>
+        </div>
+      )}
+
+      {/* Delete Modal */}
+      {showDeleteModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-50">
+          <div className="bg-white p-6 rounded-xl shadow-lg w-full max-w-md">
+            <h3 className="text-lg font-semibold mb-3">Delete File</h3>
+            <p className="text-sm text-gray-600 mb-6">
+              Are you sure you want to delete <strong>{fileToDelete}</strong>?
+            </p>
+            <div className="flex justify-end gap-3">
+              <button
+                onClick={() => setShowDeleteModal(false)}
+                className="px-4 py-2 rounded bg-gray-200 text-gray-800 hover:bg-gray-300"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleDeleteFile}
+                className="px-4 py-2 rounded bg-red-600 text-white hover:bg-red-700"
+              >
+                Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 };

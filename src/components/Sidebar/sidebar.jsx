@@ -18,6 +18,7 @@ import Logo from "./navigation/logo";
 
 // ⬇️ Add subcomponents to the component map
 const componentMap = {
+  Dashboard: lazy(() => import("../content/dashboard")),
   Reports: lazy(() => import("../content/reports")),
   Documents: lazy(() => import("../content/documents")),
   Users: lazy(() => import("../content/addemail")),
@@ -27,7 +28,6 @@ const componentMap = {
   "Mean Time To Dispatch": lazy(() => import("../content/mttd")),
   "First Touch Resolution": lazy(() => import("../content/ftr")),
   Accuracy: lazy(() => import("../content/accuracy")),
-  "Dashboard": lazy(() => import("../content/dashboard")),
 };
 
 const navigationItems = [
