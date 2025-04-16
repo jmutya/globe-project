@@ -1,24 +1,30 @@
 import React, { useState, useCallback, Suspense, lazy, memo } from "react";
 import { useNavigate } from "react-router-dom";
 import { getAuth, signOut } from "firebase/auth";
-import { FaSignOutAlt, FaTimes, FaChevronDown, FaChevronUp } from "react-icons/fa"; // ⬅️ Add these icons
+import {
+  FaSignOutAlt,
+  FaTimes,
+  FaChevronDown,
+  FaChevronUp,
+} from "react-icons/fa"; // ⬅️ Add these icons
 import {
   ChartBarSquareIcon,
   UsersIcon,
   DocumentIcon,
 } from "@heroicons/react/24/outline";
-import SearchBar from "../../main/searchbar/searchbar";
+
 import MainContent from "../../main/mainContent";
 import Logo from "./navigation/logo";
 
 // ⬇️ Add subcomponents to the component map
 const componentMap = {
-  Dashboard: lazy(() => import("../content/dashboard")),
+  Dashboard: lazy(() => import("../content/dashboardcount")),
   Reports: lazy(() => import("../content/reports")),
   Documents: lazy(() => import("../content/documents")),
   Users: lazy(() => import("../content/addemail")),
-  Summary: lazy(() => import("../content/summary")),  // ✅ Example sub-items
+  Summary: lazy(() => import("../content/summary")), 
   Accuracy: lazy(() => import("../content/accuracy")),
+  "Dashboard": lazy(() => import("../content/dashboard")),
 };
 
 const navigationItems = [
@@ -26,7 +32,7 @@ const navigationItems = [
     name: "Dashboard",
     icon: ChartBarSquareIcon,
     subItems: [
-      { name: "Dashboard" },  // 👈 include itself here
+      { name: "Dashboard" }, 
       { name: "Reports" },
       { name: "Summary" },
       { name: "Accuracy" },
@@ -35,8 +41,6 @@ const navigationItems = [
   { name: "Documents", icon: DocumentIcon },
   { name: "Users", icon: UsersIcon },
 ];
-
-
 
 const SocialLink = memo(({ link }) => (
   <a
@@ -84,58 +88,57 @@ const Sidebar = ({ user }) => {
       <div className="flex flex-col w-64 bg-indigo-600 p-4 text-white h-screen overflow-y-auto">
         <Logo />
         <nav className="space-y-2">
-        {navigationItems.map((item) => (
-  <div key={item.name}>
-    <button
-      onClick={() => {
-        if (item.subItems) {
-          setDropdowns((prev) => ({
-            ...prev,
-            [item.name]: !prev[item.name],
-          }));
-        } else {
-          setSelected(item.name);
-        }
-      }}
-      className={`flex items-center justify-between w-full p-2 space-x-3 rounded-md ${
-        selected === item.name
-          ? "bg-indigo-700 font-bold border-l-[3px] border-white pl-4"
-          : "hover:bg-indigo-700"
-      }`}
-    >
-      <div className="flex items-center space-x-3">
-        <item.icon className="w-6 h-6" />
-        <span className="text-lg">{item.name}</span>
-      </div>
-      {item.subItems && (
-        dropdowns[item.name] ? (
-          <FaChevronUp className="w-4 h-4" />
-        ) : (
-          <FaChevronDown className="w-4 h-4" />
-        )
-      )}
-    </button>
+          {navigationItems.map((item) => (
+            <div key={item.name}>
+              <button
+                onClick={() => {
+                  if (item.subItems) {
+                    setDropdowns((prev) => ({
+                      ...prev,
+                      [item.name]: !prev[item.name],
+                    }));
+                  } else {
+                    setSelected(item.name);
+                  }
+                }}
+                className={`flex items-center justify-between w-full p-2 space-x-3 rounded-md ${
+                  selected === item.name
+                    ? "bg-indigo-700 font-bold border-l-[3px] border-white pl-4"
+                    : "hover:bg-indigo-700"
+                }`}
+              >
+                <div className="flex items-center space-x-3">
+                  <item.icon className="w-6 h-6" />
+                  <span className="text-lg">{item.name}</span>
+                </div>
+                {item.subItems &&
+                  (dropdowns[item.name] ? (
+                    <FaChevronUp className="w-4 h-4" />
+                  ) : (
+                    <FaChevronDown className="w-4 h-4" />
+                  ))}
+              </button>
 
-    {/* ✅ Dropdown subItems under Dashboard */}
-    {item.subItems && dropdowns[item.name] && (
-      <div className="ml-8 mt-1 space-y-1">
-        {item.subItems.map((subItem) => (
-          <button
-            key={subItem.name}
-            onClick={() => setSelected(subItem.name)}
-            className={`block text-left w-full text-sm text-white px-3 py-1 rounded-md ${
-              selected === subItem.name
-                ? "bg-indigo-500"
-                : "hover:bg-indigo-600"
-            }`}
-          >
-            {subItem.name}
-          </button>
-        ))}
-      </div>
-    )}
-  </div>
-))}
+              {/* ✅ Dropdown subItems under Dashboard */}
+              {item.subItems && dropdowns[item.name] && (
+                <div className="ml-8 mt-1 space-y-1">
+                  {item.subItems.map((subItem) => (
+                    <button
+                      key={subItem.name}
+                      onClick={() => setSelected(subItem.name)}
+                      className={`block text-left w-full text-sm text-white px-3 py-1 rounded-md ${
+                        selected === subItem.name
+                          ? "bg-indigo-500"
+                          : "hover:bg-indigo-600"
+                      }`}
+                    >
+                      {subItem.name}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          ))}
         </nav>
 
         {/* Social Media Links */}
