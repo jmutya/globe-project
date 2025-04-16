@@ -117,9 +117,9 @@ const ExcelUploader = () => {
   return (
     <>
       <Toaster position="bottom-right" />
-      <div className="flex flex-col p-4 h-[calc(100vh-100px)] max-w-5xl mx-auto">
-        <div className="flex justify-between items-center mb-4">
-          <h2 className="text-xl font-bold">Files</h2>
+      <div className="p-6 h-[calc(100vh-100px)] flex flex-col bg-gray-50">
+        <div className="flex justify-between items-center mb-6">
+        <h3 className="text-3xl font-semibold text-indigo-700">Excel Files</h3>
           <button
             onClick={handleUploadClick}
             className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl shadow"
