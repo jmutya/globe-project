@@ -125,7 +125,7 @@ const ReportedCreatedTable = () => {
   const totalMTTTByCaller = Object.entries(groupedByCaller).map(
     ([caller, data]) => {
       const avgMTTT = (data.totalMTTT / data.count).toFixed(2); // Average MTTT for each caller
-      return { caller, totalMTTT: avgMTTT };
+      return { caller, totalMTTT: avgMTTT , ticketcount: data.count};
     }
   );
 
@@ -136,23 +136,22 @@ const ReportedCreatedTable = () => {
     }, 0)
     .toFixed(2);
 
-    const formatMinutesToHMS = (minutes) => {
-      const totalSeconds = Math.floor(minutes * 60);
-    
-      const days = Math.floor(totalSeconds / (3600 * 24));
-      const hrs = Math.floor((totalSeconds % (3600 * 24)) / 3600);
-      const mins = Math.floor((totalSeconds % 3600) / 60);
-      const secs = totalSeconds % 60;
-    
-      const parts = [];
-      if (days > 0) parts.push(`${days}d`);
-      if (hrs > 0) parts.push(`${hrs}h`);
-      if (mins > 0) parts.push(`${mins}m`);
-      if (secs > 0) parts.push(`${secs}s`);
-    
-      return parts.length > 0 ? parts.join(" ") : "0s";
-    };
-    
+  const formatMinutesToHMS = (minutes) => {
+    const totalSeconds = Math.floor(minutes * 60);
+
+    const days = Math.floor(totalSeconds / (3600 * 24));
+    const hrs = Math.floor((totalSeconds % (3600 * 24)) / 3600);
+    const mins = Math.floor((totalSeconds % 3600) / 60);
+    const secs = totalSeconds % 60;
+
+    const parts = [];
+    if (days > 0) parts.push(`${days}d`);
+    if (hrs > 0) parts.push(`${hrs}h`);
+    if (mins > 0) parts.push(`${mins}m`);
+    if (secs > 0) parts.push(`${secs}s`);
+
+    return parts.length > 0 ? parts.join(" ") : "0s";
+  };
 
   const validRows = reportData.filter((item) => !isNaN(parseFloat(item.mttt)));
   const averageMTTTinMinutes =
@@ -163,12 +162,11 @@ const ReportedCreatedTable = () => {
   return (
     <>
       <div className="max-h-[1100px] overflow-auto border rounded p-4">
-
-      <div className=" overflow-y-auto max-h-[300px] border rounded p-4">
-        <p className="mt-4 font-semibold text-2xl">
-          Overall Average MTTT: {averageFormatted}
-        </p>
-      </div>
+        <div className=" overflow-y-auto max-h-[300px] border rounded p-4">
+          <p className="mt-4 font-semibold text-2xl">
+            Overall Average MTTT: {averageFormatted}
+          </p>
+        </div>
 
         {/* <div className="max-h-[600px] overflow-auto border rounded p-4 mb-10">
           <h3 className="text-lg font-semibold mb-4">
@@ -206,7 +204,8 @@ const ReportedCreatedTable = () => {
             <thead>
               <tr className="bg-gray-100">
                 <th className="border px-4 py-2">Caller</th>
-                <th className="border px-4 py-2">MTTT (Minutes)</th>
+                <th className="border px-4 py-2"># of Assigned Tickets</th>
+                <th className="border px-4 py-2">MTTT</th>
                 <th className="border px-4 py-2">Evaluation</th>
               </tr>
             </thead>
@@ -216,6 +215,7 @@ const ReportedCreatedTable = () => {
                 return (
                   <tr key={idx}>
                     <td className="border px-4 py-2">{item.caller}</td>
+                    <td className="border px-4 py-2 text-center">{item.ticketcount}</td>
                     <td className="border px-4 py-2 text-center">
                       {formatMinutesToHMS(item.totalMTTT)}
                     </td>
