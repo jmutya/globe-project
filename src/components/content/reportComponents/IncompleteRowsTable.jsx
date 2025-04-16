@@ -5,7 +5,7 @@ import {
   ChevronUpIcon,
   ExclamationCircleIcon,
 } from "@heroicons/react/24/solid";
-import { FaTicketAlt } from 'react-icons/fa';
+import { FaTicketAlt } from "react-icons/fa";
 const IncompleteRowsTable = ({
   incompleteRows,
   onRowClick,
@@ -42,9 +42,9 @@ const IncompleteRowsTable = ({
               onClick={() => toggleExpand(idx, row)}
             >
               <div className="flex items-start gap-4">
-              <div className="flex items-center justify-center bg-yellow-500 p-2 rounded-full">
-  <FaTicketAlt className="h-10 w-10 text-white" />
-</div>
+                <div className="flex items-center justify-center bg-yellow-500 p-2 rounded-full">
+                  <FaTicketAlt className="h-10 w-10 text-white" />
+                </div>
 
                 <div className="flex-1">
                   <div className="flex justify-between items-center">

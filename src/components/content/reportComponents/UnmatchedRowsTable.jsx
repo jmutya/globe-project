@@ -1,9 +1,16 @@
-import React from "react";
+import React, { useState } from "react";
 import { FaExclamationTriangle } from "react-icons/fa";
 
-const UnmatchedRowsTable = ({ unmatchedRows, onRowClick }) => {
+const UnmatchedRowsTable = ({ unmatchedRows, onRowClick,percentagePerAssignedPerson }) => {
+  const [expandedRowIndex, setExpandedRowIndex] = useState(null);
+
+  const toggleRow = (index, row) => {
+    setExpandedRowIndex(expandedRowIndex === index ? null : index);
+    onRowClick(row); // Optional callback if needed
+  };
+
   if (!unmatchedRows || unmatchedRows.length === 0) {
-    return null; // Or a message if you prefer
+    return null;
   }
 
   return (
@@ -16,23 +23,38 @@ const UnmatchedRowsTable = ({ unmatchedRows, onRowClick }) => {
         <thead>
           <tr className="border-b bg-red-200 text-red-800">
             <th className="px-4 py-2 text-left font-medium">Ticket Number</th>
-            <th className="px-4 py-2 text-left font-medium">Resolved By</th>
-            <th className="px-4 py-2 text-left font-medium">Cause</th>
-            <th className="px-4 py-2 text-left font-medium">Reason for Outage</th>
           </tr>
         </thead>
         <tbody>
+          
           {unmatchedRows.map((row, idx) => (
-            <tr
-              key={idx}
-              className="border-b cursor-pointer hover:bg-red-100 transition-colors duration-300"
-              onClick={() => onRowClick(row)}
-            >
-              <td className="px-4 py-2">{row.number}</td>
-              <td className="px-4 py-2">{row.resolvedBy || "Unassigned"}</td>
-              <td className="px-4 py-2">{row.cause || "Empty"}</td>
-              <td className="px-4 py-2">{row.reason || "Empty"}</td>
-            </tr>
+            
+            <React.Fragment key={idx}>
+              <tr
+                className="border-b cursor-pointer hover:bg-red-100 transition-colors duration-300"
+                onClick={() => toggleRow(idx, row)}
+                
+                
+              >
+                  
+                
+                <td className="px-4 py-2 font-semibold text-red-800">
+                  🎫 {row.number}
+                  
+                </td>
+              </tr>
+              {expandedRowIndex === idx && (
+                <tr className="bg-red-100">
+                  <td className="px-6 py-3" colSpan="4">
+                    <div className="text-sm space-y-1">
+                      <div><strong>Resolved By:</strong> {row.resolvedBy || "Unassigned"}</div>
+                      <div><strong>Cause:</strong> {row.cause || "Empty"}</div>
+                      <div><strong>Reason for Outage:</strong> {row.reason || "Empty"}</div>
+                    </div>
+                  </td>
+                </tr>
+              )}
+            </React.Fragment>
           ))}
         </tbody>
       </table>
