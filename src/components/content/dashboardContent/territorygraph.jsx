@@ -34,10 +34,32 @@ const TerritoryGraph = () => {
   }, []);
 
   return (
-    <div className="p-6 bg-white rounded-md shadow" style={{ maxHeight: "450px" }}>
-      <h2 className="text-xl font-semibold text-gray-800 mb-4">
-        Alarm Distribution by Territory
-      </h2>
+    <div
+      className="p-6 bg-white rounded-md shadow"
+      style={{ maxHeight: "450px" }}
+    >
+      <div className="flex items-center mb-4">
+        <div className="rounded-lg bg-orange-500 h-12 w-12 flex items-center justify-center">
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            fill="none"
+            viewBox="0 0 24 24"
+            strokeWidth={1.5}
+            stroke="white"
+            className="w-7 h-7"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              d="M4 18v-6m4 6v-4m4 4v-8m4 8V9m4 9V5"
+            />
+          </svg>
+        </div>
+        <h2 className="text-sm font-semibold text-gray-700 ml-3 uppercase tracking-wider">
+          Alarm Distribution by Territory
+        </h2>
+      </div>
+
       {isLoading ? (
         <div className="flex justify-center items-center py-8">
           <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-500"></div>
@@ -67,24 +89,31 @@ const TerritoryGraph = () => {
               tick={{ fontSize: 12 }}
               axisLine={false}
               tickLine={false}
-              domain={[0, Math.max(...chartData.map((item) => item.count)) * 1.2]}
+              domain={[
+                0,
+                Math.max(...chartData.map((item) => item.count)) * 1.2,
+              ]}
             />
             <Tooltip
-              cursor={{ fill: 'rgba(0, 0, 0, 0.05)' }}
-              itemStyle={{ color: '#333' }}
-              labelStyle={{ color: '#000', fontWeight: 'bold' }}
+              cursor={{ fill: "rgba(0, 0, 0, 0.05)" }}
+              itemStyle={{ color: "#333" }}
+              labelStyle={{ color: "#000", fontWeight: "bold" }}
               formatter={(value, name, props) => [
-                `${value} (${props.payload.percentage ? props.payload.percentage.toFixed(1) : 0}%)`,
+                `${value} (${
+                  props.payload.percentage
+                    ? props.payload.percentage.toFixed(1)
+                    : 0
+                }%)`,
                 "Alarms",
               ]}
             />
             <Legend
               align="right"
               verticalAlign="top"
-              wrapperStyle={{ lineHeight: '24px' }}
+              wrapperStyle={{ lineHeight: "24px" }}
               iconSize={14}
               iconType="square"
-              textStyle={{ color: '#4a5568' }}
+              textStyle={{ color: "#4a5568" }}
               payload={chartData.map((entry) => ({
                 value: `Territory - ${entry.category}`,
                 type: "square",
@@ -99,7 +128,9 @@ const TerritoryGraph = () => {
           </BarChart>
         </ResponsiveContainer>
       ) : (
-        <p className="text-gray-600 py-8 text-center">No alarm data available for territories.</p>
+        <p className="text-gray-600 py-8 text-center">
+          No alarm data available for territories.
+        </p>
       )}
     </div>
   );
