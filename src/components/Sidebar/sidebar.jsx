@@ -12,19 +12,24 @@ import {
   UsersIcon,
   DocumentIcon,
 } from "@heroicons/react/24/outline";
-import SearchBar from "../../main/searchbar/searchbar";
+
 import MainContent from "../../main/mainContent";
 import Logo from "./navigation/logo";
 
 // ⬇️ Add subcomponents to the component map
 const componentMap = {
-  Dashboard: lazy(() => import("../content/dashboard")),
+  Dashboard: lazy(() => import("../content/dashboardcount")),
   Reports: lazy(() => import("../content/reports")),
   Documents: lazy(() => import("../content/documents")),
   Users: lazy(() => import("../content/addemail")),
+<<<<<<< HEAD
   Summary: lazy(() => import("../content/summary")), // ✅ Example sub-items
   "Mean Time To Ticket": lazy(() => import("../content/mttt")),
+=======
+  Summary: lazy(() => import("../content/summary")), 
+>>>>>>> 3a67e932fb960512216589a182a8fed92fbb34e4
   Accuracy: lazy(() => import("../content/accuracy")),
+  "Dashboard": lazy(() => import("../content/dashboard")),
 };
 
 const navigationItems = [
@@ -32,7 +37,11 @@ const navigationItems = [
     name: "Dashboard",
     icon: ChartBarSquareIcon,
     subItems: [
+<<<<<<< HEAD
       { name: "Dashboard" }, // 👈 include itself here
+=======
+      { name: "Dashboard" }, 
+>>>>>>> 3a67e932fb960512216589a182a8fed92fbb34e4
       { name: "Reports" },
       { name: "Summary" },
       { name: "Mean Time To Ticket" },
