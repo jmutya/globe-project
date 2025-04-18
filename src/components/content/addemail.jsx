@@ -2,9 +2,9 @@
 import React, { useState, useEffect } from "react";
 import { db, auth } from "../../backend/firebase/firebaseconfig";
 import { auth2, db2 } from "../../backend/firebase/addingNewUserConfig";
-import { signInWithEmailAndPassword, deleteUser } from "firebase/auth";
-
-
+import { createUserWithEmailAndPassword } from "firebase/auth";
+import { getAuth, deleteUser } from "firebase/auth";
+import { handleDeleteUser } from './../../backend/firebase/deleteUsers';
 
 import {
   collection,
@@ -158,19 +158,36 @@ const AddEmail = () => {
     }
   
     setDeletingId(id);
+  
     try {
-      // Directly delete the user from Firestore
+      // Delete from Firestore (in app2)
       await deleteDoc(doc(db2, "authorizedUsers", id));
   
-      // Update local state to remove the deleted user from the displayed list
+      // Call server to delete user from Firebase Authentication
+      const response = await fetch('/delete-user', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email }),
+      });
+  
+      const data = await response.json();
+      if (response.ok) {
+        toast.success("User access revoked and deleted from Firestore and Authentication.");
+      } else {
+        toast.error("Error deleting user from Authentication: " + data.message);
+      }
+  
+      // Update local UI
       setEmails(emails.filter((user) => user.id !== id));
-      toast.success("User access revoked and deleted from Firestore.");
     } catch (error) {
-      toast.error("Error deleting user: " + error.message);
+      toast.error("Error revoking access: " + error.message);
     } finally {
       setDeletingId(null);
     }
   };
+  
   
 
   // Toggle sort order between recent, A-Z, and Z-A
