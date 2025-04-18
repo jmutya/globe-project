@@ -2,7 +2,8 @@
 import React, { useState, useEffect } from "react";
 import { db, auth } from "../../backend/firebase/firebaseconfig";
 import { auth2, db2 } from "../../backend/firebase/addingNewUserConfig";
-import { createUserWithEmailAndPassword } from "firebase/auth";
+import { signInWithEmailAndPassword, deleteUser } from "firebase/auth";
+
 
 
 import {
@@ -158,21 +159,19 @@ const AddEmail = () => {
   
     setDeletingId(id);
     try {
-      // (Optional) Sign in as the user to delete from auth — only works if you know the password
-      await signInWithEmailAndPassword(auth2, email, knownPassword);
-       await deleteUser(auth2.currentUser);
-  
-      // Delete from Firestore (in app2)
+      // Directly delete the user from Firestore
       await deleteDoc(doc(db2, "authorizedUsers", id));
   
+      // Update local state to remove the deleted user from the displayed list
       setEmails(emails.filter((user) => user.id !== id));
       toast.success("User access revoked and deleted from Firestore.");
     } catch (error) {
-      toast.error("Error revoking access: " + error.message);
+      toast.error("Error deleting user: " + error.message);
     } finally {
       setDeletingId(null);
     }
   };
+  
 
   // Toggle sort order between recent, A-Z, and Z-A
   const toggleSort = () => {
