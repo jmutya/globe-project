@@ -1,6 +1,10 @@
 // Import necessary React hooks and Firebase configuration
 import React, { useState, useEffect } from "react";
 import { db, auth } from "../../backend/firebase/firebaseconfig";
+import { auth2, db2 } from "../../backend/firebase/addingNewUserConfig";
+import { createUserWithEmailAndPassword } from "firebase/auth";
+
+
 import {
   collection,
   addDoc,
@@ -87,41 +91,39 @@ const AddEmail = () => {
       toast.error("Please fill in all fields.");
       return;
     }
-
+  
     if (currentUserRole !== "admin") {
       toast.error("You do not have permission to add users.");
       return;
     }
-
+  
     setLoading(true);
     try {
-      // Create user in Firebase Auth via backend
-      const response = await fetch("http://localhost:5000/api/create-user", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: newEmail, password: newPassword }),
-      });
-
-      const data = await response.json();
-      if (!response.ok) throw new Error(data.message);
-
-      // Save user metadata in Firestore
-      const docRef = await addDoc(collection(db, "authorizedUsers"), {
+      // ✅ Create user in second Firebase project
+      const userCredential = await createUserWithEmailAndPassword(auth2, newEmail, newPassword);
+      const user = userCredential.user;
+  
+      // ✅ Save user to Firestore of second Firebase app
+      const docRef = await addDoc(collection(db2, "authorizedUsers"), {
         email: newEmail,
         role,
         createdAt: new Date(),
+        uid: user.uid,
       });
-
+  
       setEmails([...emails, { id: docRef.id, email: newEmail, role }]);
       toast.success("User added successfully!");
-      setShowModal(false); // Close modal
-      setNewEmail(""); setNewPassword(""); setRole(""); // Reset inputs
+      setShowModal(false);
+      setNewEmail("");
+      setNewPassword("");
+      setRole("");
     } catch (error) {
       toast.error("Error: " + error.message);
     } finally {
       setLoading(false);
     }
   };
+  
 
   // Send password reset email
   const handlePasswordReset = async (emailToReset, role) => {
@@ -148,26 +150,23 @@ const AddEmail = () => {
       toast.error("Cannot revoke access from another admin.");
       return;
     }
-
+  
     if (currentUserRole !== "admin") {
       toast.error("You do not have permission to revoke access.");
       return;
     }
-
+  
     setDeletingId(id);
     try {
-      const response = await fetch("http://localhost:5000/api/delete-user", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email }),
-      });
-
-      const data = await response.json();
-      if (!response.ok) throw new Error(data.message);
-
-      await deleteDoc(doc(db, "authorizedUsers", id));
+      // (Optional) Sign in as the user to delete from auth — only works if you know the password
+      await signInWithEmailAndPassword(auth2, email, knownPassword);
+       await deleteUser(auth2.currentUser);
+  
+      // Delete from Firestore (in app2)
+      await deleteDoc(doc(db2, "authorizedUsers", id));
+  
       setEmails(emails.filter((user) => user.id !== id));
-      toast.success("User access revoked and deleted from auth.");
+      toast.success("User access revoked and deleted from Firestore.");
     } catch (error) {
       toast.error("Error revoking access: " + error.message);
     } finally {
