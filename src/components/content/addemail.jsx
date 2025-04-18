@@ -3,8 +3,7 @@ import React, { useState, useEffect } from "react";
 import { db, auth } from "../../backend/firebase/firebaseconfig";
 import { auth2, db2 } from "../../backend/firebase/addingNewUserConfig";
 import { createUserWithEmailAndPassword } from "firebase/auth";
-import { getAuth, deleteUser } from "firebase/auth";
-import { handleDeleteUser } from './../../backend/firebase/deleteUsers';
+
 
 import {
   collection,
@@ -151,44 +150,32 @@ const AddEmail = () => {
       toast.error("Cannot revoke access from another admin.");
       return;
     }
-  
+
     if (currentUserRole !== "admin") {
       toast.error("You do not have permission to revoke access.");
       return;
     }
-  
+
     setDeletingId(id);
-  
     try {
-      // Delete from Firestore (in app2)
-      await deleteDoc(doc(db2, "authorizedUsers", id));
-  
-      // Call server to delete user from Firebase Authentication
-      const response = await fetch('/delete-user', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+      const response = await fetch("http://localhost:5000/api/delete-user", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email }),
       });
-  
+
       const data = await response.json();
-      if (response.ok) {
-        toast.success("User access revoked and deleted from Firestore and Authentication.");
-      } else {
-        toast.error("Error deleting user from Authentication: " + data.message);
-      }
-  
-      // Update local UI
+      if (!response.ok) throw new Error(data.message);
+
+      await deleteDoc(doc(db, "authorizedUsers", id));
       setEmails(emails.filter((user) => user.id !== id));
+      toast.success("User access revoked and deleted from auth.");
     } catch (error) {
       toast.error("Error revoking access: " + error.message);
     } finally {
       setDeletingId(null);
     }
   };
-  
-  
 
   // Toggle sort order between recent, A-Z, and Z-A
   const toggleSort = () => {
