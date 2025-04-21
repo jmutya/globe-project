@@ -13,21 +13,20 @@ import {
   DocumentIcon,
 } from "@heroicons/react/24/outline";
 
-import MainContent from "../../main/mainContent";
-import Logo from "./navigation/logo";
+import MainContent from "../../../main/mainContent";
+import Logo from "./logo";
 
 // ⬇️ Add subcomponents to the component map
 const componentMap = {
-  Dashboard: lazy(() => import("../pages/dashboard")),
-  Reports: lazy(() => import("../content/reports")),
-  Documents: lazy(() => import("../pages/documents")),
-  "Users" :lazy(() => import("../pages/addemail")),
-  Summary: lazy(() => import("../content/summary")), // ✅ Example sub-items
-  "Mean Time To Ticket": lazy(() => import("../content/mttt")),
-  "Mean Time To Investigate": lazy(() => import("../content/mtti")),
-  "Mean Time To Dispatch": lazy(() => import("../content/mttd")),
-  "First Touch Resolution": lazy(() => import("../content/ftr")),
-  Accuracy: lazy(() => import("../content/accuracy")),
+  Dashboard: lazy(() => import("../../pages/dashboard")),
+  "Insights": lazy(() => import("../../content/Insights")),
+  Documents: lazy(() => import("../../pages/documents")),
+  "Users" :lazy(() => import("../../pages/addemail")),
+  "Mean Time To Ticket": lazy(() => import("../../content/mttt")),
+  "Mean Time To Investigate": lazy(() => import("../../content/mtti")),
+  "Mean Time To Dispatch": lazy(() => import("../../content/mttd")),
+  "First Touch Resolution": lazy(() => import("../../content/ftr")),
+ 
 };
 
 const navigationItems = [
@@ -37,13 +36,12 @@ const navigationItems = [
     subItems: [
 
       { name: "Dashboard" }, // 👈 include itself here
-      { name: "Reports" },
-      { name: "Summary" },
+      { name: "Insights" },   
       { name: "Mean Time To Ticket" },
       { name: "Mean Time To Investigate" },
       { name: "Mean Time To Dispatch" },
       { name: "First Touch Resolution" },
-      { name: "Accuracy" },
+   
     ],
   },
   { name: "Documents", icon: DocumentIcon },

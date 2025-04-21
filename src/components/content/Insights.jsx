@@ -1,13 +1,13 @@
 import React, { useState } from "react";
-import useReportData from "./reportContent/useReportData";
-import AlarmLineChart from "./reportContent/AlarmLineChart";
-import AccuracyProgress from "./reportContent/AccuracyProgress";
-import IncompleteRowsTable from "./reportContent/IncompleteRowsTable";
-import UnmatchedRowsTable from "./reportContent/UnmatchedRowsTable";
-import AccuracyByPersonTable from "./reportContent/AccuracyByPersonTable";
-import FilterData from "./reportContent/filter";
+import useReportData from "./InsightsContent/useReportData";
+import AlarmLineChart from "./InsightsContent/AlarmLineChart";
+import AccuracyProgress from "./InsightsContent/AccuracyProgress";
+import IncompleteRowsTable from "./InsightsContent/IncompleteRowsTable";
+import UnmatchedRowsTable from "./InsightsContent/UnmatchedRowsTable";
+import AccuracyByPersonTable from "./InsightsContent/AccuracyByPersonTable";
+import FilterData from "./InsightsContent/filter";
 
-const Reports = () => {
+const Insights = () => {
   const [timeRange, setTimeRange] = useState("daily");
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1);
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
@@ -338,4 +338,4 @@ const Reports = () => {
   );
 };
 
-export default Reports;
+export default Insights;
