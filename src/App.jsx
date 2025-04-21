@@ -8,7 +8,7 @@ import {
 } from "react-router-dom";
 import { useAuth } from "./userauth/AuthContext"; // Use global authentication context
 import Login from "./userauth/login";
-import Sidebar from "./components/Sidebar/sidebar";
+import Sidebar from "./components/layout/navigation/sidebar";
 import AddEmail from "./components/pages/addemail";
 import ProtectedRoute from "./userauth/protectedroute";
 

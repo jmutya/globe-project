@@ -1,6 +1,6 @@
 import React from "react";
 import { Outlet } from "react-router-dom";
-import Sidebar from "../Sidebar/sidebar"; // Make sure the path is correct.
+import Sidebar from "./navigation/sidebar"; // Make sure the path is correct.
 import { useAuth } from "../../userauth/AuthContext"; // For getting user data if needed.
 
 const WebsiteLayout = () => {
