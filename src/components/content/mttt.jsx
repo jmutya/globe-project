@@ -222,7 +222,7 @@ const ReportedCreatedTable = () => {
         {totalMTTTByCaller.map((item, idx) => {
           const evaluationPassed = parseFloat(item.totalMTTT) < 16;
           return (
-            <tr key={idx} className="hover:bg-gray-100">
+            <tr key={idx} className="hover:bg-indigo-50 transition">
               <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{item.caller}</td>
               <td className="px-6 py-4 whitespace-nowrap text-sm text-center text-gray-900">{item.ticketcount}</td>
               <td className="px-6 py-4 whitespace-nowrap text-sm text-center text-gray-900">{formatMinutesToHMS(item.totalMTTT)}</td>
