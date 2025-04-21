@@ -96,12 +96,33 @@ function ftrTable() {
 
   useEffect(() => {
     const getReportData = async () => {
-      const data = await fetchftr(); // ✅ fixed call
+      const data = await fetchftr();
       setReportData(data);
     };
 
     getReportData();
   }, []);
+
+  const groupedByCaller = reportData.reduce((acc, item) => {
+    if (!acc[item.caller]) {
+      acc[item.caller] = { totalftr: 0, count: 0 };
+    }
+
+    const ftrValue = parseFloat(item.ftr);
+    if (!isNaN(ftrValue)) {
+      acc[item.caller].totalftr += ftrValue;
+      acc[item.caller].count += 1;
+    }
+
+    return acc;
+  }, {});
+
+  const totalftrByCaller = Object.entries(groupedByCaller).map(
+    ([caller, data]) => {
+      const avgftr = (data.totalftr / data.count).toFixed(2);
+      return { caller, totalftr: avgftr, ticketcount: data.count };
+    }
+  );
 
   const formatMinutesToHMS = (minutes) => {
     const totalSeconds = Math.floor(minutes * 60);
@@ -144,6 +165,43 @@ function ftrTable() {
                 <td className="border px-4 py-2">{item.resolved}</td>
               </tr>
             ))}
+          </tbody>
+        </table>
+      </div>
+
+      <div className="overflow-y-auto max-h-[700px] border rounded p-4">
+        <h3 className="text-lg font-semibold mb-2">FTR by Caller</h3>
+        <table className="min-w-full table-auto border-collapse border border-gray-300">
+          <thead>
+            <tr className="bg-gray-100">
+              <th className="border px-4 py-2">Caller</th>
+              <th className="border px-4 py-2"># of Assigned Tickets</th>
+              <th className="border px-4 py-2">FTR</th>
+              <th className="border px-4 py-2">Evaluation</th>
+            </tr>
+          </thead>
+          <tbody>
+            {totalftrByCaller.map((item, idx) => {
+              const evaluationPassed = parseFloat(item.totalftr) < 16;
+              return (
+                <tr key={idx}>
+                  <td className="border px-4 py-2">{item.caller}</td>
+                  <td className="border px-4 py-2 text-center">
+                    {item.ticketcount}
+                  </td>
+                  <td className="border px-4 py-2 text-center">
+                    {formatMinutesToHMS(item.totalftr)}
+                  </td>
+                  <td
+                    className={`border px-4 py-2 text-center font-semibold ${
+                      evaluationPassed ? "text-green-600" : "text-red-600"
+                    }`}
+                  >
+                    {evaluationPassed ? "Passed" : "Failed"}
+                  </td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       </div>
