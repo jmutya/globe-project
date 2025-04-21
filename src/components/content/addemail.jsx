@@ -67,7 +67,9 @@ const AddEmail = () => {
       const user = auth.currentUser;
       if (user) {
         try {
-          const querySnapshot = await getDocs(collection(db, "authorizedUsers"));
+          const querySnapshot = await getDocs(
+            collection(db, "authorizedUsers")
+          );
           const matchedDoc = querySnapshot.docs.find(
             (doc) => doc.data().email === user.email
           );
@@ -115,7 +117,9 @@ const AddEmail = () => {
       setEmails([...emails, { id: docRef.id, email: newEmail, role }]);
       toast.success("User added successfully!");
       setShowModal(false); // Close modal
-      setNewEmail(""); setNewPassword(""); setRole(""); // Reset inputs
+      setNewEmail("");
+      setNewPassword("");
+      setRole(""); // Reset inputs
     } catch (error) {
       toast.error("Error: " + error.message);
     } finally {
@@ -206,7 +210,11 @@ const AddEmail = () => {
   // Render appropriate sort icon based on state
   const getSortIcon = () => {
     return (
-      <button onClick={toggleSort} className="ml-2 text-gray-600 hover:text-indigo-600" title="Toggle Sort">
+      <button
+        onClick={toggleSort}
+        className="ml-2 text-gray-600 hover:text-indigo-600"
+        title="Toggle Sort"
+      >
         {sortOption === "az" && <FaSortAlphaDown className="text-sm" />}
         {sortOption === "za" && <FaSortAlphaUp className="text-sm" />}
         {sortOption === "recent" && <FaSortAmountDown className="text-sm" />}
@@ -218,7 +226,9 @@ const AddEmail = () => {
     <div className="p-6 h-[calc(100vh-100px)] flex flex-col bg-gray-50">
       {/* Header controls: filter, search, sort, view mode, and add user */}
       <div className="flex justify-between items-center mb-6">
-        <h3 className="text-3xl font-semibold text-indigo-700">Authorized Users</h3>
+        <h3 className="text-3xl font-semibold text-indigo-700">
+          Authorized Users
+        </h3>
         <div className="flex items-center gap-3">
           {/* Role Filter Dropdown */}
           <select
@@ -241,7 +251,11 @@ const AddEmail = () => {
           {/* View Toggle Buttons list */}
           <button
             onClick={() => setViewMode("list")}
-            className={`p-2 rounded-md ${viewMode === "list" ? "bg-indigo-200 text-indigo-700" : "bg-white border"}`}
+            className={`p-2 rounded-md ${
+              viewMode === "list"
+                ? "bg-indigo-200 text-indigo-700"
+                : "bg-white border"
+            }`}
             title="List View"
           >
             <FaList />
@@ -249,7 +263,11 @@ const AddEmail = () => {
           {/* View Toggle Buttons grid */}
           <button
             onClick={() => setViewMode("grid")}
-            className={`p-2 rounded-md ${viewMode === "grid" ? "bg-indigo-200 text-indigo-700" : "bg-white border"}`}
+            className={`p-2 rounded-md ${
+              viewMode === "grid"
+                ? "bg-indigo-200 text-indigo-700"
+                : "bg-white border"
+            }`}
             title="Grid View"
           >
             <FaThLarge />
@@ -283,9 +301,9 @@ const AddEmail = () => {
           ) : filteredEmails.length > 0 ? (
             viewMode === "list" ? (
               <>
+                {/* Header */}
                 <div className="grid grid-cols-12 gap-4 pb-3 border-b border-gray-300 text-gray-700 font-semibold text-sm px-4">
                   <div className="col-span-6 flex items-center">
-                    {/* Sort Toggle Button */}
                     Email {getSortIcon()}
                   </div>
                   <div className="col-span-3">Role</div>
@@ -306,7 +324,9 @@ const AddEmail = () => {
                       <div className="col-span-3 flex justify-end gap-4">
                         {/* Reset Password Button */}
                         <button
-                          onClick={() => handlePasswordReset(user.email, user.role)}
+                          onClick={() =>
+                            handlePasswordReset(user.email, user.role)
+                          }
                           className="text-indigo-600 hover:text-indigo-800"
                           title="Send Password Reset"
                         >
@@ -314,7 +334,9 @@ const AddEmail = () => {
                         </button>
                         {/* Delete User Button */}
                         <button
-                          onClick={() => handleDeleteUser(user.id, user.email, user.role)}
+                          onClick={() =>
+                            handleDeleteUser(user.id, user.email, user.role)
+                          }
                           className="text-red-500 hover:text-red-700"
                           title="Revoke Access"
                         >
@@ -341,14 +363,18 @@ const AddEmail = () => {
                     </div>
                     <div className="flex justify-end gap-3">
                       <button
-                        onClick={() => handlePasswordReset(user.email, user.role)}
+                        onClick={() =>
+                          handlePasswordReset(user.email, user.role)
+                        }
                         className="text-indigo-600 hover:text-indigo-800"
                         title="Send Password Reset"
                       >
                         <FaKey size={16} />
                       </button>
                       <button
-                        onClick={() => handleDeleteUser(user.id, user.email, user.role)}
+                        onClick={() =>
+                          handleDeleteUser(user.id, user.email, user.role)
+                        }
                         className="text-red-500 hover:text-red-700"
                         title="Revoke Access"
                       >
@@ -360,7 +386,9 @@ const AddEmail = () => {
               </div>
             )
           ) : (
-            <p className="text-gray-500 text-center">No users found for selected role.</p>
+            <p className="text-gray-500 text-center">
+              No users found for selected role.
+            </p>
           )}
         </div>
       </div>
