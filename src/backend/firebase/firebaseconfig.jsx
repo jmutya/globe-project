@@ -3,6 +3,7 @@ import { getAuth, GoogleAuthProvider } from "firebase/auth";
 import { getAnalytics } from "firebase/analytics";
 import { getFirestore } from "firebase/firestore";
 import { getStorage } from "firebase/storage"; 
+
 const firebaseConfig = {
   apiKey: "AIzaSyBoW9fYNNX5eE46QftAK89gtk-uvVm2mgU",
   authDomain: "globe-project-cdd3f.firebaseapp.com",

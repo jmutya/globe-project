@@ -26,7 +26,7 @@ const componentMap = {
   "Mean Time To Investigate": lazy(() => import("../../content/mtti")),
   "Mean Time To Dispatch": lazy(() => import("../../content/mttd")),
   "First Touch Resolution": lazy(() => import("../../content/ftr")),
-  Accuracy: lazy(() => import("../../content/accuracy")),
+ 
 };
 
 const navigationItems = [
@@ -41,7 +41,7 @@ const navigationItems = [
       { name: "Mean Time To Investigate" },
       { name: "Mean Time To Dispatch" },
       { name: "First Touch Resolution" },
-      { name: "Accuracy" },
+   
     ],
   },
   { name: "Documents", icon: DocumentIcon },

@@ -1,10 +1,5 @@
 import React, { useState, useEffect } from "react";
-import {
-  FaUpload,
-  FaFileExcel,
-  FaTrash,
-  FaSpinner,
-} from "react-icons/fa";
+import { FaUpload, FaFileExcel, FaTrash, FaSpinner } from "react-icons/fa";
 import toast, { Toaster } from "react-hot-toast";
 import supabase from "../../backend/supabase/supabase";
 
@@ -77,7 +72,9 @@ const ExcelUploader = () => {
 
         if (error) throw error;
         uploadedCount++;
-        setUploadProgress(Math.round((uploadedCount / selectedFiles.length) * 100));
+        setUploadProgress(
+          Math.round((uploadedCount / selectedFiles.length) * 100)
+        );
       } catch (error) {
         console.error("Upload failed:", error);
         toast.error(`Failed to upload ${file.name}`);
@@ -117,70 +114,65 @@ const ExcelUploader = () => {
   return (
     <>
       <Toaster position="bottom-right" />
+
       <div className="p-6 h-[calc(100vh-100px)] flex flex-col bg-gray-50">
-        <div className="flex justify-between items-center mb-6">
-        <h3 className="text-3xl font-semibold text-indigo-700">Excel Files</h3>
+        {/* Page Title and Upload Button */}
+        <div className="flex justify-between items-center mb-4">
+          <h2 className="text-3xl font-semibold text-indigo-700">
+            Excel Files
+          </h2>
           <button
             onClick={handleUploadClick}
-            className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl shadow"
+            className="flex items-center gap-2 bg-indigo-600 text-white px-4 py-2 rounded-xl hover:bg-indigo-700 transition"
           >
-            <FaUpload />
+            <FaUpload className="w-4 h-4" />
             Upload File
           </button>
         </div>
 
-        <div className="bg-white rounded-xl shadow border border-gray-200 overflow-hidden">
-          {loadingFiles ? (
-            <div className="flex items-center justify-center py-10 text-gray-500">
-              <FaSpinner className="animate-spin text-xl mr-2" />
-              Loading files...
+        {/* File List Box with borderline specification*/}
+        <div className="flex-1 border border-gray-200 rounded-xl bg-white p-6 shadow-sm">
+          {/* Header */}
+          <div className="grid grid-cols-12 gap-4 pb-3 border-b border-gray-300 text-gray-700 font-bold text-sm px-4">
+            <div className="col-span-9 flex items-left">File</div>
+            <div className="col-span-3 text-right">Action</div>
+          </div>
+
+          <div className="divide-y divide-gray-100 text-[15px] font-medium text-[#111827]">
+            {loadingFiles ? (
+              <div className="flex items-center justify-center h-[300px]">
+              <div className="text-center">
+                <div className="animate-spin h-8 w-8 border-2 border-indigo-500 border-t-transparent rounded-full mx-auto mb-4" />
+                <p className="text-gray-500">Loading files...</p>
+              </div>
             </div>
-          ) : (
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-100 text-gray-700 text-sm">
-                <tr>
-                  <th className="px-6 py-3 text-left font-medium">File</th>
-                  <th className="px-6 py-3 text-left font-medium">Date</th>
-                  <th className="px-6 py-3 text-center font-medium">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="text-gray-800 text-sm divide-y divide-gray-100">
-                {files.length > 0 ? (
-                  files.map((file, index) => (
-                    <tr key={index} className="hover:bg-gray-50">
-                      <td className="px-6 py-3 flex items-center gap-2">
-                        <FaFileExcel className="text-green-600" />
-                        <a
-                          href={file.url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="hover:underline"
-                        >
-                          {file.name}
-                        </a>
-                      </td>
-                      <td className="px-6 py-3">{file.date}</td>
-                      <td className="px-6 py-3 text-center">
-                        <button
-                          onClick={() => confirmDelete(file.name)}
-                          className="text-red-600 hover:text-red-800"
-                          title="Delete"
-                        >
-                          <FaTrash />
-                        </button>
-                      </td>
-                    </tr>
-                  ))
-                ) : (
-                  <tr>
-                    <td colSpan="3" className="text-center py-10 text-gray-500">
-                      No files uploaded yet.
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          )}
+            ) : files.length > 0 ? (
+              files.map((file, index) => (
+                <div
+                  key={index}
+                  className="grid grid-cols-12 gap-4 py-3 items-center hover:bg-indigo-50 transition rounded-lg px-4"
+                >
+                  <div className="col-span-9 flex justify-start items-left gap-2 truncate">
+                    <FaFileExcel className="text-green-600 w-5 h-5 flex-shrink-0" />
+                    <span className="truncate text-right">{file.name}</span>
+                  </div>
+                  <div className="col-span-3 flex justify-end">
+                    <button
+                      onClick={() => confirmDelete(file.name)}
+                      className="text-red-600 hover:text-red-800"
+                      title="Delete"
+                    >
+                      <FaTrash className="w-5 h-5" />
+                    </button>
+                  </div>
+                </div>
+              ))
+            ) : (
+              <div className="text-center text-gray-500 py-10">
+                No files uploaded yet.
+              </div>
+            )}
+          </div>
         </div>
       </div>
 

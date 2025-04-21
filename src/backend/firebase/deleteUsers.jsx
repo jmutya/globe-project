@@ -1,26 +1,26 @@
+// backend/firebase/deleteUser.js
 import { initializeApp } from "firebase/app";
 import { getAuth, deleteUser } from "firebase/auth";
 import { getFirestore, deleteDoc, doc } from "firebase/firestore";
 import { toast } from "react-toastify";
 
-// ⚠️ Replace with your second Firebase project's config
 const firebaseConfig2 = {
-    apiKey: "AIzaSyBoW9fYNNX5eE46QftAK89gtk-uvVm2mgU",
-    authDomain: "globe-project-cdd3f.firebaseapp.com",
-    projectId: "globe-project-cdd3f",
-    storageBucket: "globe-project-cdd3f.firebasestorage.app",
-    messagingSenderId: "758541012292",
-    appId: "1:758541012292:web:0133177f54c242e44ddb11",
-    measurementId: "G-YN14Z9M4RE"
+  apiKey: "AIzaSyBoW9fYNNX5eE46QftAK89gtk-uvVm2mgU",
+  authDomain: "globe-project-cdd3f.firebaseapp.com",
+  projectId: "globe-project-cdd3f",
+  storageBucket: "globe-project-cdd3f.appspot.com",
+  messagingSenderId: "758541012292",
+  appId: "1:758541012292:web:0133177f54c242e44ddb11",
+  measurementId: "G-YN14Z9M4RE"
 };
 
-const app2 = initializeApp(firebaseConfig2, "app2");
-const auth2 = getAuth(app2);
-const db2 = getFirestore(app2);
+const app_del = initializeApp(firebaseConfig2, "app_del");
+const auth_del = getAuth(app_del);
+const db_del = getFirestore(app_del);
 
 const deleteUserFromFirestore = async (id) => {
   try {
-    await deleteDoc(doc(db2, "authorizedUsers", id));
+    await deleteDoc(doc(db_del, "authorizedUsers", id));
     toast.success("User deleted from Firestore.");
   } catch (error) {
     toast.error("Error deleting user from Firestore: " + error.message);
@@ -51,12 +51,13 @@ const handleDeleteUser = async (id, email, role, currentUserRole) => {
     // Step 1: Delete from Firestore
     await deleteUserFromFirestore(id);
 
-    // Step 2: Delete the user from Firebase Authentication
-    const currentUser = auth2.currentUser;
+    // Step 2: Try deleting from Firebase Auth (only works if current user is same)
+    const currentUser = auth_del.currentUser;
 
-    // Only delete the user if the current authenticated user is the same
     if (currentUser && currentUser.email === email) {
       await deleteUserFromAuth(currentUser);
+    } else {
+      toast.info("User deleted from Firestore, but not from Firebase Auth (need backend access).");
     }
 
     toast.success("User access revoked and deleted.");
