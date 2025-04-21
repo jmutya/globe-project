@@ -68,7 +68,6 @@ const AddEmail = () => {
   // Fetch the current user's role from Firestore
   useEffect(() => {
     const fetchUserRole = async () => {
-      const user = auth.currentUser;
       if (user) {
         try {
           const querySnapshot = await getDocs(collection(db, "authorizedUsers"));

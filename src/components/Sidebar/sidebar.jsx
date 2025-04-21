@@ -18,10 +18,10 @@ import Logo from "./navigation/logo";
 
 // ⬇️ Add subcomponents to the component map
 const componentMap = {
-  Dashboard: lazy(() => import("../content/dashboard")),
+  Dashboard: lazy(() => import("../pages/dashboard")),
   Reports: lazy(() => import("../content/reports")),
-  Documents: lazy(() => import("../content/documents")),
-  "Users" :lazy(() => import("../content/addemail")),
+  Documents: lazy(() => import("../pages/documents")),
+  "Users" :lazy(() => import("../pages/addemail")),
   Summary: lazy(() => import("../content/summary")), // ✅ Example sub-items
   "Mean Time To Ticket": lazy(() => import("../content/mttt")),
   "Mean Time To Investigate": lazy(() => import("../content/mtti")),
