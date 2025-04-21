@@ -134,7 +134,7 @@ const ExcelUploader = () => {
         <div className="flex-1 border border-gray-200 rounded-xl bg-white p-6 shadow-sm">
           {/* Header */}
           <div className="grid grid-cols-12 gap-4 pb-3 border-b border-gray-300 text-gray-700 font-semibold text-sm px-4">
-            <div className="col-span-6 flex items-center">File</div>
+            <div className="flex items-center">File</div>
             <div className="col-span-3 text-right">Action</div>
           </div>
 
