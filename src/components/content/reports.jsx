@@ -1,11 +1,11 @@
 import React, { useState } from "react";
-import useReportData from "../content/reportComponents/useReportData";
-import AlarmLineChart from "./reportComponents/AlarmLineChart";
-import AccuracyProgress from "./reportComponents/AccuracyProgress";
-import IncompleteRowsTable from "./reportComponents/IncompleteRowsTable";
-import UnmatchedRowsTable from "./reportComponents/UnmatchedRowsTable";
-import AccuracyByPersonTable from "./reportComponents/AccuracyByPersonTable";
-import FilterData from "./reportComponents/filter";
+import useReportData from "./reportContent/useReportData";
+import AlarmLineChart from "./reportContent/AlarmLineChart";
+import AccuracyProgress from "./reportContent/AccuracyProgress";
+import IncompleteRowsTable from "./reportContent/IncompleteRowsTable";
+import UnmatchedRowsTable from "./reportContent/UnmatchedRowsTable";
+import AccuracyByPersonTable from "./reportContent/AccuracyByPersonTable";
+import FilterData from "./reportContent/filter";
 
 const Reports = () => {
   const [timeRange, setTimeRange] = useState("daily");

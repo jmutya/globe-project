@@ -1,15 +1,15 @@
 import React, { Suspense, lazy, useState } from "react";
 import Card from "../card/Card";
-import LazyLoadWrapper from "./LazyLoadWrapper";
+import LazyLoadWrapper from "../content/LazyLoadWrapper";
 
 // Lazy-loaded components
-const AlarmCount = lazy(() => import("./dashboardContent/alarmcount"));
-const AlarmsSeverity = lazy(() => import("./dashboardContent/alarmseveritygraph"));
-const AlarmCategory = lazy(() => import("./dashboardContent/alarmcategory"));
-const AlarmTypeLineGraph = lazy(() => import("./dashboardContent/linegraph"));
-const AlarmTypeBarGraph = lazy(() => import("./dashboardContent/bargraph"));
-const TerritoryGraph = lazy(() => import("./dashboardContent/territorygraph"));
-const AreaLineGraph = lazy(() => import("./dashboardContent/arealinegraph"));
+const AlarmCount = lazy(() => import("../content/dashboardContent/alarmcount"));
+const AlarmsSeverity = lazy(() => import("../content/dashboardContent/alarmseveritygraph"));
+const AlarmCategory = lazy(() => import("../content/dashboardContent/alarmcategory"));
+const AlarmTypeLineGraph = lazy(() => import("../content/dashboardContent/linegraph"));
+const AlarmTypeBarGraph = lazy(() => import("../content/dashboardContent/bargraph"));
+const TerritoryGraph = lazy(() => import("../content/dashboardContent/territorygraph"));
+const AreaLineGraph = lazy(() => import("../content/dashboardContent/arealinegraph"));
 
 const Dashboard = () => {
   const [loadedComponents, setLoadedComponents] = useState({

@@ -9,10 +9,10 @@ import {
 import { useAuth } from "./userauth/AuthContext"; // Use global authentication context
 import Login from "./userauth/login";
 import Sidebar from "./components/Sidebar/sidebar";
-import AddEmail from "./components/content/addemail";
+import AddEmail from "./components/pages/addemail";
 import ProtectedRoute from "./userauth/protectedroute";
 
-import ExcelUploader from "./components/content/documents";
+import ExcelUploader from "./components/pages/documents";
 import { FaSpinner } from "react-icons/fa";
 
 function App() {

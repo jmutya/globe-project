@@ -133,24 +133,26 @@ const ExcelUploader = () => {
         {/* File List Box with borderline specification*/}
         <div className="flex-1 border border-gray-200 rounded-xl bg-white p-6 shadow-sm">
           {/* Header */}
-          <div className="grid grid-cols-12 gap-4 pb-3 border-b border-gray-300 text-gray-700 font-semibold text-sm px-4">
-            <div className="flex items-center">File</div>
+          <div className="grid grid-cols-12 gap-4 pb-3 border-b border-gray-300 text-gray-700 font-bold text-sm px-4">
+            <div className="col-span-9 flex items-left">File</div>
             <div className="col-span-3 text-right">Action</div>
           </div>
 
           <div className="divide-y divide-gray-100 text-[15px] font-medium text-[#111827]">
             {loadingFiles ? (
               <div className="flex items-center justify-center h-[300px]">
-                <FaSpinner className="animate-spin mr-2" />
-                Loading files...
+              <div className="text-center">
+                <div className="animate-spin h-8 w-8 border-2 border-indigo-500 border-t-transparent rounded-full mx-auto mb-4" />
+                <p className="text-gray-500">Loading files...</p>
               </div>
+            </div>
             ) : files.length > 0 ? (
               files.map((file, index) => (
                 <div
                   key={index}
                   className="grid grid-cols-12 gap-4 py-3 items-center hover:bg-indigo-50 transition rounded-lg px-4"
                 >
-                  <div className="col-span-9 flex justify-start items-center gap-2 truncate">
+                  <div className="col-span-9 flex justify-start items-left gap-2 truncate">
                     <FaFileExcel className="text-green-600 w-5 h-5 flex-shrink-0" />
                     <span className="truncate text-right">{file.name}</span>
                   </div>
