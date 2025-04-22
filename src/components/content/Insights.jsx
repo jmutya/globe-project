@@ -262,6 +262,7 @@ const Insights = () => {
               <UnmatchedRowsTable
                 unmatchedRows={unmatchedRows}
                 onRowClick={setSelectedUnmatchedRow}
+                
               />
 
               {selectedUnmatchedRow && (

@@ -16,7 +16,10 @@ const convertExcelDate = (value) => {
     if (ampm.toLowerCase() === "am" && hour === 12) hour = 0;
 
     const date = new Date(
-      `${year}-${month}-${day}T${String(hour).padStart(2, "0")}:${minute}:${second}`
+      `${year}-${month}-${day}T${String(hour).padStart(
+        2,
+        "0"
+      )}:${minute}:${second}`
     );
     if (!isNaN(date)) {
       return date.toISOString();
@@ -42,7 +45,9 @@ const processExcelData = async (fileUrl) => {
 };
 
 const fetchmtti = async () => {
-  const { data: files, error } = await supabase.storage.from("uploads").list("excels");
+  const { data: files, error } = await supabase.storage
+    .from("uploads")
+    .list("excels");
 
   if (error) return console.error("Supabase error:", error);
 
@@ -148,15 +153,21 @@ function MttiTable() {
   };
 
   const validRows = reportData.filter((item) => !isNaN(parseFloat(item.mtti)));
-  const averageMTTIinMinutes = validRows.length > 0 ? totalMTTI / validRows.length : 0;
+  const averageMTTIinMinutes =
+    validRows.length > 0 ? totalMTTI / validRows.length : 0;
   const averageFormatted = formatMinutesToHMS(averageMTTIinMinutes);
 
   return (
     <div className="max-h-[1100px] overflow-auto border rounded p-4">
-      <div className=" overflow-y-auto max-h-[300px] border rounded p-4">
-        <p className="mt-4 font-semibold text-2xl">
-          Overall Average MTTI: {averageFormatted}
-        </p>
+      <div className="flex justify-center items-center overflow-y-auto max-h-[300px] rounded-xl p-6 bg-gray-50">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <h3 className="text-base font-medium text-gray-600 tracking-wide">
+            Overall Average MTTI
+          </h3>
+          <span className="inline-block text-lg font-semibold text-blue-600 bg-blue-50 px-4 py-1.5 rounded-xl shadow-sm">
+            {averageFormatted}
+          </span>
+        </div>
       </div>
 
       {/* <div className="max-h-[600px] overflow-auto border rounded p-4 mb-10">
@@ -189,29 +200,38 @@ function MttiTable() {
         </table>
       </div> */}
 
-      <div className=" overflow-y-auto max-h-[700px] border rounded p-4">
-        <h3 className="text-lg font-semibold mb-2">MTTI by Caller</h3>
-        <table className="min-w-full table-auto border-collapse border border-gray-300">
+      <div className="overflow-y-auto max-h-[700px] border rounded-lg shadow-lg p-6 bg-white">
+        <h3 className="text-xl font-semibold mb-4 text-gray-800">
+          MTTI by Caller
+        </h3>
+        <table className="min-w-full table-auto border-separate border-spacing-0">
           <thead>
-            <tr className="bg-gray-100">
-              <th className="border px-4 py-2">Caller</th>
-              <th className="border px-4 py-2"># of Assigned Tickets</th>
-              <th className="border px-4 py-2">MTTI</th>
-              <th className="border px-4 py-2">Evaluation</th>
+            <tr className="bg-gray-100 text-sm text-gray-700">
+              <th className="px-6 py-3 text-left font-medium">Caller</th>
+              <th className="px-6 py-3 text-center font-medium">
+                # of Assigned Tickets
+              </th>
+              <th className="px-6 py-3 text-center font-medium">MTTI</th>
+              <th className="px-6 py-3 text-center font-medium">Evaluation</th>
             </tr>
           </thead>
           <tbody>
             {totalMTTIByCaller.map((item, idx) => {
               const evaluationPassed = parseFloat(item.totalMTTI) < 16;
               return (
-                <tr key={idx}>
-                  <td className="border px-4 py-2">{item.caller}</td>
-                  <td className="border px-4 py-2 text-center">{item.ticketcount}</td>
-                  <td className="border px-4 py-2 text-center">
+                <tr
+                  key={idx}
+                  className="hover:bg-gray-50 transition duration-200"
+                >
+                  <td className="px-6 py-4 text-gray-800">{item.caller}</td>
+                  <td className="px-6 py-4 text-center text-gray-600">
+                    {item.ticketcount}
+                  </td>
+                  <td className="px-6 py-4 text-center text-gray-600">
                     {formatMinutesToHMS(item.totalMTTI)}
                   </td>
                   <td
-                    className={`border px-4 py-2 text-center font-semibold ${
+                    className={`px-6 py-4 text-center font-semibold ${
                       evaluationPassed ? "text-green-600" : "text-red-600"
                     }`}
                   >
