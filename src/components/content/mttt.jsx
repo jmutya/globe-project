@@ -174,35 +174,7 @@ const ReportedCreatedTable = () => {
           </div>
         </div>
 
-        {/* <div className="max-h-[600px] overflow-auto border rounded p-4 mb-10">
-    <h3 className="text-lg font-semibold mb-4">
-      Reported, Created, and MTTT (with time)
-    </h3>
-    <table className="min-w-full table-auto border-collapse border border-gray-300">
-      <thead>
-        <tr className="bg-gray-100">
-          <th className="border px-4 py-2">Ticket Number</th>
-          <th className="border px-4 py-2">Caller</th>
-          <th className="border px-4 py-2">Reported</th>
-          <th className="border px-4 py-2">Created</th>
-          <th className="border px-4 py-2">MTTT (Minutes)</th>
-        </tr>
-      </thead>
-      <tbody>
-        {reportData.map((item, idx) => (
-          <tr key={idx}>
-            <td className="border px-4 py-2">{item.number}</td>
-            <td className="border px-4 py-2">{item.caller}</td>
-            <td className="border px-4 py-2">{item.reported}</td>
-            <td className="border px-4 py-2">{item.created}</td>
-            <td className="border px-4 py-2 text-center">
-              {formatMinutesToHMS(item.mttt)}
-            </td>
-          </tr>
-        ))}
-      </tbody>
-    </table>
-  </div> */}
+      
 
         {/* MTTT by Caller Table */}
         <div className="overflow-x-auto">
