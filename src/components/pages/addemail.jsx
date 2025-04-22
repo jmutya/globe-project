@@ -1,9 +1,10 @@
+// Import necessary React hooks and Firebase configuration
 import React, { useState, useEffect } from "react";
 import { db, auth } from "../../backend/firebase/firebaseconfig";
 import { auth2, db2 } from "../../backend/firebase/addingNewUserConfig";
 import { handleDeleteUser } from "../../backend/firebase/deleteUsers"; // update the path if needed
 import { createUserWithEmailAndPassword } from "firebase/auth";
-import { onAuthStateChanged } from "firebase/auth";
+
 
 import {
   collection,
@@ -23,24 +24,26 @@ import {
   FaSortAlphaUp,
   FaSortAmountDown,
 } from "react-icons/fa";
+
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 
-const AddEmail = () => {
-  const [currentUserRole, setCurrentUserRole] = useState(null);
-  const [emails, setEmails] = useState([]);
-  const [loadingEmails, setLoadingEmails] = useState(true);
-  const [showModal, setShowModal] = useState(false);
-  const [newEmail, setNewEmail] = useState("");
-  const [newPassword, setNewPassword] = useState("");
-  const [role, setRole] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [deletingId, setDeletingId] = useState(null);
-  const [filterRole, setFilterRole] = useState("all");
-  const [viewMode, setViewMode] = useState("list");
-  const [searchTerm, setSearchTerm] = useState("");
-  const [sortOption, setSortOption] = useState("recent");
-
+const AddEmail = ({ user }) => {
+  // State declarations
+  const [currentUserRole, setCurrentUserRole] = useState(null); // Current logged-in user's role
+  const [emails, setEmails] = useState([]); // All users fetched from Firestore
+  const [loadingEmails, setLoadingEmails] = useState(true); // Loading state for emails
+  const [showModal, setShowModal] = useState(false); // Toggle modal for adding users
+  const [newEmail, setNewEmail] = useState(""); // New email input
+  const [newPassword, setNewPassword] = useState(""); // New password input
+  const [role, setRole] = useState(""); // New user role input
+  const [loading, setLoading] = useState(false); // Add user loading state
+  const [deletingId, setDeletingId] = useState(null); // ID of user being deleted
+  const [filterRole, setFilterRole] = useState("all"); // Role filter dropdown
+  const [viewMode, setViewMode] = useState("list"); // View mode: list or grid
+  const [searchTerm, setSearchTerm] = useState(""); // Email search input
+  const [sortOption, setSortOption] = useState("recent"); // Sort option
+// Fetch users from Firestore on initial load
   useEffect(() => {
     const fetchEmails = async () => {
       try {
@@ -59,15 +62,14 @@ const AddEmail = () => {
     fetchEmails();
   }, []);
 
+  // Fetch the current user's role from Firestore
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
-      if (firebaseUser) {
+    const fetchUserRole = async () => {
+      if (user) {
         try {
-          const querySnapshot = await getDocs(
-            collection(db, "authorizedUsers")
-          );
+          const querySnapshot = await getDocs(collection(db, "authorizedUsers"));
           const matchedDoc = querySnapshot.docs.find(
-            (doc) => doc.data().email === firebaseUser.email
+            (doc) => doc.data().email === user.email
           );
           setCurrentUserRole(matchedDoc ? matchedDoc.data().role : "user");
         } catch (error) {
@@ -75,11 +77,11 @@ const AddEmail = () => {
           toast.error("Failed to fetch your role.");
         }
       }
-    });
-
-    return () => unsubscribe();
+    };
+    fetchUserRole();
   }, []);
 
+  // Add a new user through backend API and Firestore
   const handleAddUser = async () => {
     if (!newEmail || !newPassword || !role) {
       toast.error("Please fill in all fields.");
@@ -137,7 +139,9 @@ const AddEmail = () => {
       setLoading(false);
     }
   };
+  
 
+  // Send password reset email
   const handlePasswordReset = async (emailToReset, role) => {
     if (role === "admin") {
       toast.error("Cannot reset another admin’s password.");
@@ -156,18 +160,8 @@ const AddEmail = () => {
     }
   };
 
-  const handleDeleteUser = async (id, email, role, currentUserRole) => {
-    try {
-      // Delete from Firestore (second project)
-      await deleteDoc(doc(db, "authorizedUsers", id));
-      toast.success(`Access revoked for ${email}`);
-    } catch (error) {
-      console.error("Error deleting user:", error);
-      toast.error("Failed to revoke access.");
-    }
-  };
-
-  const handleDeleteUserClick = async (id, email, role) => {
+  // Revoke access by deleting from Auth and Firestore
+  const handleDeleteUser = async (id, email, role) => {
     if (role === "admin") {
       toast.error("Cannot revoke access from another admin.");
       return;
@@ -179,10 +173,19 @@ const AddEmail = () => {
     }
 
     setDeletingId(id);
-
     try {
-      await handleDeleteUser(id, email, role, currentUserRole);
+      const response = await fetch("http://localhost:5000/api/delete-user", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email }),
+      });
+
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.message);
+
+      await deleteDoc(doc(db, "authorizedUsers", id));
       setEmails(emails.filter((user) => user.id !== id));
+      toast.success("User access revoked and deleted from auth.");
     } catch (error) {
       toast.error("Error revoking access: " + error.message);
     } finally {
@@ -190,6 +193,7 @@ const AddEmail = () => {
     }
   };
 
+  // Toggle sort order between recent, A-Z, and Z-A
   const toggleSort = () => {
     if (sortOption === "az") {
       setSortOption("za");
@@ -200,6 +204,7 @@ const AddEmail = () => {
     }
   };
 
+  // Apply filtering, searching, and sorting
   const filteredEmails = emails
     .filter((user) => filterRole === "all" || user.role === filterRole)
     .filter((user) =>
@@ -216,13 +221,10 @@ const AddEmail = () => {
       return 0;
     });
 
+  // Render appropriate sort icon based on state
   const getSortIcon = () => {
     return (
-      <button
-        onClick={toggleSort}
-        className="ml-2 text-gray-600 hover:text-indigo-600"
-        title="Toggle Sort"
-      >
+      <button onClick={toggleSort} className="ml-2 text-gray-600 hover:text-indigo-600" title="Toggle Sort">
         {sortOption === "az" && <FaSortAlphaDown className="text-sm" />}
         {sortOption === "za" && <FaSortAlphaUp className="text-sm" />}
         {sortOption === "recent" && <FaSortAmountDown className="text-sm" />}
@@ -232,11 +234,11 @@ const AddEmail = () => {
 
   return (
     <div className="p-6 h-[calc(100vh-100px)] flex flex-col bg-gray-50">
+      {/* Header controls: filter, search, sort, view mode, and add user */}
       <div className="flex justify-between items-center mb-6">
-        <h3 className="text-3xl font-semibold text-indigo-700">
-          Authorized Users
-        </h3>
+        <h3 className="text-3xl font-semibold text-indigo-700">Authorized Users</h3>
         <div className="flex items-center gap-3">
+          {/* Role Filter Dropdown */}
           <select
             value={filterRole}
             onChange={(e) => setFilterRole(e.target.value)}
@@ -246,6 +248,7 @@ const AddEmail = () => {
             <option value="admin">Admin</option>
             <option value="user">User</option>
           </select>
+          {/* Search Input */}
           <input
             type="text"
             placeholder="Search by email..."
@@ -253,28 +256,23 @@ const AddEmail = () => {
             onChange={(e) => setSearchTerm(e.target.value)}
             className="p-2 border rounded-md text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-400"
           />
+          {/* View Toggle Buttons list */}
           <button
             onClick={() => setViewMode("list")}
-            className={`p-2 rounded-md ${
-              viewMode === "list"
-                ? "bg-indigo-200 text-indigo-700"
-                : "bg-white border"
-            }`}
+            className={`p-2 rounded-md ${viewMode === "list" ? "bg-indigo-200 text-indigo-700" : "bg-white border"}`}
             title="List View"
           >
             <FaList />
           </button>
+          {/* View Toggle Buttons grid */}
           <button
             onClick={() => setViewMode("grid")}
-            className={`p-2 rounded-md ${
-              viewMode === "grid"
-                ? "bg-indigo-200 text-indigo-700"
-                : "bg-white border"
-            }`}
+            className={`p-2 rounded-md ${viewMode === "grid" ? "bg-indigo-200 text-indigo-700" : "bg-white border"}`}
             title="Grid View"
           >
             <FaThLarge />
           </button>
+          {/* Add User Button */}
           <button
             onClick={() => {
               if (currentUserRole !== "admin") {
@@ -292,6 +290,7 @@ const AddEmail = () => {
 
       <div className="flex-1 border border-gray-200 rounded-xl bg-white p-6 shadow-sm">
         <div className="max-h-[500px] overflow-y-auto pr-2">
+          {/* User List/Grid */}
           {loadingEmails ? (
             <div className="flex items-center justify-center h-[300px]">
               <div className="text-center">
@@ -302,9 +301,9 @@ const AddEmail = () => {
           ) : filteredEmails.length > 0 ? (
             viewMode === "list" ? (
               <>
-                {/* Header with specification */}
                 <div className="grid grid-cols-12 gap-4 pb-3 border-b border-gray-300 text-gray-700 font-semibold text-sm px-4">
                   <div className="col-span-6 flex items-center">
+                    {/* Sort Toggle Button */}
                     Email {getSortIcon()}
                   </div>
                   <div className="col-span-3">Role</div>
@@ -323,23 +322,17 @@ const AddEmail = () => {
                         {user.role}
                       </div>
                       <div className="col-span-3 flex justify-end gap-4">
+                        {/* Reset Password Button */}
                         <button
-                          onClick={() =>
-                            handlePasswordReset(user.email, user.role)
-                          }
+                          onClick={() => handlePasswordReset(user.email, user.role)}
                           className="text-indigo-600 hover:text-indigo-800"
                           title="Send Password Reset"
                         >
                           <FaKey size={16} />
                         </button>
+                        {/* Delete User Button */}
                         <button
-                          onClick={() =>
-                            handleDeleteUserClick(
-                              user.id,
-                              user.email,
-                              user.role
-                            )
-                          }
+                          onClick={() => handleDeleteUser(user.id, user.email, user.role)}
                           className="text-red-500 hover:text-red-700"
                           title="Revoke Access"
                         >
@@ -351,6 +344,7 @@ const AddEmail = () => {
                 </ul>
               </>
             ) : (
+              // Grid view
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
                 {filteredEmails.map((user) => (
                   <div
@@ -365,18 +359,14 @@ const AddEmail = () => {
                     </div>
                     <div className="flex justify-end gap-3">
                       <button
-                        onClick={() =>
-                          handlePasswordReset(user.email, user.role)
-                        }
+                        onClick={() => handlePasswordReset(user.email, user.role)}
                         className="text-indigo-600 hover:text-indigo-800"
                         title="Send Password Reset"
                       >
                         <FaKey size={16} />
                       </button>
                       <button
-                        onClick={() =>
-                          handleDeleteUserClick(user.id, user.email, user.role)
-                        }
+                        onClick={() => handleDeleteUser(user.id, user.email, user.role)}
                         className="text-red-500 hover:text-red-700"
                         title="Revoke Access"
                       >
@@ -388,13 +378,11 @@ const AddEmail = () => {
               </div>
             )
           ) : (
-            <p className="text-gray-500 text-center">
-              No users found for selected role.
-            </p>
+            <p className="text-gray-500 text-center">No users found for selected role.</p>
           )}
         </div>
       </div>
-
+      {/* Modal for Adding a New User */}
       {showModal && (
         <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
           <div className="bg-white rounded-xl shadow-lg p-6 w-full max-w-md">
@@ -446,7 +434,7 @@ const AddEmail = () => {
           </div>
         </div>
       )}
-
+      {/* Toast for alerts */}
       <ToastContainer position="bottom-right" />
     </div>
   );
