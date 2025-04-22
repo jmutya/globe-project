@@ -13,6 +13,8 @@ import {
   doc,
 } from "firebase/firestore";
 import { sendPasswordResetEmail } from "firebase/auth";
+
+// Import icons for UI
 import {
   FaKey,
   FaPlus,
@@ -24,12 +26,14 @@ import {
   FaSortAmountDown,
 } from "react-icons/fa";
 
+// Toast notifications
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 
 const AddEmail = ({ user }) => {
   // State declarations
   const [currentUserRole, setCurrentUserRole] = useState(null); // Current logged-in user's role
+  
   const [emails, setEmails] = useState([]); // All users fetched from Firestore
   const [loadingEmails, setLoadingEmails] = useState(true); // Loading state for emails
   const [showModal, setShowModal] = useState(false); // Toggle modal for adding users
@@ -42,7 +46,8 @@ const AddEmail = ({ user }) => {
   const [viewMode, setViewMode] = useState("list"); // View mode: list or grid
   const [searchTerm, setSearchTerm] = useState(""); // Email search input
   const [sortOption, setSortOption] = useState("recent"); // Sort option
-// Fetch users from Firestore on initial load
+
+  // Fetch users from Firestore on initial load
   useEffect(() => {
     const fetchEmails = async () => {
       try {
@@ -94,24 +99,8 @@ const AddEmail = ({ user }) => {
   
     setLoading(true);
     try {
-      // 🔍 Check if email already exists in Firestore (db2)
-      const existingUsersSnapshot = await getDocs(collection(db2, "authorizedUsers"));
-      const emailExists = existingUsersSnapshot.docs.some(
-        (doc) => doc.data().email === newEmail
-      );
-  
-      if (emailExists) {
-        toast.error("This email is already registered in the system.");
-        setLoading(false);
-        return;
-      }
-  
-      // ✅ Create user in second Firebase project's Auth
-      const userCredential = await createUserWithEmailAndPassword(
-        auth2,
-        newEmail,
-        newPassword
-      );
+      // ✅ Create user in second Firebase project
+      const userCredential = await createUserWithEmailAndPassword(auth2, newEmail, newPassword);
       const user = userCredential.user;
   
       // ✅ Save user to Firestore of second Firebase app
@@ -129,11 +118,7 @@ const AddEmail = ({ user }) => {
       setNewPassword("");
       setRole("");
     } catch (error) {
-      if (error.code === "auth/email-already-in-use") {
-        toast.error("This email is already registered in Firebase Auth.");
-      } else {
-        toast.error("Error: " + error.message);
-      }
+      toast.error("Error: " + error.message);
     } finally {
       setLoading(false);
     }
