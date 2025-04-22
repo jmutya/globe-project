@@ -11,6 +11,7 @@ import {
   ChartBarSquareIcon,
   UsersIcon,
   DocumentIcon,
+  ArrowUpTrayIcon,
 } from "@heroicons/react/24/outline";
 
 import MainContent from "../../../main/mainContent";
@@ -20,8 +21,8 @@ import Logo from "./logo";
 const componentMap = {
   Dashboard: lazy(() => import("../../pages/dashboard")),
   "Insights": lazy(() => import("../../content/Insights")),
-  Documents: lazy(() => import("../../pages/documents")),
-  "Users" :lazy(() => import("../../pages/addemail")),
+  "Upload Files": lazy(() => import("../../pages/documents")),
+  "Authorized Users" :lazy(() => import("../../pages/addemail")),
   "Mean Time To Ticket": lazy(() => import("../../content/mttt")),
   "Mean Time To Investigate": lazy(() => import("../../content/mtti")),
   "Mean Time To Dispatch": lazy(() => import("../../content/mttd")),
@@ -44,8 +45,8 @@ const navigationItems = [
    
     ],
   },
-  { name: "Documents", icon: DocumentIcon },
-  { name: "Users", icon: UsersIcon },
+  { name: "Upload Files", icon: ArrowUpTrayIcon },
+  { name: "Authorized Users", icon: UsersIcon },
 ];
 
 const SocialLink = memo(({ link }) => (
