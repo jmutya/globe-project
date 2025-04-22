@@ -167,31 +167,7 @@ function ftrTable() {
           </div>
         </div>
 
-      {/* <div className="max-h-[600px] overflow-auto border rounded p-4 mb-10">
-        <h3 className="text-lg font-semibold mb-4">
-          First Touched Resolution (FTR) Report
-        </h3>
-        <table className="min-w-full table-auto border-collapse border border-gray-300">
-          <thead>
-            <tr className="bg-gray-100">
-              <th className="border px-4 py-2">Ticket Number</th>
-              <th className="border px-4 py-2">Caller</th>
-              <th className="border px-4 py-2">Closed</th>
-              <th className="border px-4 py-2">Resolved</th>
-            </tr>
-          </thead>
-          <tbody>
-            {reportData.map((item, idx) => (
-              <tr key={idx}>
-                <td className="border px-4 py-2">{item.number}</td>
-                <td className="border px-4 py-2">{item.caller}</td>
-                <td className="border px-4 py-2">{item.closed}</td>
-                <td className="border px-4 py-2">{item.resolved}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div> */}
+      
 
       <div className="overflow-x-auto">
         <h3 className="text-lg font-semibold text-gray-800 mb-4">FTR by Caller</h3>

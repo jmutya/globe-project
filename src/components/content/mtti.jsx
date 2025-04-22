@@ -170,35 +170,7 @@ function MttiTable() {
         </div>
       </div>
 
-      {/* <div className="max-h-[600px] overflow-auto border rounded p-4 mb-10">
-        <h3 className="text-lg font-semibold mb-4">
-          First Touched Resolution (FTR) Report
-        </h3>
-        <table className="min-w-full table-auto border-collapse border border-gray-300">
-          <thead>
-            <tr className="bg-gray-100">
-              <th className="border px-4 py-2">Ticket Number</th>
-              <th className="border px-4 py-2">Caller</th>
-              <th className="border px-4 py-2">Investigation Completed</th>
-              <th className="border px-4 py-2">Reported</th>
-              <th className="border px-4 py-2">MTTI</th>
-            </tr>
-          </thead>
-          <tbody>
-            {reportData.map((item, idx) => (
-              <tr key={idx}>
-                <td className="border px-4 py-2">{item.number}</td>
-                <td className="border px-4 py-2">{item.caller}</td>
-                <td className="border px-4 py-2">{item.ic}</td>
-                <td className="border px-4 py-2">{item.reported}</td>
-                <td className="border px-4 py-2 text-center">
-                  {formatMinutesToHMS(item.mtti)}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div> */}
+     
 
       <div className="overflow-x-auto">
         <h3 className="text-lg font-semibold text-gray-800 mb-4">
@@ -226,7 +198,9 @@ function MttiTable() {
               const evaluationPassed = parseFloat(item.totalMTTI) < 16;
               return (
                 <tr key={idx} className="hover:bg-indigo-50 transition">
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{item.caller}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    {item.caller}
+                  </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-center text-gray-900">
                     {item.ticketcount}
                   </td>
@@ -234,10 +208,16 @@ function MttiTable() {
                     {formatMinutesToHMS(item.totalMTTI)}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-center">
-                <span className={`inline-block px-2 py-1 text-xs font-semibold rounded-full ${evaluationPassed ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
-                  {evaluationPassed ? 'Passed' : 'Failed'}
-                </span>
-              </td>
+                    <span
+                      className={`inline-block px-2 py-1 text-xs font-semibold rounded-full ${
+                        evaluationPassed
+                          ? "bg-green-100 text-green-800"
+                          : "bg-red-100 text-red-800"
+                      }`}
+                    >
+                      {evaluationPassed ? "Passed" : "Failed"}
+                    </span>
+                  </td>
                 </tr>
               );
             })}
