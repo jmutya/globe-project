@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from "react";
 import { db, auth } from "../../backend/firebase/firebaseconfig";
 import { auth2, db2 } from "../../backend/firebase/addingNewUserConfig";
-// import { handleDeleteUser } from "../../backend/firebase/deleteUsers"; // update the path if needed
-import { createUserWithEmailAndPassword } from "firebase/auth";
-import { onAuthStateChanged } from "firebase/auth";
 import { handleDeleteUser } from "../../backend/firebase/deleteUsers";
-
+import {
+  createUserWithEmailAndPassword,
+  onAuthStateChanged,
+  sendPasswordResetEmail,
+} from "firebase/auth";
 import {
   collection,
   addDoc,
@@ -13,9 +14,7 @@ import {
   deleteDoc,
   doc,
 } from "firebase/firestore";
-import { sendPasswordResetEmail } from "firebase/auth";
 
-// Import icons for UI
 import {
   FaKey,
   FaPlus,
@@ -37,6 +36,7 @@ const AddEmail = () => {
   const [newEmail, setNewEmail] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [role, setRole] = useState("");
+  const [status, setStatus] = useState(""); // Added this line
   const [loading, setLoading] = useState(false);
   const [deletingId, setDeletingId] = useState(null);
   const [filterRole, setFilterRole] = useState("all");
@@ -88,32 +88,36 @@ const AddEmail = () => {
       toast.error("Please fill in all fields.");
       return;
     }
-  
+
     if (currentUserRole !== "admin") {
       toast.error("You do not have permission to add users.");
       return;
     }
-  
+
     setLoading(true);
     try {
-      // ✅ Create user in second Firebase project
-      const userCredential = await createUserWithEmailAndPassword(auth2, newEmail, newPassword);
+      const userCredential = await createUserWithEmailAndPassword(
+        auth2,
+        newEmail,
+        newPassword
+      );
       const user = userCredential.user;
-  
-      // ✅ Save user to Firestore of second Firebase app
+
       const docRef = await addDoc(collection(db2, "authorizedUsers"), {
         email: newEmail,
         role,
+        status: status || "active",
         createdAt: new Date(),
         uid: user.uid,
       });
-  
-      setEmails([...emails, { id: docRef.id, email: newEmail, role }]);
+
+      setEmails([...emails, { id: docRef.id, email: newEmail, role, status }]);
       toast.success("User added successfully!");
       setShowModal(false);
       setNewEmail("");
       setNewPassword("");
       setRole("");
+      setStatus("");
     } catch (error) {
       toast.error("Error: " + error.message);
     } finally {
@@ -136,17 +140,6 @@ const AddEmail = () => {
       toast.success(`Password reset link sent to ${emailToReset}`);
     } catch (error) {
       toast.error("Error sending reset link: " + error.message);
-    }
-  };
-
-  const handleDeleteUser = async (id, email, role, currentUserRole) => {
-    try {
-      // Delete from Firestore (second project)
-      await deleteDoc(doc(db, "authorizedUsers", id));
-      toast.success(`Access revoked for ${email}`);
-    } catch (error) {
-      console.error("Error deleting user:", error);
-      toast.error("Failed to revoke access.");
     }
   };
 
@@ -185,6 +178,7 @@ const AddEmail = () => {
 
   const filteredEmails = emails
     .filter((user) => filterRole === "all" || user.role === filterRole)
+    .filter((user) => !status || user.status === status)
     .filter((user) =>
       user.email.toLowerCase().includes(searchTerm.toLowerCase())
     )
@@ -199,27 +193,55 @@ const AddEmail = () => {
       return 0;
     });
 
-  const getSortIcon = () => {
-    return (
-      <button
-        onClick={toggleSort}
-        className="ml-2 text-gray-600 hover:text-indigo-600"
-        title="Toggle Sort"
-      >
-        {sortOption === "az" && <FaSortAlphaDown className="text-sm" />}
-        {sortOption === "za" && <FaSortAlphaUp className="text-sm" />}
-        {sortOption === "recent" && <FaSortAmountDown className="text-sm" />}
-      </button>
-    );
-  };
+  const getSortIcon = () => (
+    <button
+      onClick={toggleSort}
+      className="ml-2 text-gray-600 hover:text-indigo-600"
+      title="Toggle Sort"
+    >
+      {sortOption === "az" && <FaSortAlphaDown className="text-sm" />}
+      {sortOption === "za" && <FaSortAlphaUp className="text-sm" />}
+      {sortOption === "recent" && <FaSortAmountDown className="text-sm" />}
+    </button>
+  );
 
   return (
     <div className="p-6 h-[calc(100vh-100px)] flex flex-col bg-gray-50">
-      <div className="flex justify-between items-center mb-6">
-        <h3 className="text-3xl font-semibold text-indigo-700">
-          Authorized Users
-        </h3>
-        <div className="flex items-center gap-3">
+      <div className="flex justify-between items-center mb-6 flex-wrap gap-4">
+        <div className="flex items-center gap-2 mr-6">
+          <button
+            onClick={() => setStatus("")}
+            className={`px-4 py-2 border rounded-md text-sm ${
+              status === ""
+                ? "bg-indigo-100 text-indigo-700 font-medium"
+                : "bg-gray-100 text-gray-700"
+            }`}
+          >
+            All
+          </button>
+          <button
+            onClick={() => setStatus("active")}
+            className={`px-4 py-2 border rounded-md text-sm ${
+              status === "active"
+                ? "bg-indigo-100 text-indigo-700 font-medium"
+                : "bg-gray-100 text-gray-700"
+            }`}
+          >
+            Active
+          </button>
+          <button
+            onClick={() => setStatus("inactive")}
+            className={`px-4 py-2 border rounded-md text-sm ${
+              status === "inactive"
+                ? "bg-indigo-100 text-indigo-700 font-medium"
+                : "bg-gray-100 text-gray-700"
+            }`}
+          >
+            Inactive
+          </button>
+        </div>
+
+        <div className="flex items-center gap-3 flex-wrap">
           <select
             value={filterRole}
             onChange={(e) => setFilterRole(e.target.value)}
@@ -286,26 +308,36 @@ const AddEmail = () => {
             viewMode === "list" ? (
               <>
                 {/* Header with specification */}
-                <div className="grid grid-cols-12 gap-4 pb-3 border-b border-gray-300 text-gray-700 font-semibold text-sm px-4">
-                  <div className="col-span-6 flex items-center">
-                    Email {getSortIcon()}
-                  </div>
-                  <div className="col-span-3">Role</div>
-                  <div className="col-span-3 text-right">Actions</div>
+                <div className="grid grid-cols-10 gap-4 pb-3 border-b border-gray-300 text-gray-700 font-semibold text-sm px-4">
+                  <div className="col-span-5">Email {getSortIcon()}</div>
+                  <div className="col-span-2">Role</div>
+                  <div className="col-span-2">Status</div>
+                  <div className="col-span-1 text-right">Actions</div>
                 </div>
                 <ul className="divide-y divide-gray-100 mt-2">
                   {filteredEmails.map((user) => (
                     <li
                       key={user.id}
-                      className="grid grid-cols-12 gap-4 py-3 items-center hover:bg-indigo-50 transition rounded-lg px-4"
+                      className="grid grid-cols-10 gap-4 py-3 items-center hover:bg-indigo-50 transition rounded-lg px-4"
                     >
-                      <div className="col-span-6 text-sm text-indigo-900 font-medium">
+                      <div className="col-span-5 text-sm text-indigo-900 font-medium">
                         {user.email}
                       </div>
-                      <div className="col-span-3 text-sm text-gray-600 capitalize">
+                      <div className="col-span-2 text-sm text-gray-600 capitalize">
                         {user.role}
                       </div>
-                      <div className="col-span-3 flex justify-end gap-4">
+                      <div className="col-span-2 text-sm capitalize">
+                        <span
+                          className={`px-2 py-1 rounded-full text-xs font-medium ${
+                            user.status === "inactive"
+                              ? "bg-gray-200 text-gray-600"
+                              : "bg-green-100 text-green-700"
+                          }`}
+                        >
+                          {user.status || "active"}
+                        </span>
+                      </div>
+                      <div className="col-span-1 flex justify-end gap-4">
                         <button
                           onClick={() =>
                             handlePasswordReset(user.email, user.role)
@@ -407,6 +439,14 @@ const AddEmail = () => {
                 <option value="">Select Role</option>
                 <option value="admin">Admin</option>
                 <option value="user">User</option>
+              </select>
+              <select
+                value={status}
+                onChange={(e) => setStatus(e.target.value)}
+                className="w-full p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-400"
+              >
+                <option value="active">Active</option>
+                <option value="inactive">Inactive</option>
               </select>
             </div>
             <div className="flex justify-end mt-6 gap-3">
