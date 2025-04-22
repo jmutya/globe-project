@@ -262,38 +262,8 @@ const Insights = () => {
               <UnmatchedRowsTable
                 unmatchedRows={unmatchedRows}
                 onRowClick={setSelectedUnmatchedRow}
-                
+                individualAccuracy={individualAccuracy}
               />
-
-              {selectedUnmatchedRow && (
-                <div className="mt-4 p-4 bg-white border rounded shadow">
-                  <h4 className="text-lg font-semibold mb-2 text-gray-800">
-                    Selected Row Details
-                  </h4>
-                  <p>
-                    <strong>Ticket Number:</strong>{" "}
-                    {selectedUnmatchedRow.number}
-                  </p>
-                  <p>
-                    <strong>Resolved By:</strong>{" "}
-                    {selectedUnmatchedRow.resolvedBy || "Unassigned"}
-                  </p>
-                  <p>
-                    <strong>Cause:</strong>{" "}
-                    {selectedUnmatchedRow.cause || "Empty"}
-                  </p>
-                  <p>
-                    <strong>Reason for Outage:</strong>{" "}
-                    {selectedUnmatchedRow.reason || "Empty"}
-                  </p>
-                  <p>
-                    <strong>Closing Accuracy:</strong>{" "}
-                    {individualAccuracy[selectedUnmatchedRow.resolvedBy] ||
-                      "N/A"}
-                    %
-                  </p>
-                </div>
-              )}
             </div>
           </div>
 

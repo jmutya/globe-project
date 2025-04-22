@@ -27,6 +27,7 @@ const UnmatchedRowsTable = ({
       </h4>
       <ul className="space-y-4">
         {unmatchedRows.map((row, idx) => {
+          const accuracy = individualAccuracy?.[row.resolvedBy];
           return (
             <li
               key={idx}
@@ -78,6 +79,7 @@ const UnmatchedRowsTable = ({
                   </p>
                   <p>
                     <strong>Clossing Accuracy:</strong>{" "}
+                    {accuracy ? `${accuracy}%` : "Not Available"}
                   </p>
                 </div>
               )}
