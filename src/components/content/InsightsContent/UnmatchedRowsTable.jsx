@@ -27,7 +27,6 @@ const UnmatchedRowsTable = ({
       </h4>
       <ul className="space-y-4">
         {unmatchedRows.map((row, idx) => {
-          
           return (
             <li
               key={idx}
@@ -79,7 +78,6 @@ const UnmatchedRowsTable = ({
                   </p>
                   <p>
                     <strong>Clossing Accuracy:</strong>{" "}
-                   
                   </p>
                 </div>
               )}
