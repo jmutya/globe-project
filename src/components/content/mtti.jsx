@@ -158,10 +158,10 @@ function MttiTable() {
   const averageFormatted = formatMinutesToHMS(averageMTTIinMinutes);
 
   return (
-    <div className="max-h-[1100px] overflow-auto border border-gray-200 rounded-2xl p-6 bg-white shadow-sm">
-      <div className="overflow-y-auto max-h-[300px] rounded-xl p-6 bg-gray-50">
-        <div className=" flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <h3 className="text-lg font-medium text-gray-600 tracking-wide">
+    <div className="max-h-[1100px] overflow-auto border rounded p-4">
+      <div className="flex justify-center items-center overflow-y-auto max-h-[300px] rounded-xl p-6 bg-gray-50">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <h3 className="text-base font-medium text-gray-600 tracking-wide">
             Overall Average MTTI
           </h3>
           <span className="inline-block text-lg font-semibold text-blue-600 bg-blue-50 px-4 py-1.5 rounded-xl shadow-sm">

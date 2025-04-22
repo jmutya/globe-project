@@ -126,6 +126,7 @@ const ReportedCreatedTable = () => {
     ([caller, data]) => {
       const avgMTTT = (data.totalMTTT / data.count).toFixed(2); // Average MTTT for each caller
       return { caller, totalMTTT: avgMTTT, ticketcount: data.count };
+      return { caller, totalMTTT: avgMTTT, ticketcount: data.count };
     }
   );
 
@@ -192,6 +193,60 @@ const ReportedCreatedTable = () => {
                   MTTT
                 </th>
                 <th className="px-6 py-3 text-center text-s font-medium text-indigo-700 uppercase tracking-wider">
+                  Evaluation
+                </th>
+              </tr>
+            </thead>
+            <tbody className="bg-white divide-y divide-gray-200">
+              {totalMTTTByCaller.map((item, idx) => {
+                const evaluationPassed = parseFloat(item.totalMTTT) < 16;
+                return (
+                  <tr key={idx} className="hover:bg-indigo-50 transition">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      {item.caller}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-center text-gray-900">
+                      {item.ticketcount}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-center text-gray-900">
+                      {formatMinutesToHMS(item.totalMTTT)}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-center">
+                      <span
+                        className={`inline-block px-2 py-1 text-xs font-semibold rounded-full ${
+                          evaluationPassed
+                            ? "bg-green-100 text-green-800"
+                            : "bg-red-100 text-red-800"
+                        }`}
+                      >
+                        {evaluationPassed ? "Passed" : "Failed"}
+                      </span>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      </div>
+        {/* MTTT by Caller Table */}
+        <div className="overflow-x-auto">
+          <h3 className="text-lg font-semibold text-gray-800 mb-4">
+            MTTT by Caller
+          </h3>
+          <table className="min-w-full divide-y divide-gray-200">
+            <thead className="bg-indigo-50">
+              <tr>
+                <th className="px-6 py-3 text-left text-xs font-medium text-indigo-700 uppercase tracking-wider">
+                  Caller
+                </th>
+                <th className="px-6 py-3 text-center text-xs font-medium text-indigo-700 uppercase tracking-wider">
+                  # of Assigned Tickets
+                </th>
+                <th className="px-6 py-3 text-center text-xs font-medium text-indigo-700 uppercase tracking-wider">
+                  MTTT
+                </th>
+                <th className="px-6 py-3 text-center text-xs font-medium text-indigo-700 uppercase tracking-wider">
                   Evaluation
                 </th>
               </tr>

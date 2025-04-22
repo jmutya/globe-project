@@ -56,7 +56,7 @@ function App() {
           path="/addemail"
           element={
             <ProtectedRoute>
-              <AddEmail />
+              <AddEmail user={user}/>
             </ProtectedRoute>
           }
         />

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { db, auth } from "../../backend/firebase/firebaseconfig";
 import { auth2, db2 } from "../../backend/firebase/addingNewUserConfig";
-import { handleDeleteUser } from "../../backend/firebase/deleteUsers.jsx"; // update the path if needed
+import { handleDeleteUser } from "../../backend/firebase/deleteUsers"; // update the path if needed
 import { createUserWithEmailAndPassword } from "firebase/auth";
 import { onAuthStateChanged } from "firebase/auth";
 
@@ -13,6 +13,8 @@ import {
   doc,
 } from "firebase/firestore";
 import { sendPasswordResetEmail } from "firebase/auth";
+
+// Import icons for UI
 import {
   FaKey,
   FaPlus,
@@ -93,24 +95,8 @@ const AddEmail = () => {
   
     setLoading(true);
     try {
-      // 🔍 Check if email already exists in Firestore (db2)
-      const existingUsersSnapshot = await getDocs(collection(db2, "authorizedUsers"));
-      const emailExists = existingUsersSnapshot.docs.some(
-        (doc) => doc.data().email === newEmail
-      );
-  
-      if (emailExists) {
-        toast.error("This email is already registered in the system.");
-        setLoading(false);
-        return;
-      }
-  
-      // ✅ Create user in second Firebase project's Auth
-      const userCredential = await createUserWithEmailAndPassword(
-        auth2,
-        newEmail,
-        newPassword
-      );
+      // ✅ Create user in second Firebase project
+      const userCredential = await createUserWithEmailAndPassword(auth2, newEmail, newPassword);
       const user = userCredential.user;
   
       // ✅ Save user to Firestore of second Firebase app
@@ -128,11 +114,7 @@ const AddEmail = () => {
       setNewPassword("");
       setRole("");
     } catch (error) {
-      if (error.code === "auth/email-already-in-use") {
-        toast.error("This email is already registered in Firebase Auth.");
-      } else {
-        toast.error("Error: " + error.message);
-      }
+      toast.error("Error: " + error.message);
     } finally {
       setLoading(false);
     }
