@@ -1,6 +1,6 @@
 // src/hooks/useReportData.js
 import { useState, useEffect } from "react";
-import fetchReportData from "../reportComponents/reportService";
+import fetchReportData from "./reportService";
 
 const useReportData = (timeRange, selectedMonth, selectedYear, sortBy) => {
   const [reportData, setReportData] = useState({

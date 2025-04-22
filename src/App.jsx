@@ -1,3 +1,4 @@
+import './index.css'; // Or './App.css'
 import React from "react";
 import {
   BrowserRouter as Router,
@@ -7,27 +8,31 @@ import {
 } from "react-router-dom";
 import { useAuth } from "./userauth/AuthContext"; // Use global authentication context
 import Login from "./userauth/login";
-import Sidebar from "./components/Sidebar/sidebar";
-import AddEmail from "./components/content/addemail";
+import Sidebar from "./components/layout/navigation/sidebar";
+import AddEmail from "./components/pages/addemail";
 import ProtectedRoute from "./userauth/protectedroute";
 
-import ExcelUploader from "./components/content/documents";
+import ExcelUploader from "./components/pages/documents";
 import { FaSpinner } from "react-icons/fa";
 
 function App() {
   const { user, loading } = useAuth(); // Get authentication state
-
   if (loading) {
     return (
-      <div className="fixed inset-0 flex justify-center items-center bg-black bg-opacity-50">
-        <div className="p-5 rounded-lg bg-white shadow-lg flex items-center gap-2">
-          <FaSpinner className="animate-spin text-xl text-blue-500" />
-          <p className="text-gray-700">Loading, please wait...</p>
+      <div className="fixed inset-0 flex justify-center items-center bg-white z-50">
+        <div className="flex flex-col items-center space-y-4">
+          {/* Spinner */}
+          <div className="w-8 h-8 border-4 border-gray-300 border-t-indigo-500 rounded-full animate-spin" />
+          
+          {/* Message */}
+          <p className="text-gray-600 font-medium text-sm">
+            Loading, please wait...
+          </p>
         </div>
       </div>
     );
   }
-
+  
   return (
     <Router>
       <Routes>
@@ -51,7 +56,7 @@ function App() {
           path="/addemail"
           element={
             <ProtectedRoute>
-              <AddEmail />
+              <AddEmail user={user}/>
             </ProtectedRoute>
           }
         />
