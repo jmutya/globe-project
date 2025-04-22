@@ -16,7 +16,10 @@ const convertExcelDate = (value) => {
     if (ampm.toLowerCase() === "am" && hour === 12) hour = 0;
 
     const date = new Date(
-      `${year}-${month}-${day}T${String(hour).padStart(2, "0")}:${minute}:${second}`
+      `${year}-${month}-${day}T${String(hour).padStart(
+        2,
+        "0"
+      )}:${minute}:${second}`
     );
     if (!isNaN(date)) {
       return date.toISOString();
@@ -42,7 +45,9 @@ const processExcelData = async (fileUrl) => {
 };
 
 const fetchmtti = async () => {
-  const { data: files, error } = await supabase.storage.from("uploads").list("excels");
+  const { data: files, error } = await supabase.storage
+    .from("uploads")
+    .list("excels");
 
   if (error) return console.error("Supabase error:", error);
 
@@ -148,15 +153,21 @@ function MttiTable() {
   };
 
   const validRows = reportData.filter((item) => !isNaN(parseFloat(item.mtti)));
-  const averageMTTIinMinutes = validRows.length > 0 ? totalMTTI / validRows.length : 0;
+  const averageMTTIinMinutes =
+    validRows.length > 0 ? totalMTTI / validRows.length : 0;
   const averageFormatted = formatMinutesToHMS(averageMTTIinMinutes);
 
   return (
-    <div className="max-h-[1100px] overflow-auto border rounded p-4">
-      <div className=" overflow-y-auto max-h-[300px] border rounded p-4">
-        <p className="mt-4 font-semibold text-2xl">
-          Overall Average MTTI: {averageFormatted}
-        </p>
+    <div className="max-h-[1100px] overflow-auto border border-gray-200 rounded-2xl p-6 bg-white shadow-sm">
+      <div className="overflow-y-auto max-h-[300px] rounded-xl p-6 bg-gray-50">
+        <div className=" flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <h3 className="text-lg font-medium text-gray-600 tracking-wide">
+            Overall Average MTTI
+          </h3>
+          <span className="inline-block text-lg font-semibold text-blue-600 bg-blue-50 px-4 py-1.5 rounded-xl shadow-sm">
+            {averageFormatted}
+          </span>
+        </div>
       </div>
 
       {/* <div className="max-h-[600px] overflow-auto border rounded p-4 mb-10">
@@ -189,34 +200,44 @@ function MttiTable() {
         </table>
       </div> */}
 
-      <div className=" overflow-y-auto max-h-[700px] border rounded p-4">
-        <h3 className="text-lg font-semibold mb-2">MTTI by Caller</h3>
-        <table className="min-w-full table-auto border-collapse border border-gray-300">
-          <thead>
-            <tr className="bg-gray-100">
-              <th className="border px-4 py-2">Caller</th>
-              <th className="border px-4 py-2"># of Assigned Tickets</th>
-              <th className="border px-4 py-2">MTTI</th>
-              <th className="border px-4 py-2">Evaluation</th>
+      <div className="overflow-x-auto">
+        <h3 className="text-lg font-semibold text-gray-800 mb-4">
+          MTTI by Caller
+        </h3>
+        <table className="min-w-full divide-y divide-gray-200">
+          <thead className="bg-indigo-50">
+            <tr>
+              <th className="px-6 py-3 text-left text-s font-medium text-indigo-700 uppercase tracking-wider">
+                Caller
+              </th>
+              <th className="px-6 py-3 text-center text-s font-medium text-indigo-700 uppercase tracking-wider">
+                # of Assigned Tickets
+              </th>
+              <th className="px-6 py-3 text-center text-s font-medium text-indigo-700 uppercase tracking-wider">
+                MTTI
+              </th>
+              <th className="px-6 py-3 text-center text-s font-medium text-indigo-700 uppercase tracking-wider">
+                Evaluation
+              </th>
             </tr>
           </thead>
-          <tbody>
+          <tbody className="bg-white divide-y divide-gray-200">
             {totalMTTIByCaller.map((item, idx) => {
               const evaluationPassed = parseFloat(item.totalMTTI) < 16;
               return (
-                <tr key={idx}>
-                  <td className="border px-4 py-2">{item.caller}</td>
-                  <td className="border px-4 py-2 text-center">{item.ticketcount}</td>
-                  <td className="border px-4 py-2 text-center">
+                <tr key={idx} className="hover:bg-indigo-50 transition">
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{item.caller}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-center text-gray-900">
+                    {item.ticketcount}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-center text-gray-900">
                     {formatMinutesToHMS(item.totalMTTI)}
                   </td>
-                  <td
-                    className={`border px-4 py-2 text-center font-semibold ${
-                      evaluationPassed ? "text-green-600" : "text-red-600"
-                    }`}
-                  >
-                    {evaluationPassed ? "Passed" : "Failed"}
-                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-center">
+                <span className={`inline-block px-2 py-1 text-xs font-semibold rounded-full ${evaluationPassed ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+                  {evaluationPassed ? 'Passed' : 'Failed'}
+                </span>
+              </td>
                 </tr>
               );
             })}
