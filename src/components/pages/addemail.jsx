@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from "react";
 import { db, auth } from "../../backend/firebase/firebaseconfig";
 import { auth2, db2 } from "../../backend/firebase/addingNewUserConfig";
-import { handleDeleteUser } from "../../backend/firebase/deleteUsers"; // update the path if needed
+// import { handleDeleteUser } from "../../backend/firebase/deleteUsers"; // update the path if needed
 import { createUserWithEmailAndPassword } from "firebase/auth";
 import { onAuthStateChanged } from "firebase/auth";
+import { handleDeleteUser } from "../../backend/firebase/deleteUsers";
 
 import {
   collection,
