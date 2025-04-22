@@ -21,10 +21,10 @@ html, body {
   height: 100vh;
 }
 @keyframes runner {
-  80% {
+  0% {
     right: -6rem;
   }
-  80% {
+  100% {
     left: 100%;
   }
 }
