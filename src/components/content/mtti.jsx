@@ -170,8 +170,6 @@ function MttiTable() {
         </div>
       </div>
 
-     
-
       <div className="overflow-x-auto">
         <h3 className="text-lg font-semibold text-gray-800 mb-4">
           MTTI by Caller

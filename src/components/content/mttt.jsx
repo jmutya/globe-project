@@ -174,8 +174,6 @@ const ReportedCreatedTable = () => {
           </div>
         </div>
 
-      
-
         {/* MTTT by Caller Table */}
         <div className="overflow-x-auto">
           <h3 className="text-lg font-semibold text-gray-800 mb-4">
