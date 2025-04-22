@@ -200,43 +200,44 @@ function MttiTable() {
         </table>
       </div> */}
 
-      <div className="overflow-y-auto max-h-[700px] border rounded-lg shadow-lg p-6 bg-white">
-        <h3 className="text-xl font-semibold mb-4 text-gray-800">
+      <div className="overflow-x-auto">
+        <h3 className="text-lg font-semibold text-gray-800 mb-4">
           MTTI by Caller
         </h3>
-        <table className="min-w-full table-auto border-separate border-spacing-0">
-          <thead>
-            <tr className="bg-gray-100 text-sm text-gray-700">
-              <th className="px-6 py-3 text-left font-medium">Caller</th>
-              <th className="px-6 py-3 text-center font-medium">
+        <table className="min-w-full divide-y divide-gray-200">
+          <thead className="bg-indigo-50">
+            <tr>
+              <th className="px-6 py-3 text-left text-s font-medium text-indigo-700 uppercase tracking-wider">
+                Caller
+              </th>
+              <th className="px-6 py-3 text-center text-s font-medium text-indigo-700 uppercase tracking-wider">
                 # of Assigned Tickets
               </th>
-              <th className="px-6 py-3 text-center font-medium">MTTI</th>
-              <th className="px-6 py-3 text-center font-medium">Evaluation</th>
+              <th className="px-6 py-3 text-center text-s font-medium text-indigo-700 uppercase tracking-wider">
+                MTTI
+              </th>
+              <th className="px-6 py-3 text-center text-s font-medium text-indigo-700 uppercase tracking-wider">
+                Evaluation
+              </th>
             </tr>
           </thead>
-          <tbody>
+          <tbody className="bg-white divide-y divide-gray-200">
             {totalMTTIByCaller.map((item, idx) => {
               const evaluationPassed = parseFloat(item.totalMTTI) < 16;
               return (
-                <tr
-                  key={idx}
-                  className="hover:bg-gray-50 transition duration-200"
-                >
-                  <td className="px-6 py-4 text-gray-800">{item.caller}</td>
-                  <td className="px-6 py-4 text-center text-gray-600">
+                <tr key={idx} className="hover:bg-indigo-50 transition">
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{item.caller}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-center text-gray-900">
                     {item.ticketcount}
                   </td>
-                  <td className="px-6 py-4 text-center text-gray-600">
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-center text-gray-900">
                     {formatMinutesToHMS(item.totalMTTI)}
                   </td>
-                  <td
-                    className={`px-6 py-4 text-center font-semibold ${
-                      evaluationPassed ? "text-green-600" : "text-red-600"
-                    }`}
-                  >
-                    {evaluationPassed ? "Passed" : "Failed"}
-                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-center">
+                <span className={`inline-block px-2 py-1 text-xs font-semibold rounded-full ${evaluationPassed ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+                  {evaluationPassed ? 'Passed' : 'Failed'}
+                </span>
+              </td>
                 </tr>
               );
             })}

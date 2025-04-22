@@ -94,8 +94,24 @@ const AddEmail = ({ user }) => {
   
     setLoading(true);
     try {
-      // ✅ Create user in second Firebase project
-      const userCredential = await createUserWithEmailAndPassword(auth2, newEmail, newPassword);
+      // 🔍 Check if email already exists in Firestore (db2)
+      const existingUsersSnapshot = await getDocs(collection(db2, "authorizedUsers"));
+      const emailExists = existingUsersSnapshot.docs.some(
+        (doc) => doc.data().email === newEmail
+      );
+  
+      if (emailExists) {
+        toast.error("This email is already registered in the system.");
+        setLoading(false);
+        return;
+      }
+  
+      // ✅ Create user in second Firebase project's Auth
+      const userCredential = await createUserWithEmailAndPassword(
+        auth2,
+        newEmail,
+        newPassword
+      );
       const user = userCredential.user;
   
       // ✅ Save user to Firestore of second Firebase app
@@ -113,7 +129,11 @@ const AddEmail = ({ user }) => {
       setNewPassword("");
       setRole("");
     } catch (error) {
-      toast.error("Error: " + error.message);
+      if (error.code === "auth/email-already-in-use") {
+        toast.error("This email is already registered in Firebase Auth.");
+      } else {
+        toast.error("Error: " + error.message);
+      }
     } finally {
       setLoading(false);
     }
