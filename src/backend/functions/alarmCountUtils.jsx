@@ -5,13 +5,11 @@ import supabase from "../supabase/supabase";
 const parseExcelDate = (value) => {
   if (!value) return null;
 
-  // Excel serial numbers
   if (typeof value === "number") {
     const excelEpoch = new Date(Date.UTC(1899, 11, 30));
     return new Date(excelEpoch.getTime() + value * 86400000);
   }
 
-  // Handle "MM/DD/YYYY HH:mm:ss"
   if (typeof value === "string") {
     const match = value.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})\s+(\d{2}):(\d{2}):(\d{2})$/);
     if (match) {
@@ -20,7 +18,6 @@ const parseExcelDate = (value) => {
     }
   }
 
-  // Fallback
   const parsed = new Date(value);
   return isNaN(parsed) ? null : parsed;
 };
@@ -32,7 +29,6 @@ export const fetchSeverityCounts = async () => {
 
     let allRows = [];
 
-    // Gather data from all files
     for (const file of files) {
       const { data: fileUrl } = supabase.storage.from("uploads").getPublicUrl(`excels/${file.name}`);
       const response = await fetch(fileUrl.publicUrl);
@@ -63,15 +59,10 @@ export const fetchSeverityCounts = async () => {
       }
     }
 
-    if (allRows.length === 0) return {};
+    if (allRows.length === 0) return { counts: {}, mostRecentMonth: null };
 
-    // Find latest month
-    const mostRecentMonth = allRows
-      .map(r => r.yearMonth)
-      .sort()
-      .reverse()[0];
+    const mostRecentMonth = allRows.map(r => r.yearMonth).sort().reverse()[0];
 
-    // Count severities for that month
     const counts = {};
     allRows.forEach(({ yearMonth, severity }) => {
       if (yearMonth === mostRecentMonth) {
@@ -79,9 +70,9 @@ export const fetchSeverityCounts = async () => {
       }
     });
 
-    return counts;
+    return { counts, mostRecentMonth };
   } catch (error) {
     console.error("Error fetching severity counts:", error);
-    return {};
+    return { counts: {}, mostRecentMonth: null };
   }
 };

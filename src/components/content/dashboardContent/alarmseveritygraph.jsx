@@ -12,7 +12,7 @@ import { fetchAlarmSeverityData } from "../../../backend/functions/alarmUtilsGra
 const AlarmsSeverity = () => {
   const [chartData, setChartData] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [latestMonth, setLatestMonth] = useState("");
+  const [latestMonth, setLatestMonth] = useState(""); // Default empty string
 
   const colors = [
     "#60a5fa", // Blue 400
@@ -29,6 +29,14 @@ const AlarmsSeverity = () => {
     const loadData = async () => {
       setIsLoading(true);
       const { severityCounts, latestMonth } = await fetchAlarmSeverityData();
+
+      // Handle empty data gracefully
+      if (!latestMonth || latestMonth === "No data") {
+        setLatestMonth("No data available for this month");
+      } else {
+        setLatestMonth(latestMonth);
+      }
+
       const formattedData = Object.entries(severityCounts).map(
         ([name, value], index) => ({
           name,
@@ -37,7 +45,6 @@ const AlarmsSeverity = () => {
         })
       );
       setChartData(formattedData);
-      setLatestMonth(latestMonth);
       setIsLoading(false);
     };
 
