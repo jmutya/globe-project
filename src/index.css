@@ -22,14 +22,15 @@ html, body {
 }
 @keyframes runner {
   0% {
-    right: -6rem;
+    transform: translateX(-100%);
   }
   100% {
-    left: 100%;
+    transform: translateX(100%);
   }
 }
 
 .animate-runner {
-  animation: runner 10s linear infinite; /* Adjusted to 2s for faster speed */
+  animation: runner 5s linear infinite;
 }
+
 
