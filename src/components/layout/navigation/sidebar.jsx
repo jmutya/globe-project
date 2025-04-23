@@ -189,7 +189,7 @@ const Sidebar = ({ user }) => {
        <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 transition-opacity duration-300 ease-out animate__animated animate__fadeIn">
        <div className="bg-white p-8 rounded-lg w-1/3 max-w-md shadow-lg transform transition-all duration-500 ease-in-out animate__animated animate__zoomIn flex flex-col items-center">
          <img
-           src="/public/sadCat.gif" // Replace with the actual path to your image/GIF
+           src="/sadCat.gif" // Replace with the actual path to your image/GIF
            alt="Crying Cat"
            className="w-32 h-32 object-contain mb-4" // Adjust size as needed
          />
