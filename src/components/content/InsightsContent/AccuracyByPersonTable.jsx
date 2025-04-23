@@ -19,14 +19,15 @@ const AccuracyByPersonTable = ({ accuracyData, title, valueAccessor = (item) => 
           <thead>
             <tr className="bg-gray-100 border-b">
               <th className="px-4 py-3 text-left font-medium">Assigned Person</th>
+              <th className="px-4 py-3 text-center font-medium">Accurate Tickets / Tickets Issued</th>
               <th className="px-4 py-3 text-left font-medium w-1/2">Accuracy</th>
               <th className="px-4 py-3 text-left font-medium">%</th>
             </tr>
           </thead>
           <tbody>
-            {Object.entries(accuracyData).map(([person, percentage], idx) => {
-              const value = parseFloat(percentage);
-              const barColor = getProgressBarColor(value);
+            {Object.entries(accuracyData).map(([person, data], idx) => {
+              const { accurate, total, percentage } = valueAccessor(data);
+              const barColor = getProgressBarColor(percentage);
 
               return (
                 <tr
@@ -36,16 +37,17 @@ const AccuracyByPersonTable = ({ accuracyData, title, valueAccessor = (item) => 
                   } hover:bg-indigo-50 transition`}
                 >
                   <td className="px-4 py-3">{person}</td>
+                  <td className="px-4 py-3 text-center">{`${accurate} / ${total}`}</td>
                   <td className="px-4 py-3">
                     <div className="w-full bg-gray-200 rounded-full h-4">
                       <div
                         className={`h-4 rounded-full ${barColor} transition-all duration-500 ease-out`}
-                        style={{ width: `${value}%` }}
+                        style={{ width: `${percentage}%` }}
                       />
                     </div>
                   </td>
                   <td className="px-4 py-3 font-semibold text-indigo-600">
-                    {value.toFixed(1)}%
+                    {percentage.toFixed(1)}%
                   </td>
                 </tr>
               );
