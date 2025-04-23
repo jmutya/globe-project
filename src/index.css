@@ -21,15 +21,16 @@ html, body {
   height: 100vh;
 }
 @keyframes runner {
-  80% {
-    right: -6rem;
+  0% {
+    transform: translateX(-100%);
   }
-  80% {
-    left: 100%;
+  100% {
+    transform: translateX(100%);
   }
 }
 
 .animate-runner {
-  animation: runner 10s linear infinite; /* Adjusted to 2s for faster speed */
+  animation: runner 5s linear infinite;
 }
+
 

@@ -20,12 +20,13 @@ function App() {
   if (loading) {
     return (
       <div className="fixed inset-0 flex justify-center items-center bg-white z-50">
-      <div className="relative w-full h-40 overflow-hidden">
+      <div className="relative w-64 h-40 overflow-hidden mx-auto">
+
         {/* Running Dino across screen */}
         <img
-          src="https://media3.giphy.com/media/v1.Y2lkPTc5MGI3NjExMmxqczg1dXN0b294YnUyMHUxN2lmMjI3M2hmaHpyNHNjaTg3NTRraCZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/wl3pyqP3J57oc/giphy.gif"
+         src="/DinosaursGIF.gif"
           alt="Running Dino"
-          className="absolute top-4 left-1/2 transform -translate-x-1/2 h-20 animate-runner"
+          className="absolute top-4 left-1/2 transform -translate-x-2/4 h-20 animate-runner"
           style={{ visibility: 'hidden' }}
           onLoad={(e) => e.target.style.visibility = 'visible'}
         />

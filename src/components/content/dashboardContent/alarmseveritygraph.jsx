@@ -64,7 +64,7 @@ const AlarmsSeverity = () => {
               />
             </svg>
           </div>
-          <h2 className="text-lg font-semibold text-gray-800 text-center">
+          <h2 className="text-sm font-semibold text-gray-700 ml-3 uppercase tracking-wider">
             Alarm Severity Distribution ({latestMonth || "Loading..."})
           </h2>
         </div>
