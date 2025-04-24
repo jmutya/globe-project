@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { FaUpload, FaFileExcel, FaTrash, FaSpinner } from "react-icons/fa";
 import toast, { Toaster } from "react-hot-toast";
 import supabase from "../../backend/supabase/supabase";
+import * as XLSX from "xlsx";
 
 const ExcelUploader = () => {
   const [uploading, setUploading] = useState(false);
@@ -17,28 +18,60 @@ const ExcelUploader = () => {
     fetchUploadedFiles();
   }, []);
 
+  const parseExcelMonth = (value) => {
+    let parsedDate;
+    if (typeof value === "number") {
+      parsedDate = new Date(Math.round((value - 25569) * 86400 * 1000));
+    } else if (typeof value === "string") {
+      parsedDate = new Date(value);
+    }
+    if (parsedDate && !isNaN(parsedDate.getTime())) {
+      return parsedDate.toLocaleString("default", { month: "long", year: "numeric" });
+    }
+    return "—";
+  };
+
   const fetchUploadedFiles = async () => {
     setLoadingFiles(true);
     try {
-      const { data, error } = await supabase.storage
-        .from("uploads")
-        .list("excels", { limit: 100 });
-
+      const { data, error } = await supabase.storage.from("uploads").list("excels");
       if (error) throw error;
 
       const validFiles = data.filter((file) => !file.name.startsWith("."));
-      setFiles(
-        validFiles.map((file) => ({
-          name: file.name,
-          date: new Date().toLocaleDateString(), // Placeholder date
-          url: supabase.storage
-            .from("uploads")
-            .getPublicUrl(`excels/${file.name}`).data.publicUrl,
-        }))
+
+      const fileList = await Promise.all(
+        validFiles.map(async (file) => {
+          const fullPath = `excels/${file.name}`;
+          const fileUrl = supabase.storage.from("uploads").getPublicUrl(fullPath).data.publicUrl;
+
+          let month = "—";
+          try {
+            const res = await fetch(fileUrl);
+            const arrayBuffer = await res.arrayBuffer();
+            const workbook = XLSX.read(arrayBuffer, { type: "array" });
+            const sheet = workbook.Sheets[workbook.SheetNames[0]];
+            const json = XLSX.utils.sheet_to_json(sheet, { defval: "" });
+
+            if (json.length > 0) {
+              const openedValue = json[0]["Opened"] || json[0]["Created"];
+              month = parseExcelMonth(openedValue);
+            }
+          } catch (err) {
+            console.warn(`Could not parse ${file.name}:`, err.message);
+          }
+
+          return {
+            name: file.name,
+            date: new Date().toLocaleDateString(),
+            month,
+            url: fileUrl,
+          };
+        })
       );
-    } catch (error) {
-      console.error("Failed to fetch files:", error);
-      toast.error("Error fetching files");
+
+      setFiles(fileList);
+    } catch (err) {
+      console.error("Error loading files:", err.message);
     } finally {
       setLoadingFiles(false);
     }
@@ -60,9 +93,22 @@ const ExcelUploader = () => {
     setUploadProgress(0);
 
     let uploadedCount = 0;
+
     for (let i = 0; i < selectedFiles.length; i++) {
       const file = selectedFiles[i];
+
       try {
+        const data = await file.arrayBuffer();
+        const workbook = XLSX.read(data, { type: "array" });
+        const sheet = workbook.Sheets[workbook.SheetNames[0]];
+        const json = XLSX.utils.sheet_to_json(sheet, { defval: "" });
+
+        let month = "Unknown";
+        if (json.length > 0) {
+          const openedValue = json[0]["Opened"] || json[0]["Created"];
+          month = parseExcelMonth(openedValue);
+        }
+
         const { error } = await supabase.storage
           .from("uploads")
           .upload(`excels/${file.name}`, file, {
@@ -71,10 +117,21 @@ const ExcelUploader = () => {
           });
 
         if (error) throw error;
+
         uploadedCount++;
-        setUploadProgress(
-          Math.round((uploadedCount / selectedFiles.length) * 100)
-        );
+        setUploadProgress(Math.round((uploadedCount / selectedFiles.length) * 100));
+
+        setFiles((prev) => [
+          ...prev,
+          {
+            name: file.name,
+            date: new Date().toLocaleDateString(),
+            month,
+            url: supabase.storage
+              .from("uploads")
+              .getPublicUrl(`excels/${file.name}`).data.publicUrl,
+          },
+        ]);
       } catch (error) {
         console.error("Upload failed:", error);
         toast.error(`Failed to upload ${file.name}`);
@@ -84,21 +141,17 @@ const ExcelUploader = () => {
     toast.success("Upload completed");
     setUploading(false);
     setShowUploadModal(false);
-    fetchUploadedFiles();
   };
 
   const confirmDelete = (fileName) => {
-    setFileToDelete(fileName);
+    setFileToDelete(`excels/${fileName}`);
     setShowDeleteModal(true);
   };
 
   const handleDeleteFile = async () => {
     if (!fileToDelete) return;
     try {
-      const { error } = await supabase.storage
-        .from("uploads")
-        .remove([`excels/${fileToDelete}`]);
-
+      const { error } = await supabase.storage.from("uploads").remove([fileToDelete]);
       if (error) throw error;
       toast.success("File deleted");
       fetchUploadedFiles();
@@ -114,13 +167,9 @@ const ExcelUploader = () => {
   return (
     <>
       <Toaster position="bottom-right" />
-
       <div className="p-6 h-[calc(100vh-100px)] flex flex-col bg-gray-50">
-        {/* Page Title and Upload Button */}
         <div className="flex justify-between items-center mb-4">
-          <h2 className="text-3xl font-semibold text-indigo-700">
-            Excel Files
-          </h2>
+          <h2 className="text-3xl font-semibold text-indigo-700">Excel Files</h2>
           <button
             onClick={handleUploadClick}
             className="flex items-center gap-2 bg-indigo-600 text-white px-4 py-2 rounded-xl hover:bg-indigo-700 transition"
@@ -130,33 +179,33 @@ const ExcelUploader = () => {
           </button>
         </div>
 
-        {/* File List Box with borderline specification*/}
         <div className="flex-1 border border-gray-200 rounded-xl bg-white p-6 shadow-sm">
-          {/* Header */}
           <div className="grid grid-cols-12 gap-4 pb-3 border-b border-gray-300 text-gray-700 font-bold text-sm px-4">
-            <div className="col-span-9 flex items-left">File</div>
+            <div className="col-span-6">File</div>
+            <div className="col-span-3">Month</div>
             <div className="col-span-3 text-right">Action</div>
           </div>
 
           <div className="divide-y divide-gray-100 text-[15px] font-medium text-[#111827]">
             {loadingFiles ? (
               <div className="flex items-center justify-center h-[300px]">
-              <div className="text-center">
-                <div className="animate-spin h-8 w-8 border-2 border-indigo-500 border-t-transparent rounded-full mx-auto mb-4" />
-                <p className="text-gray-500">Loading files...</p>
+                <div className="text-center">
+                  <div className="animate-spin h-8 w-8 border-2 border-indigo-500 border-t-transparent rounded-full mx-auto mb-4" />
+                  <p className="text-gray-500">Loading files...</p>
+                </div>
               </div>
-            </div>
             ) : files.length > 0 ? (
               files.map((file, index) => (
                 <div
                   key={index}
                   className="grid grid-cols-12 gap-4 py-3 items-center hover:bg-indigo-50 transition rounded-lg px-4"
                 >
-                  <div className="col-span-9 flex justify-start items-left gap-2 truncate">
-                    <FaFileExcel className="text-green-600 w-5 h-5 flex-shrink-0" />
-                    <span className="truncate text-right">{file.name}</span>
+                  <div className="col-span-6 flex gap-2 truncate">
+                    <FaFileExcel className="text-green-600 w-5 h-5" />
+                    <span className="truncate">{file.name}</span>
                   </div>
-                  <div className="col-span-3 flex justify-end">
+                  <div className="col-span-3">{file.month || "—"}</div>
+                  <div className="col-span-3 text-right">
                     <button
                       onClick={() => confirmDelete(file.name)}
                       className="text-red-600 hover:text-red-800"
@@ -168,9 +217,7 @@ const ExcelUploader = () => {
                 </div>
               ))
             ) : (
-              <div className="text-center text-gray-500 py-10">
-                No files uploaded yet.
-              </div>
+              <div className="text-center text-gray-500 py-10">No files uploaded yet.</div>
             )}
           </div>
         </div>
@@ -249,7 +296,8 @@ const ExcelUploader = () => {
           <div className="bg-white p-6 rounded-xl shadow-lg w-full max-w-md">
             <h3 className="text-lg font-semibold mb-3">Delete File</h3>
             <p className="text-sm text-gray-600 mb-6">
-              Are you sure you want to delete <strong>{fileToDelete}</strong>?
+              Are you sure you want to delete{" "}
+              <strong>{fileToDelete?.split("/")[1]}</strong>?
             </p>
             <div className="flex justify-end gap-3">
               <button
