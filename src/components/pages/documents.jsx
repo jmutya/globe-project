@@ -18,23 +18,41 @@ const ExcelUploader = () => {
     fetchUploadedFiles();
   }, []);
 
-  const parseExcelMonth = (value) => {
-    let parsedDate;
-    if (typeof value === "number") {
-      parsedDate = new Date(Math.round((value - 25569) * 86400 * 1000));
-    } else if (typeof value === "string") {
-      parsedDate = new Date(value);
-    }
-    if (parsedDate && !isNaN(parsedDate.getTime())) {
-      return parsedDate.toLocaleString("default", { month: "long", year: "numeric" });
-    }
-    return "—";
+  const parseExcelMonths = (json) => {
+    const seen = new Set();
+    const months = [];
+
+    json.forEach((row) => {
+      const value = row["Opened"] || row["Created"];
+      let parsedDate;
+
+      if (typeof value === "number") {
+        parsedDate = new Date(Math.round((value - 25569) * 86400 * 1000));
+      } else if (typeof value === "string") {
+        parsedDate = new Date(value);
+      }
+
+      if (parsedDate && !isNaN(parsedDate.getTime())) {
+        const monthYear = `${parsedDate.toLocaleString("default", {
+          month: "long",
+        })} (${parsedDate.getFullYear()})`;
+
+        if (!seen.has(monthYear)) {
+          seen.add(monthYear);
+          months.push(monthYear);
+        }
+      }
+    });
+
+    return months.length > 0 ? months.join(", ") : "—";
   };
 
   const fetchUploadedFiles = async () => {
     setLoadingFiles(true);
     try {
-      const { data, error } = await supabase.storage.from("uploads").list("excels");
+      const { data, error } = await supabase.storage
+        .from("uploads")
+        .list("excels");
       if (error) throw error;
 
       const validFiles = data.filter((file) => !file.name.startsWith("."));
@@ -42,7 +60,9 @@ const ExcelUploader = () => {
       const fileList = await Promise.all(
         validFiles.map(async (file) => {
           const fullPath = `excels/${file.name}`;
-          const fileUrl = supabase.storage.from("uploads").getPublicUrl(fullPath).data.publicUrl;
+          const fileUrl = supabase.storage
+            .from("uploads")
+            .getPublicUrl(fullPath).data.publicUrl;
 
           let month = "—";
           try {
@@ -53,8 +73,7 @@ const ExcelUploader = () => {
             const json = XLSX.utils.sheet_to_json(sheet, { defval: "" });
 
             if (json.length > 0) {
-              const openedValue = json[0]["Opened"] || json[0]["Created"];
-              month = parseExcelMonth(openedValue);
+              month = parseExcelMonths(json);
             }
           } catch (err) {
             console.warn(`Could not parse ${file.name}:`, err.message);
@@ -105,21 +124,21 @@ const ExcelUploader = () => {
 
         let month = "Unknown";
         if (json.length > 0) {
-          const openedValue = json[0]["Opened"] || json[0]["Created"];
-          month = parseExcelMonth(openedValue);
+          month = parseExcelMonths(json);
         }
 
-        const { error } = await supabase.storage
-          .from("uploads")
-          .upload(`excels/${file.name}`, file, {
-            cacheControl: "3600",
-            upsert: true,
-          });
+        const blob = new Blob([file], { type: file.type });
+        const { error } = await supabase.storage.from("uploads").upload(`excels/${file.name}`, blob, {
+          cacheControl: "3600",
+          upsert: true,
+        });
 
         if (error) throw error;
 
         uploadedCount++;
-        setUploadProgress(Math.round((uploadedCount / selectedFiles.length) * 100));
+        setUploadProgress(
+          Math.round((uploadedCount / selectedFiles.length) * 100)
+        );
 
         setFiles((prev) => [
           ...prev,
@@ -151,7 +170,9 @@ const ExcelUploader = () => {
   const handleDeleteFile = async () => {
     if (!fileToDelete) return;
     try {
-      const { error } = await supabase.storage.from("uploads").remove([fileToDelete]);
+      const { error } = await supabase.storage
+        .from("uploads")
+        .remove([fileToDelete]);
       if (error) throw error;
       toast.success("File deleted");
       fetchUploadedFiles();
@@ -169,7 +190,9 @@ const ExcelUploader = () => {
       <Toaster position="bottom-right" />
       <div className="p-6 h-[calc(100vh-100px)] flex flex-col bg-gray-50">
         <div className="flex justify-between items-center mb-4">
-          <h2 className="text-3xl font-semibold text-indigo-700">Excel Files</h2>
+          <h2 className="text-3xl font-semibold text-indigo-700">
+            Excel Files
+          </h2>
           <button
             onClick={handleUploadClick}
             className="flex items-center gap-2 bg-indigo-600 text-white px-4 py-2 rounded-xl hover:bg-indigo-700 transition"
@@ -181,9 +204,9 @@ const ExcelUploader = () => {
 
         <div className="flex-1 border border-gray-200 rounded-xl bg-white p-6 shadow-sm">
           <div className="grid grid-cols-12 gap-4 pb-3 border-b border-gray-300 text-gray-700 font-bold text-sm px-4">
-            <div className="col-span-6">File</div>
-            <div className="col-span-3">Month</div>
-            <div className="col-span-3 text-right">Action</div>
+            <div className="col-span-5">File</div>
+            <div className="col-span-5">Month</div>
+            <div className="col-span-2 text-right">Action</div>
           </div>
 
           <div className="divide-y divide-gray-100 text-[15px] font-medium text-[#111827]">
@@ -200,12 +223,12 @@ const ExcelUploader = () => {
                   key={index}
                   className="grid grid-cols-12 gap-4 py-3 items-center hover:bg-indigo-50 transition rounded-lg px-4"
                 >
-                  <div className="col-span-6 flex gap-2 truncate">
+                  <div className="col-span-5 flex gap-2 truncate">
                     <FaFileExcel className="text-green-600 w-5 h-5" />
                     <span className="truncate">{file.name}</span>
                   </div>
-                  <div className="col-span-3">{file.month || "—"}</div>
-                  <div className="col-span-3 text-right">
+                  <div className="col-span-5">{file.month || "—"}</div>
+                  <div className="col-span-2 text-right">
                     <button
                       onClick={() => confirmDelete(file.name)}
                       className="text-red-600 hover:text-red-800"
@@ -217,7 +240,9 @@ const ExcelUploader = () => {
                 </div>
               ))
             ) : (
-              <div className="text-center text-gray-500 py-10">No files uploaded yet.</div>
+              <div className="text-center text-gray-500 py-10">
+                No files uploaded yet.
+              </div>
             )}
           </div>
         </div>
