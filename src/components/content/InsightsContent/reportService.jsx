@@ -193,12 +193,19 @@ const fetchReportData = async (timeRange, selectedMonth, selectedYear) => {
     }
 
     const percentagePerAssignedPerson = {};
-    for (const [person, data] of Object.entries(assignedPersonsData)) {
-      const percentage = data.total
-        ? ((data.completed / data.total) * 100).toFixed(2)
-        : "0.00";
-      percentagePerAssignedPerson[person] = percentage;
-    }
+
+for (const [person, data] of Object.entries(assignedPersonsData)) {
+  const accurate = data.completed;
+  const total = data.total;
+  const percentage = total ? (accurate / total) * 100 : 0;
+
+  percentagePerAssignedPerson[person] = {
+    accurate,
+    total,
+    percentage,
+  };
+}
+
 
     let formattedData = Object.entries(alarmData).map(([date, alarms]) => {
       let entry = { date };
