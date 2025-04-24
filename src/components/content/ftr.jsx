@@ -74,7 +74,7 @@ function ftrTable() {
   }, []);
 
   return (
-    <div className="max-h-[1100px] overflow-auto border border-gray-200 rounded-2xl p-6 bg-white shadow-sm">
+    <div className="max-h-[850px] overflow-auto border border-gray-200 rounded-2xl p-6 bg-white shadow-sm">
       <div className="foverflow-y-auto max-h-[300px] rounded-xl p-6 bg-gray-50">
         <h3 className="text-lg font-semibold text-gray-800 mb-4">
           Total Tickets Per Caller

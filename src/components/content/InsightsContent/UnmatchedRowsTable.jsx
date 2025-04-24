@@ -24,7 +24,7 @@ const UnmatchedRowsTable = ({
   }
 
   return (
-    <div className="mt-6 ">
+    <div className="mt-6 overflow-y-auto max-h-[500px]">
       <h4 className="font-semibold text-lg text-red-600 mb-4 flex items-center gap-2">
         <FaExclamationTriangle className="mr-2 text-red-600" />
         Unmatched Rows Found:
@@ -83,8 +83,9 @@ const UnmatchedRowsTable = ({
                   </p>
                   <p>
                     <strong>Clossing Accuracy:</strong>{" "}
-                    {accuracy ? `${accuracy.accuracy}%` : "Not Available"}
-
+                    {accuracy
+                      ? `${accuracy.accuracy.toFixed(2)}%`
+                      : "Not Available"}
                   </p>
                 </div>
               )}

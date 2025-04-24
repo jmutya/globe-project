@@ -22,6 +22,7 @@ const FilterData = () => {
   const [reasonSummary, setReasonSummary] = useState([]);
   const [tableData, setTableData] = useState([]);
   const [uniqueReasonTableData, setUniqueReasonTableData] = useState([]);
+  const [selectedMonth, setSelectedMonth] = useState("");
 
   const convertExcelDate = (value) => {
     if (typeof value === "number") {
@@ -120,6 +121,14 @@ const FilterData = () => {
         ),
       ]
     : [];
+  const monthOptions = [
+    ...new Set(
+      structuredData
+        .map((item) => item.date?.slice(0, 7)) // 'YYYY-MM'
+        .filter(Boolean)
+    ),
+  ].sort();
+
   const areaOptions = selectTerritory
     ? [
         ...new Set(
@@ -150,6 +159,11 @@ const FilterData = () => {
       filtered = filtered.filter((item) => item.area === selectedArea);
     if (selectedProvince)
       filtered = filtered.filter((item) => item.province === selectedProvince);
+    if (selectedMonth) {
+      filtered = filtered.filter((item) =>
+        item.date?.startsWith(selectedMonth)
+      );
+    }
 
     setTableData(filtered); // Save for summary table
 
@@ -265,6 +279,21 @@ const FilterData = () => {
     <div>
       {/* Dropdown Filters */}
       <div className="mb-4 flex gap-4 items-center flex-wrap">
+        <div>
+          <label>Month: </label>
+          <select
+            className="p-2 border rounded-md ml-3"
+            value={selectedMonth}
+            onChange={(e) => setSelectedMonth(e.target.value)}
+          >
+            <option value="">All Months</option>
+            {monthOptions.map((month, idx) => (
+              <option key={idx} value={month}>
+                {month}
+              </option>
+            ))}
+          </select>
+        </div>
         <div>
           <label>Region: </label>
           <select

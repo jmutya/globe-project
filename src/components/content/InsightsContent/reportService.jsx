@@ -201,7 +201,7 @@ const fetchReportData = async (timeRange, selectedMonth, selectedYear) => {
       percentagePerAssignedPerson[person] = {
         accurate,
         total,
-        percentage,
+        percentage: parseFloat(percentage),
       };
     }
 
@@ -292,16 +292,16 @@ const fetchReportData = async (timeRange, selectedMonth, selectedYear) => {
     const individualAccuracy = {};
 
     Object.entries(resolverStats).forEach(([resolver, stats]) => {
-      const totalAssigned = stats.totalResolved - stats.errors ?? 0;// fallback to 0 if undefined
-      const totalResolved = stats.totalResolved ?? 0;
-      const errors = stats.errors ?? 0;
+      const totalAssigned = stats.totalResolved- stats.errors; // Assuming you have this data in `stats.totalAssigned`
+      const totalResolved = stats.totalResolved;
 
-      let accuracy = 0;
+      let accuracy = "0.00";
 
       if (totalResolved > 0) {
-        accuracy = (((totalResolved - errors) / totalResolved) * 100).toFixed(
-          2
-        );
+        accuracy = (
+          ((totalResolved - stats.errors) / totalResolved) *
+          100
+        ).toFixed(2);
       }
 
       individualAccuracy[resolver] = {

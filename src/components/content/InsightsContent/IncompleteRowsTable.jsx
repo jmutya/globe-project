@@ -27,7 +27,7 @@ const IncompleteRowsTable = ({
   }
 
   return (
-    <div className="mt-6">
+    <div className="mt-6 overflow-y-auto max-h-[500px]">
       <h4 className="font-semibold text-lg text-yellow-600 mb-4 flex items-center gap-2">
         <ExclamationCircleIcon className="h-5 w-5" />
         Incomplete Data - Requires Attention
@@ -96,7 +96,9 @@ const IncompleteRowsTable = ({
                   </p>
                   <p>
                     <strong>Accuracy Percentage:</strong>{" "}
-                    {percentage != null ? `${percentage.percentage}%` : "N/A"}
+                    {percentage != null
+                      ? `${percentage.percentage.toFixed(2)}%`
+                      : "N/A"}
                   </p>
                 </div>
               )}
