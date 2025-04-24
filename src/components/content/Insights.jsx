@@ -6,6 +6,7 @@ import IncompleteRowsTable from "./InsightsContent/IncompleteRowsTable";
 import UnmatchedRowsTable from "./InsightsContent/UnmatchedRowsTable";
 import AccuracyByPersonTable from "./InsightsContent/AccuracyByPersonTable";
 import FilterData from "./InsightsContent/filter";
+import PercentageByPersonTable from "./InsightsContent/PercentageBypersonTable";
 
 const Insights = () => {
   const [timeRange, setTimeRange] = useState("daily");
@@ -240,7 +241,7 @@ const Insights = () => {
 
           {showAccuracyTable && (
             <div className="mt-6">
-              <AccuracyByPersonTable
+              <PercentageByPersonTable
                 accuracyData={percentagePerAssignedPerson}
                 title="Ticket Issuance Accuracy per Assigned Person"
               />

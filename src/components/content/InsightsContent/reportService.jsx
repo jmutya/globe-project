@@ -75,7 +75,6 @@ const fetchReportData = async (timeRange, selectedMonth, selectedYear) => {
     const seenUnmatchedNumbers = new Set(); // To track unique unmatched IDs
     let resolverStats = {};
     let allAlarmTypes = new Set();
-    
 
     for (const file of files) {
       const { data: fileUrl } = supabase.storage
@@ -194,18 +193,17 @@ const fetchReportData = async (timeRange, selectedMonth, selectedYear) => {
 
     const percentagePerAssignedPerson = {};
 
-for (const [person, data] of Object.entries(assignedPersonsData)) {
-  const accurate = data.completed;
-  const total = data.total;
-  const percentage = total ? (accurate / total) * 100 : 0;
+    for (const [person, data] of Object.entries(assignedPersonsData)) {
+      const accurate = data.completed;
+      const total = data.total;
+      const percentage = total ? (accurate / total) * 100 : 0;
 
-  percentagePerAssignedPerson[person] = {
-    accurate,
-    total,
-    percentage,
-  };
-}
-
+      percentagePerAssignedPerson[person] = {
+        accurate,
+        total,
+        percentage,
+      };
+    }
 
     let formattedData = Object.entries(alarmData).map(([date, alarms]) => {
       let entry = { date };
@@ -292,22 +290,33 @@ for (const [person, data] of Object.entries(assignedPersonsData)) {
     formattedData = groupByTimeRange(formattedData, timeRange);
 
     const individualAccuracy = {};
+
     Object.entries(resolverStats).forEach(([resolver, stats]) => {
-      if (stats.totalResolved > 0) {
-        individualAccuracy[resolver] = (
-          ((stats.totalResolved - stats.errors) / stats.totalResolved) *
-          100
-        ).toFixed(2);
-      } else {
-        individualAccuracy[resolver] = "0.00";
+      const totalAssigned = stats.totalResolved - stats.errors ?? 0;// fallback to 0 if undefined
+      const totalResolved = stats.totalResolved ?? 0;
+      const errors = stats.errors ?? 0;
+
+      let accuracy = 0;
+
+      if (totalResolved > 0) {
+        accuracy = (((totalResolved - errors) / totalResolved) * 100).toFixed(
+          2
+        );
       }
+
+      individualAccuracy[resolver] = {
+        totalAssigned,
+        totalResolved,
+        accuracy: parseFloat(accuracy),
+      };
     });
 
     const closingAccuracy =
       totalRowCount > 0
-        ? (((totalRowCount - unmatchedRows.length) / totalRowCount) * 100).toFixed(
-            2
-          )
+        ? (
+            ((totalRowCount - unmatchedRows.length) / totalRowCount) *
+            100
+          ).toFixed(2)
         : "0.00";
 
     return {
