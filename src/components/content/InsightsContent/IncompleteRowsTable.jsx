@@ -96,7 +96,7 @@ const IncompleteRowsTable = ({
                   </p>
                   <p>
                     <strong>Accuracy Percentage:</strong>{" "}
-                    {percentage != null ? `${percentage}%` : "N/A"}
+                    {percentage != null ? `${percentage.percentage}%` : "N/A"}
                   </p>
                 </div>
               )}

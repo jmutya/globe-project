@@ -6,7 +6,7 @@ const getProgressBarColor = (value) => {
   return "bg-red-500";
 };
 
-const AccuracyByPersonTable = ({ accuracyData, title, valueAccessor = (item) => item }) => {
+const PercentageByPersonTable = ({ accuracyData, title, valueAccessor = (item) => item }) => {
   if (!accuracyData || Object.keys(accuracyData).length === 0) {
     return null;
   }
@@ -25,30 +25,29 @@ const AccuracyByPersonTable = ({ accuracyData, title, valueAccessor = (item) => 
             </tr>
           </thead>
           <tbody>
-            {Object.entries(accuracyData).map(([resolver, stats], idx) => {
-              const { totalAssigned, totalResolved, accuracy } = valueAccessor(stats);
-              const numericAccuracy = parseFloat(accuracy);
-              const barColor = getProgressBarColor(numericAccuracy);
+            {Object.entries(accuracyData).map(([person, data], idx) => {
+              const { accurate, total, percentage} = valueAccessor(data);
+              const barColor = getProgressBarColor(percentage);
 
               return (
                 <tr
-                  key={resolver}
+                  key={person}
                   className={`border-b ${
                     idx % 2 === 0 ? "bg-white" : "bg-gray-50"
                   } hover:bg-indigo-50 transition`}
                 >
-                  <td className="px-4 py-3">{resolver}</td>
-                  <td className="px-4 py-3 text-center">{`${totalAssigned} / ${totalResolved}`}</td>
+                  <td className="px-4 py-3">{person}</td>
+                  <td className="px-4 py-3 text-center">{`${accurate} / ${total}`}</td>
                   <td className="px-4 py-3">
                     <div className="w-full bg-gray-200 rounded-full h-4">
                       <div
                         className={`h-4 rounded-full ${barColor} transition-all duration-500 ease-out`}
-                        style={{ width: `${numericAccuracy}%` }}
+                        style={{ width: `${percentage}%` }}
                       />
                     </div>
                   </td>
                   <td className="px-4 py-3 font-semibold text-indigo-600">
-                    {numericAccuracy.toFixed(1)}%
+                    {percentage.toFixed(1)}%
                   </td>
                 </tr>
               );
@@ -60,4 +59,4 @@ const AccuracyByPersonTable = ({ accuracyData, title, valueAccessor = (item) => 
   );
 };
 
-export default AccuracyByPersonTable;
+export default PercentageByPersonTable;

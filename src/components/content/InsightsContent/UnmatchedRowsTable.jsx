@@ -16,7 +16,11 @@ const UnmatchedRowsTable = ({
   };
 
   if (!unmatchedRows || unmatchedRows.length === 0) {
-    return null;
+    return (
+      <div className="mt-4 p-4 bg-green-100 text-green-800 rounded-lg text-sm">
+        ✅ All required fields are complete in the uploaded Excel files.
+      </div>
+    );
   }
 
   return (
@@ -79,7 +83,8 @@ const UnmatchedRowsTable = ({
                   </p>
                   <p>
                     <strong>Clossing Accuracy:</strong>{" "}
-                    {accuracy ? `${accuracy}%` : "Not Available"}
+                    {accuracy ? `${accuracy.accuracy}%` : "Not Available"}
+
                   </p>
                 </div>
               )}
