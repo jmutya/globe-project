@@ -23,6 +23,7 @@ const FilterData = () => {
   const [tableData, setTableData] = useState([]);
   const [uniqueReasonTableData, setUniqueReasonTableData] = useState([]);
   const [selectedMonth, setSelectedMonth] = useState("");
+  const [selectedMonth, setSelectedMonth] = useState("");
 
   const convertExcelDate = (value) => {
     if (typeof value === "number") {
@@ -148,6 +149,14 @@ const FilterData = () => {
       ]
     : [];
 
+    const monthOptions = [
+      ...new Set(
+        structuredData
+          .map((item) => item.date?.slice(0, 7)) // 'YYYY-MM'
+          .filter(Boolean)
+      ),
+    ].sort();
+
   const handleGenerateChart = () => {
     let filtered = [...structuredData];
 
@@ -163,6 +172,9 @@ const FilterData = () => {
       filtered = filtered.filter((item) =>
         item.date?.startsWith(selectedMonth)
       );
+    }
+    if (selectedMonth) {
+      filtered = filtered.filter((item) => item.date?.startsWith(selectedMonth));
     }
 
     setTableData(filtered); // Save for summary table
@@ -278,6 +290,7 @@ const FilterData = () => {
   return (
     <div>
       {/* Dropdown Filters */}
+    
       <div className="mb-4 flex gap-4 items-center flex-wrap">
         <div>
           <label>Month: </label>
