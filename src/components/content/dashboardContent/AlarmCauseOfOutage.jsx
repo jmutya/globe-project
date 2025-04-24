@@ -7,7 +7,7 @@ import {
   Cell,
   ResponsiveContainer,
 } from "recharts";
-import { fetchAlarmCategoryChartData } from "../../../backend/functions/alarmCategoryUtils";
+import { fetchAlarmCategoryChartData } from "../../../backend/functions/FunctionCauseOfOutage";
 
 const AlarmCategory = () => {
   const [chartData, setChartData] = useState([]);
@@ -45,7 +45,7 @@ const AlarmCategory = () => {
           </svg>
         </div>
         <h2 className="text-sm font-semibold text-gray-700 ml-3 uppercase tracking-wider">
-          Alarm Distribution by Territory
+          Current Monthly Cause of Outage Distribution
         </h2>
       </div>
 
