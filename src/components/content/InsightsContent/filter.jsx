@@ -23,7 +23,6 @@ const FilterData = () => {
   const [tableData, setTableData] = useState([]);
   const [uniqueReasonTableData, setUniqueReasonTableData] = useState([]);
   const [selectedMonth, setSelectedMonth] = useState("");
-  const [selectedMonth, setSelectedMonth] = useState("");
 
   const convertExcelDate = (value) => {
     if (typeof value === "number") {
@@ -122,13 +121,6 @@ const FilterData = () => {
         ),
       ]
     : [];
-  const monthOptions = [
-    ...new Set(
-      structuredData
-        .map((item) => item.date?.slice(0, 7)) // 'YYYY-MM'
-        .filter(Boolean)
-    ),
-  ].sort();
 
   const areaOptions = selectTerritory
     ? [
@@ -173,9 +165,7 @@ const FilterData = () => {
         item.date?.startsWith(selectedMonth)
       );
     }
-    if (selectedMonth) {
-      filtered = filtered.filter((item) => item.date?.startsWith(selectedMonth));
-    }
+    
 
     setTableData(filtered); // Save for summary table
 
