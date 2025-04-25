@@ -35,28 +35,14 @@ const fetchftr = async () => {
   return { allData, filteredResolutionCodes };
 };
 
-function formatMinutesToHMS(minutes) {
-  const totalSeconds = Math.floor(minutes * 60);
-  const h = Math.floor(totalSeconds / 3600);
-  const m = Math.floor((totalSeconds % 3600) / 60);
-  const s = totalSeconds % 60;
-  return `${h}h ${m}m ${s}s`;
-}
-
 function ftrTable() {
-  const [allRows, setAllRows] = useState([]);
-  const [filteredResolutionCodes, setFilteredResolutionCodes] = useState([]);
-  const [totalftrByCaller, setTotalftrByCaller] = useState([]);
-  const [averageFormatted, setAverageFormatted] = useState("0h 0m 0s");
   const [ticketsPerCaller, setTicketsPerCaller] = useState([]);
+  const [sortDirection, setSortDirection] = useState("desc");
 
   useEffect(() => {
     const getReportData = async () => {
-      const { allData, filteredResolutionCodes } = await fetchftr();
-      setAllRows(allData);
-      setFilteredResolutionCodes(filteredResolutionCodes);
+      const { filteredResolutionCodes } = await fetchftr();
 
-      // Total tickets per caller
       const counts = filteredResolutionCodes.reduce((acc, row) => {
         const caller = row["Caller"] || "Unknown";
         acc[caller] = (acc[caller] || 0) + 1;
@@ -67,11 +53,25 @@ function ftrTable() {
         caller,
         totalTickets: count,
       }));
+
       setTicketsPerCaller(ticketStats);
     };
 
     getReportData();
   }, []);
+
+  const handleSortToggle = () => {
+    const newDirection = sortDirection === "asc" ? "desc" : "asc";
+    setSortDirection(newDirection);
+
+    const sorted = [...ticketsPerCaller].sort((a, b) => {
+      return newDirection === "asc"
+        ? a.totalTickets - b.totalTickets
+        : b.totalTickets - a.totalTickets;
+    });
+
+    setTicketsPerCaller(sorted);
+  };
 
   return (
     <div className="max-h-[850px] overflow-auto border border-gray-200 rounded-2xl p-6 bg-white shadow-sm">
@@ -88,8 +88,11 @@ function ftrTable() {
               <th className="px-6 py-3 text-left text-s font-medium text-indigo-700 uppercase tracking-wider">
                 Caller
               </th>
-              <th className="px-6 py-3 text-left text-s font-medium text-indigo-700 uppercase tracking-wider">
-                Total Tickets
+              <th
+                className="px-6 py-3 text-left text-s font-medium text-indigo-700 uppercase tracking-wider cursor-pointer"
+                onClick={handleSortToggle}
+              >
+                Total Tickets {sortDirection === "asc" ? "▲" : "▼"}
               </th>
             </tr>
           </thead>
