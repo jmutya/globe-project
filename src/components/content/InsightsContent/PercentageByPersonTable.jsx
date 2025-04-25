@@ -1,4 +1,5 @@
-import React from "react";
+import React, { useState } from "react";
+import { ArrowUp, ArrowDown } from "lucide-react"; // You can swap this with any icon lib or SVG
 
 const getProgressBarColor = (value) => {
   if (value >= 90) return "bg-green-500";
@@ -7,9 +8,36 @@ const getProgressBarColor = (value) => {
 };
 
 const PercentageByPersonTable = ({ accuracyData, title, valueAccessor = (item) => item }) => {
+  const [sortBy, setSortBy] = useState(null);
+  const [sortDirection, setSortDirection] = useState("desc");
+
   if (!accuracyData || Object.keys(accuracyData).length === 0) {
     return null;
   }
+
+  const handleSort = (column) => {
+    if (sortBy === column) {
+      setSortDirection(sortDirection === "asc" ? "desc" : "asc");
+    } else {
+      setSortBy(column);
+      setSortDirection("desc");
+    }
+  };
+
+  const sortedEntries = Object.entries(accuracyData).sort(([aKey, aData], [bKey, bData]) => {
+    const aVal = valueAccessor(aData);
+    const bVal = valueAccessor(bData);
+
+    if (!sortBy) return 0;
+
+    const compareVal = sortBy === "accurate" ? aVal.accurate - bVal.accurate : aVal.total - bVal.total;
+    return sortDirection === "asc" ? compareVal : -compareVal;
+  });
+
+  const SortIcon = ({ active }) =>
+    active ? (
+      sortDirection === "asc" ? <ArrowUp size={14} className="inline ml-1" /> : <ArrowDown size={14} className="inline ml-1" />
+    ) : null;
 
   return (
     <div className="mt-6 bg-white shadow-md rounded-xl p-6 max-h-96 overflow-y-auto">
@@ -19,14 +47,26 @@ const PercentageByPersonTable = ({ accuracyData, title, valueAccessor = (item) =
           <thead>
             <tr className="bg-gray-100 border-b">
               <th className="px-4 py-3 text-left font-medium">Assigned Person</th>
-              <th className="px-4 py-3 text-center font-medium">Accurate Tickets / Tickets Issued</th>
+              <th
+                className="px-4 py-3 text-center font-medium cursor-pointer"
+                onClick={() => handleSort("accurate")}
+              >
+                Accurate Tickets / Tickets Issued
+                <SortIcon active={sortBy === "accurate"} />
+              </th>
               <th className="px-4 py-3 text-left font-medium w-1/2">Accuracy</th>
-              <th className="px-4 py-3 text-left font-medium">%</th>
+              <th
+                className="px-4 py-3 text-left font-medium cursor-pointer"
+                onClick={() => handleSort("total")}
+              >
+                %
+                <SortIcon active={sortBy === "total"} />
+              </th>
             </tr>
           </thead>
           <tbody>
-            {Object.entries(accuracyData).map(([person, data], idx) => {
-              const { accurate, total, percentage} = valueAccessor(data);
+            {sortedEntries.map(([person, data], idx) => {
+              const { accurate, total, percentage } = valueAccessor(data);
               const barColor = getProgressBarColor(percentage);
 
               return (
