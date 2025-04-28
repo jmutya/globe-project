@@ -38,7 +38,6 @@ const IncompleteRowsTable = ({
     const year = date.getFullYear();
     return `${month < 10 ? "0" : ""}${month}/${year}`; // Format as "MM/YYYY"
   };
-  
 
   const filteredRows = incompleteRows.filter((row) => {
     const assignedToMatch = (row.assignedTo || "Not Assigned")

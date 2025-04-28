@@ -80,7 +80,7 @@ const formatOpenedDate = (openedRaw) => {
     const day = String(date.getDate()).padStart(2, "0");
     const month = String(date.getMonth() + 1).padStart(2, "0");
     const year = date.getFullYear();
-    return `${day}/${month}/${year}`;
+    return `${year}/${month}/${day}`;
   } else if (typeof openedRaw === "string") {
     // If it's already a string (formatted date)
     return openedRaw;
