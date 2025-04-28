@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { ArrowUp, ArrowDown } from "lucide-react"; // You can swap this with any icon lib or SVG
+import { ArrowUp, ArrowDown } from "lucide-react";
 
 const getProgressBarColor = (value) => {
   if (value >= 90) return "bg-green-500";
@@ -30,14 +30,20 @@ const PercentageByPersonTable = ({ accuracyData, title, valueAccessor = (item) =
 
     if (!sortBy) return 0;
 
-    const compareVal = sortBy === "accurate" ? aVal.accurate - bVal.accurate : aVal.total - bVal.total;
+    const compareVal = sortBy === "accurate"
+      ? aVal.accurate - bVal.accurate
+      : aVal.total - bVal.total;
+
     return sortDirection === "asc" ? compareVal : -compareVal;
   });
 
-  const SortIcon = ({ active }) =>
-    active ? (
-      sortDirection === "asc" ? <ArrowUp size={14} className="inline ml-1" /> : <ArrowDown size={14} className="inline ml-1" />
-    ) : null;
+  const SortIcon = ({ active, direction }) => (
+    direction === "asc" ? (
+      <ArrowUp size={14} className={`inline ml-1 ${active ? "" : "opacity-50"}`} />
+    ) : (
+      <ArrowDown size={14} className={`inline ml-1 ${active ? "" : "opacity-50"}`} />
+    )
+  );
 
   return (
     <div className="mt-6 bg-white shadow-md rounded-xl p-6 max-h-96 overflow-y-auto">
@@ -52,7 +58,10 @@ const PercentageByPersonTable = ({ accuracyData, title, valueAccessor = (item) =
                 onClick={() => handleSort("accurate")}
               >
                 Accurate Tickets / Tickets Issued
-                <SortIcon active={sortBy === "accurate"} />
+                <SortIcon
+                  active={sortBy === "accurate"}
+                  direction={sortBy === "accurate" ? sortDirection : "desc"}
+                />
               </th>
               <th className="px-4 py-3 text-left font-medium w-1/2">Accuracy</th>
               <th
@@ -60,7 +69,10 @@ const PercentageByPersonTable = ({ accuracyData, title, valueAccessor = (item) =
                 onClick={() => handleSort("total")}
               >
                 %
-                <SortIcon active={sortBy === "total"} />
+                <SortIcon
+                  active={sortBy === "total"}
+                  direction={sortBy === "total" ? sortDirection : "desc"}
+                />
               </th>
             </tr>
           </thead>
@@ -72,9 +84,7 @@ const PercentageByPersonTable = ({ accuracyData, title, valueAccessor = (item) =
               return (
                 <tr
                   key={person}
-                  className={`border-b ${
-                    idx % 2 === 0 ? "bg-white" : "bg-gray-50"
-                  } hover:bg-indigo-50 transition`}
+                  className={`border-b ${idx % 2 === 0 ? "bg-white" : "bg-gray-50"} hover:bg-indigo-50 transition`}
                 >
                   <td className="px-4 py-3">{person}</td>
                   <td className="px-4 py-3 text-center">{`${accurate} / ${total}`}</td>
