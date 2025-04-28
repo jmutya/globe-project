@@ -61,7 +61,7 @@ const AreaLineGraph = () => {
           </svg>
         </div>
         <h2 className="text-sm font-semibold text-gray-700 ml-3 uppercase tracking-wider">
-          Alarm Distribution by Area
+          Overall Alarm Distribution by Area
         </h2>
       </div>
 
