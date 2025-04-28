@@ -121,6 +121,7 @@ const IncompleteRowsTable = ({
                         <p className="text-md font-bold text-gray-800">
                           Ticket #{row.number}
                         </p>
+                        <p>{row.opened}</p>
                         <p className="text-sm text-gray-600">
                           Assigned to:{" "}
                           <span className="font-semibold text-gray-800">
