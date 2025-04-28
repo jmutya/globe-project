@@ -59,7 +59,7 @@ const AlarmTypeBarGraph = () => {
     </svg>
   </div>
   <h2 className="text-sm font-semibold text-gray-700 ml-3 uppercase tracking-wider">
-    Failure Category Distribution
+    Overall Failure Category Distribution
   </h2>
 </div>
 
