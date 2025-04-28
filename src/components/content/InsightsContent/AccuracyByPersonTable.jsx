@@ -39,10 +39,13 @@ const AccuracyByPersonTable = ({ accuracyData, title, valueAccessor = (item) => 
     return sortDirection === "asc" ? compareVal : -compareVal;
   });
 
-  const SortIcon = ({ active }) =>
-    active ? (
-      sortDirection === "asc" ? <ArrowUp size={14} className="inline ml-1" /> : <ArrowDown size={14} className="inline ml-1" />
-    ) : null;
+  const SortIcon = ({ active, direction }) => (
+    direction === "asc" ? (
+      <ArrowUp size={14} className={`inline ml-1 ${active ? "" : "opacity-50"}`} />
+    ) : (
+      <ArrowDown size={14} className={`inline ml-1 ${active ? "" : "opacity-50"}`} />
+    )
+  );
 
   return (
     <div className="mt-6 bg-white shadow-md rounded-xl p-6 max-h-96 overflow-y-auto">
@@ -57,7 +60,10 @@ const AccuracyByPersonTable = ({ accuracyData, title, valueAccessor = (item) => 
                 onClick={() => handleSort("accurate")}
               >
                 Accurate Tickets / Tickets Issued
-                <SortIcon active={sortBy === "accurate"} />
+                <SortIcon
+                  active={sortBy === "accurate"}
+                  direction={sortBy === "accurate" ? sortDirection : "desc"}
+                />
               </th>
               <th className="px-4 py-3 text-left font-medium w-1/2">Accuracy</th>
               <th
@@ -65,7 +71,10 @@ const AccuracyByPersonTable = ({ accuracyData, title, valueAccessor = (item) => 
                 onClick={() => handleSort("accuracy")}
               >
                 %
-                <SortIcon active={sortBy === "accuracy"} />
+                <SortIcon
+                  active={sortBy === "accuracy"}
+                  direction={sortBy === "accuracy" ? sortDirection : "desc"}
+                />
               </th>
             </tr>
           </thead>
