@@ -20,8 +20,18 @@ const AlarmLineChart = ({ chartData, alarmTypes, colors }) => {
       <LineChart data={chartData}>
         <XAxis
           dataKey="date"
-          tickFormatter={(date) => new Date(date).toLocaleDateString()}
+          tickFormatter={(date) => {
+            if (!date) return "";
+            const cleanedDate = String(date).replace(/,/g, "").trim(); // <-- REMOVE commas
+            const parsedDate = new Date(cleanedDate);
+            if (isNaN(parsedDate)) return cleanedDate; // fallback
+            const year = parsedDate.getFullYear();
+            const month = String(parsedDate.getMonth() + 1).padStart(2, "0");
+            const day = String(parsedDate.getDate()).padStart(2, "0");
+            return `${year}-${month}-${day}`;
+          }}
         />
+
         <YAxis allowDecimals={false} />
         <Tooltip />
         <Legend />

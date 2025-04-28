@@ -107,7 +107,7 @@ function ftrTable() {
         </table>
       </div>
     </div>
-  );
+  ); 
 }
 
 export default ftrTable;
