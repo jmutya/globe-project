@@ -23,6 +23,7 @@ const getIncompleteRows = (sheet, headers) => {
     "AOR001",
     "AOR002",
     "Number",
+    "Opened",
   ];
   const requiredIndices = requiredColumns.map((col) => headers.indexOf(col));
   const assignedToIndex = headers.indexOf("Assigned to");
@@ -46,13 +47,30 @@ const getIncompleteRows = (sheet, headers) => {
     if (missingColumns.length > 0) {
       const assignedTo = assignedToIndex !== -1 ? row[assignedToIndex] : "";
       const number = row[headers.indexOf("Number")] || "Not Provided";
+      const openedRaw = row[headers.indexOf("Opened")];
+    
+      let openedFormatted = "";
+      if (openedRaw) {
+        if (typeof openedRaw === "number") {
+          const date = new Date((openedRaw - 25569) * 86400 * 1000); // Excel serial to Date
+          const day = String(date.getDate()).padStart(2, "0");
+          const month = String(date.getMonth() + 1).padStart(2, "0");
+          const year = date.getFullYear();
+          openedFormatted = `${day}/${month}/${year}`;
+        } else if (typeof openedRaw === "string") {
+          openedFormatted = openedRaw; // Already a string date
+        }
+      }
+    
       incompleteRows.push({
         number: number,
         assignedTo,
         missingColumns,
         rowData: row,
+        opened: openedFormatted,
       });
     }
+    
   });
 
   return incompleteRows;
