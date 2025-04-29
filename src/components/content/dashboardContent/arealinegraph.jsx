@@ -78,22 +78,22 @@ const AreaLineGraph = () => {
           >
             <CartesianGrid stroke="#e0e0e0" strokeDasharray="2 2" />
             <XAxis
-              dataKey="date"
-              tick={{ fontSize: 12, angle: 35, dy: 25 }} // <-- added this
-              tickFormatter={(date) => {
-                if (!date) return "";
-                const cleanedDate = String(date).replace(/,/g, "").trim(); // <-- REMOVE commas
-                const parsedDate = new Date(cleanedDate);
-                if (isNaN(parsedDate)) return cleanedDate; // fallback
-                const year = parsedDate.getFullYear();
-                const month = String(parsedDate.getMonth() + 1).padStart(
-                  2,
-                  "0"
-                );
-                const day = String(parsedDate.getDate()).padStart(2, "0");
-                return `${year}-${month}-${day}`;
-              }}
-            />
+                          dataKey="date"
+                          tick={{ fontSize: 12, angle: 35, dy: 25 }} // <-- added this
+                          tickFormatter={(date) => {
+                            if (!date) return "";
+                            const cleanedDate = String(date).replace(/,/g, "").trim(); // <-- REMOVE commas
+                            const parsedDate = new Date(cleanedDate);
+                            if (isNaN(parsedDate)) return cleanedDate; // fallback
+                            const year = parsedDate.getFullYear();
+                            const month = String(parsedDate.getMonth() + 1).padStart(
+                              2,
+                              "0"
+                            );
+                            const day = String(parsedDate.getDate()).padStart(2, "0");
+                            return `${year}-${month}-${day}`;
+                          }}
+                        />
             <YAxis
               allowDecimals={false}
               stroke="#757575"

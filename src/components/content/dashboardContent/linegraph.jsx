@@ -113,7 +113,10 @@ const AlarmTypeLineGraph = () => {
                 const parsedDate = new Date(cleanedLabel);
                 if (isNaN(parsedDate)) return cleanedLabel; // fallback
                 const year = parsedDate.getFullYear();
-                const month = String(parsedDate.getMonth() + 1).padStart(2, "0");
+                const month = String(parsedDate.getMonth() + 1).padStart(
+                  2,
+                  "0"
+                );
                 const day = String(parsedDate.getDate()).padStart(2, "0");
                 return `Date: ${year}-${month}-${day}`;
               }}

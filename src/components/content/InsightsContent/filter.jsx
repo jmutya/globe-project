@@ -23,6 +23,7 @@ const FilterData = () => {
   const [tableData, setTableData] = useState([]);
   const [uniqueReasonTableData, setUniqueReasonTableData] = useState([]);
   const [selectedMonth, setSelectedMonth] = useState("");
+  const [parsingErrors, setParsingErrors] = useState([]);
 
   const convertExcelDate = (value) => {
     if (typeof value === "number") {
@@ -63,31 +64,47 @@ const FilterData = () => {
       allData = [...allData, ...sheet];
     }
 
+    const errors = []; // new array to store errors
     const parsed = allData
-      .map((row) => {
+      .map((row, idx) => {
         const desc = row["Short description"];
-        const match = desc?.match(/\(([^)]+)\)/);
+        const cleanDesc = desc?.replace(/^[\s']+/, "");
+        const match = cleanDesc?.match(/\(([^)]+)\)/);
         const date = convertExcelDate(row["Opened"]);
         const reason = row["Reason For Outage"] || "Empty";
         const number = row["Number"] || "";
 
-        if (match) {
-          const parts = match[1].split("-");
-          if (parts.length >= 5) {
-            return {
-              region: parts[0],
-              area: parts[2],
-              territory: parts[3],
-              province: parts[4],
-              reason,
-              date,
-              number,
-            };
-          }
+        if (!desc) {
+          errors.push(`Row ${idx + 1}: Missing Short description (Ticket Number: ${number || 'N/A'})`);
+          return null;
         }
-        return null;
+        
+        if (!match) {
+          errors.push(`Row ${idx + 1}: Could not match pattern in "${desc}" (Ticket Number: ${number || 'N/A'})`);
+          return null;
+        }
+        
+        const parts = match[1].split("-");
+        if (parts.length < 5) {
+          errors.push(`Row ${idx + 1}: Not enough parts in "${match[1]}" (Ticket Number: ${number || 'N/A'})`);
+          return null;
+        }
+        
+
+        return {
+          region: parts[0],
+          area: parts[2],
+          territory: parts[3],
+          province: parts[4],
+          reason,
+          date,
+          number,
+        };
       })
       .filter(Boolean);
+
+    // Save to state
+    setParsingErrors(errors);
 
     setStructuredData(parsed);
   };
@@ -141,13 +158,13 @@ const FilterData = () => {
       ]
     : [];
 
-    const monthOptions = [
-      ...new Set(
-        structuredData
-          .map((item) => item.date?.slice(0, 7)) // 'YYYY-MM'
-          .filter(Boolean)
-      ),
-    ].sort();
+  const monthOptions = [
+    ...new Set(
+      structuredData
+        .map((item) => item.date?.slice(0, 7)) // 'YYYY-MM'
+        .filter(Boolean)
+    ),
+  ].sort();
 
   const handleGenerateChart = () => {
     let filtered = [...structuredData];
@@ -165,7 +182,6 @@ const FilterData = () => {
         item.date?.startsWith(selectedMonth)
       );
     }
-    
 
     setTableData(filtered); // Save for summary table
 
@@ -175,10 +191,16 @@ const FilterData = () => {
       const reasonCount = {};
       const uniqueReasons = {}; // NEW: Track unique reasons and their counts
 
+      console.log("Total parsed structuredData:", structuredData.length);
+      console.log("Filtered data before counting:", filtered.length);
+
       filtered.forEach((item) => {
+        console.log("Total parsed structuredData:", structuredData.length);
+        console.log("Filtered data before counting:", filtered.length);
+
         const date = item.date || "Unknown";
         const reason = item.reason?.split("-")[0]?.trim() || "Unknown";
-        const fullReason = item.reason || "Unknown"; // Get the full reason text
+        const fullReason = item.reason || "Empty"; // Get the full reason text
 
         if (!groupedByDate[date]) {
           groupedByDate[date] = {};
@@ -233,7 +255,7 @@ const FilterData = () => {
     filtered.forEach((item) => {
       const keyGroup = item[groupKey] || "Unknown";
       const keyDate = item.date || "Unknown";
-      const reason = item.reason?.split("-")[0]?.trim() || "Unknown"; // NEW
+      const reason = item.reason?.split("-")[0]?.trim() || "Empty"; // NEW
 
       if (!grouped[keyGroup]) grouped[keyGroup] = {};
       grouped[keyGroup][keyDate] = (grouped[keyGroup][keyDate] || 0) + 1;
@@ -280,7 +302,7 @@ const FilterData = () => {
   return (
     <div>
       {/* Dropdown Filters */}
-    
+
       <div className="mb-4 flex gap-4 items-center flex-wrap">
         <div>
           <label>Month: </label>
@@ -379,6 +401,8 @@ const FilterData = () => {
         )}
       </div>
 
+      
+
       {/* Line Chart */}
       {chartData.length > 0 && (
         <div className="mt-8 overflow-x-auto">
@@ -465,6 +489,18 @@ const FilterData = () => {
           </div>
         )}
       </div>
+
+      {/* Error Messages */}
+      {parsingErrors.length > 0 && (
+        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4 max-h-60 overflow-auto mt-10">
+          <strong className="font-bold">Parsing Issues:</strong>
+          <ul className="mt-2 list-disc list-inside">
+            {parsingErrors.map((error, idx) => (
+              <li key={idx}>{error}</li>
+            ))}
+          </ul>
+        </div>
+      )}
     </div>
   );
 };
