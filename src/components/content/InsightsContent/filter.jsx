@@ -68,7 +68,7 @@ const FilterData = () => {
         const desc = row["Short description"];
         const match = desc?.match(/\(([^)]+)\)/);
         const date = convertExcelDate(row["Opened"]);
-        const reason = row["Reason For Outage"] || "Unknown";
+        const reason = row["Cause"] || "Unknown";
         const number = row["Number"] || "";
 
         if (match) {
