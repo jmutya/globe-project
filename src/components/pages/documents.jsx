@@ -13,6 +13,7 @@ const ExcelUploader = () => {
   const [selectedFiles, setSelectedFiles] = useState([]);
   const [fileToDelete, setFileToDelete] = useState(null);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [selectedFilesToDelete, setSelectedFilesToDelete] = useState([]);
 
   useEffect(() => {
     fetchUploadedFiles();
@@ -110,52 +111,59 @@ const ExcelUploader = () => {
     if (selectedFiles.length === 0) return;
     setUploading(true);
     setUploadProgress(0);
-  
+
     let uploadedCount = 0;
-  
+
     for (let i = 0; i < selectedFiles.length; i++) {
       const file = selectedFiles[i];
-  
+
       try {
         // Read the file as an array buffer
         const data = await file.arrayBuffer();
         const workbook = XLSX.read(data, { type: "array" });
         const sheet = workbook.Sheets[workbook.SheetNames[0]];
         const rows = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: "" });
-  
+
         if (rows.length === 0) continue;
-  
+
         const headers = rows[0];
         const openedIndex = headers.indexOf("Opened");
         if (openedIndex === -1) {
           throw new Error("No 'Opened' column found in the Excel file.");
         }
-  
+
         // Object to group rows by month
         const monthGroups = {};
-  
+
         // Iterate over each row and group them by the 'Opened' date
         for (const row of rows.slice(1)) {
           const openedRaw = row[openedIndex];
           let openedDate;
-  
+
           // Parse the 'Opened' date correctly and preserve it as a Date object
           if (typeof openedRaw === "number") {
             const parsed = XLSX.SSF.parse_date_code(openedRaw);
-            openedDate = new Date(parsed.y, parsed.m - 1, parsed.d, parsed.H, parsed.M, parsed.S);
+            openedDate = new Date(
+              parsed.y,
+              parsed.m - 1,
+              parsed.d,
+              parsed.H,
+              parsed.M,
+              parsed.S
+            );
           } else {
             openedDate = new Date(openedRaw);
           }
-  
+
           // If the date is valid, group by year-month
           if (!isNaN(openedDate)) {
             const year = openedDate.getFullYear();
             const month = String(openedDate.getMonth() + 1).padStart(2, "0");
             const key = `${year}-${month}`;
-  
+
             // Preserve the date and format it as 'MM/DD/YYYY HH:mm:ss'
             row[openedIndex] = formatDate(openedDate); // Format date as "MM/DD/YYYY HH:mm:ss"
-  
+
             // Group the rows by the year-month key
             if (!monthGroups[key]) {
               monthGroups[key] = [];
@@ -163,23 +171,23 @@ const ExcelUploader = () => {
             monthGroups[key].push(row);
           }
         }
-  
+
         // Now that we have grouped by month, upload each group
         for (const [monthKey, monthRows] of Object.entries(monthGroups)) {
           const newWorkbook = XLSX.utils.book_new();
           const newSheet = XLSX.utils.aoa_to_sheet([headers, ...monthRows]);
           XLSX.utils.book_append_sheet(newWorkbook, newSheet, "Sheet1");
-  
+
           const excelBuffer = XLSX.write(newWorkbook, {
             type: "array",
             bookType: "xlsx",
           });
-  
+
           const blob = new Blob([excelBuffer], { type: file.type });
-  
+
           const fileNameWithoutExt = file.name.replace(/\.[^/.]+$/, "");
           const newFileName = `${fileNameWithoutExt}_${monthKey}.xlsx`;
-  
+
           // Upload the file to Supabase storage
           const { error } = await supabase.storage
             .from("uploads")
@@ -187,14 +195,14 @@ const ExcelUploader = () => {
               cacheControl: "3600",
               upsert: true,
             });
-  
+
           if (error) throw error;
-  
+
           uploadedCount++;
           setUploadProgress(
             Math.round((uploadedCount / Object.keys(monthGroups).length) * 100)
           );
-  
+
           // Update the files list with the new file's metadata
           setFiles((prev) => [
             ...prev,
@@ -208,19 +216,18 @@ const ExcelUploader = () => {
             },
           ]);
         }
-  
       } catch (error) {
         console.error("Upload failed:", error);
         toast.error(`Failed to upload ${file.name}`);
       }
     }
-  
+
     // Finalize the upload
     toast.success("Upload completed");
     setUploading(false);
     setShowUploadModal(false);
   };
-  
+
   // Helper function to format the date (MM/DD/YYYY HH:mm:ss)
   function formatDate(date) {
     const options = {
@@ -235,11 +242,7 @@ const ExcelUploader = () => {
     // Return formatted date as "MM/DD/YYYY HH:mm:ss"
     return date.toLocaleString("en-US", options);
   }
-  
 
-  
- 
-  
   const confirmDelete = (fileName) => {
     setFileToDelete(`excels/${fileName}`);
     setShowDeleteModal(true);
@@ -263,6 +266,46 @@ const ExcelUploader = () => {
     }
   };
 
+  const toggleSelectFile = (fileName) => {
+    setSelectedFilesToDelete((prevSelected) =>
+      prevSelected.includes(fileName)
+        ? prevSelected.filter((name) => name !== fileName)
+        : [...prevSelected, fileName]
+    );
+  };
+
+  const isSelected = (fileName) => selectedFilesToDelete.includes(fileName);
+
+  const toggleSelectAll = () => {
+    if (selectedFilesToDelete.length === files.length) {
+      setSelectedFilesToDelete([]);
+    } else {
+      setSelectedFilesToDelete(files.map((file) => file.name));
+    }
+  };
+
+  const handleDeleteSelectedFiles = async () => {
+    if (selectedFilesToDelete.length === 0) return;
+
+    const filePaths = selectedFilesToDelete.map(
+      (fileName) => `excels/${fileName}`
+    );
+
+    try {
+      const { error } = await supabase.storage
+        .from("uploads")
+        .remove(filePaths);
+      if (error) throw error;
+
+      toast.success("Selected files deleted");
+      fetchUploadedFiles();
+      setSelectedFilesToDelete([]);
+    } catch (error) {
+      console.error("Delete failed:", error);
+      toast.error("Failed to delete selected files");
+    }
+  };
+
   return (
     <>
       <Toaster position="bottom-right" />
@@ -271,6 +314,17 @@ const ExcelUploader = () => {
           <h2 className="text-3xl font-semibold text-indigo-700">
             Excel Files
           </h2>
+          {selectedFilesToDelete.length > 0 && (
+            <div className="flex justify-end mb-4">
+              <button
+                onClick={handleDeleteSelectedFiles}
+                className="flex items-center gap-2 bg-red-600 text-white px-4 py-2 rounded-xl hover:bg-red-700 transition"
+              >
+                <FaTrash className="w-4 h-4" />
+                Delete Selected ({selectedFilesToDelete.length})
+              </button>
+            </div>
+          )}
           <button
             onClick={handleUploadClick}
             className="flex items-center gap-2 bg-indigo-600 text-white px-4 py-2 rounded-xl hover:bg-indigo-700 transition"
@@ -301,7 +355,13 @@ const ExcelUploader = () => {
                   key={index}
                   className="grid grid-cols-12 gap-4 py-3 items-center hover:bg-indigo-50 transition rounded-lg px-4"
                 >
-                  <div className="col-span-5 flex gap-2 truncate">
+                  <div className="col-span-5 flex gap-2 truncate justify-start items-center">
+                    <input
+                      type="checkbox"
+                      checked={isSelected(file.name)}
+                      onChange={() => toggleSelectFile(file.name)}
+                      className="w-4 h-4 text-indigo-600"
+                    />
                     <FaFileExcel className="text-green-600 w-5 h-5" />
                     <span className="truncate">{file.name}</span>
                   </div>
