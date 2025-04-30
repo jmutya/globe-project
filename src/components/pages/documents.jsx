@@ -239,10 +239,13 @@ const ExcelUploader = () => {
       minute: "2-digit",
       second: "2-digit",
       hour12: false,
-    })
+      timeZone: "Asia/Manila", // Set to Philippine Time (PHT)
+    };
+    return new Intl.DateTimeFormat("en-US", options)
       .format(date)
       .replace(",", "");
   }
+  
 
   const confirmDelete = (fileName) => {
     setFileToDelete(`excels/${fileName}`);
