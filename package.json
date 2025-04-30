@@ -28,6 +28,7 @@
     "bootstrap": "^5.3.5",
     "cors": "^2.8.5",
     "daisyui": "^5.0.27",
+    "date-fns": "^4.1.0",
     "dayjs": "^1.11.13",
     "exceljs": "^4.4.0",
     "express": "^5.1.0",
