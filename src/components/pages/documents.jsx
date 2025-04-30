@@ -107,104 +107,93 @@ const ExcelUploader = () => {
   const handleFilesSelected = (e) => {
     setSelectedFiles(Array.from(e.target.files));
   };
-
   const handleUploadFile = async () => {
     if (selectedFiles.length === 0) return;
   
     setUploading(true);
     setUploadProgress(0);
-
+  
     let uploadedCount = 0;
-
+  
     for (let i = 0; i < selectedFiles.length; i++) {
       const file = selectedFiles[i];
-
+  
       try {
         const data = await file.arrayBuffer();
         const workbook = XLSX.read(data, { type: "array" });
         const sheet = workbook.Sheets[workbook.SheetNames[0]];
         const rows = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: "" });
-
+  
         if (rows.length === 0) continue;
-
+  
         const headers = rows[0];
         const openedIndex = headers.indexOf("Opened");
         if (openedIndex === -1) {
           throw new Error("No 'Opened' column found in the Excel file.");
         }
-
-        // Object to group rows by month
+  
+        // Group by year-month (Philippine Time)
         const monthGroups = {};
-
-        // Iterate over each row and group them by the 'Opened' date
+  
         for (const row of rows.slice(1)) {
           const openedRaw = row[openedIndex];
           let openedDate;
-
-          // Parse the 'Opened' date correctly and preserve it as a Date object
+  
           if (typeof openedRaw === "number") {
             const parsed = XLSX.SSF.parse_date_code(openedRaw);
-            openedDate = new Date(
-              parsed.y,
-              parsed.m - 1,
-              parsed.d,
-              parsed.H,
-              parsed.M,
-              parsed.S
-            );
+            openedDate = new Date(parsed.y, parsed.m - 1, parsed.d, parsed.H, parsed.M, parsed.S);
           } else {
             openedDate = new Date(openedRaw);
           }
-
-          // If the date is valid, group by year-month
+  
           if (!isNaN(openedDate)) {
-            const year = openedDate.getFullYear();
-            const month = String(openedDate.getMonth() + 1).padStart(2, "0");
-            const key = `${year}-${month}`;
-
-            // Preserve the date and format it as 'MM/DD/YYYY HH:mm:ss'
-            row[openedIndex] = formatDate(openedDate); // Format date as "MM/DD/YYYY HH:mm:ss"
-
-            // Group the rows by the year-month key
-            if (!monthGroups[key]) {
-              monthGroups[key] = [];
+            const datePH = new Date(openedDate.toLocaleString("en-US", { timeZone: "Asia/Manila" }));
+            const year = datePH.getFullYear();
+            const month = String(datePH.getMonth() + 1).padStart(2, "0");
+            const groupKey = `${year}-${month}`;
+  
+            // Replace 'Opened' column with formatted PH date string
+            row[openedIndex] = formatDatePH(datePH); // "MM/DD/YYYY HH:mm:ss"
+  
+            if (!monthGroups[groupKey]) {
+              monthGroups[groupKey] = [];
             }
             monthGroups[groupKey].push(row);
           }
         }
-
-        // Now that we have grouped by month, upload each group
-        for (const [monthKey, monthRows] of Object.entries(monthGroups)) {
+  
+        // Upload one file per PH month
+        const keys = Object.keys(monthGroups);
+        for (const monthKey of keys) {
+          const monthRows = monthGroups[monthKey];
+  
           const newWorkbook = XLSX.utils.book_new();
           const newSheet = XLSX.utils.aoa_to_sheet([headers, ...monthRows]);
           XLSX.utils.book_append_sheet(newWorkbook, newSheet, "Sheet1");
-
+  
           const excelBuffer = XLSX.write(newWorkbook, {
             type: "array",
             bookType: "xlsx",
           });
-
+  
           const blob = new Blob([excelBuffer], { type: file.type });
-
+  
           const fileNameWithoutExt = file.name.replace(/\.[^/.]+$/, "");
           const newFileName = `${fileNameWithoutExt}_${monthKey}.xlsx`;
-
-          // Upload the file to Supabase storage
+  
+          // Upload to Supabase
           const { error } = await supabase.storage
             .from("uploads")
             .upload(`excels/${newFileName}`, blob, {
               cacheControl: "3600",
               upsert: true,
             });
-
+  
           if (error) throw error;
-
+  
           uploadedCount++;
-          setUploadProgress(
-            Math.round((uploadedCount / Object.keys(monthGroups).length) * 100)
-          );
-
-          // Update the files list with the new file's metadata
+          setUploadProgress(Math.round((uploadedCount / keys.length) * 100));
+  
           setFiles((prev) => [
             ...prev,
             {
@@ -222,12 +211,28 @@ const ExcelUploader = () => {
         toast.error(`Failed to upload ${file.name}`);
       }
     }
-
-    // Finalize the upload
+  
     toast.success("Upload completed");
     setUploading(false);
     setShowUploadModal(false);
   };
+  
+  // Format as "MM/DD/YYYY HH:mm:ss" in PH time
+  function formatDatePH(date) {
+    return new Intl.DateTimeFormat("en-US", {
+      timeZone: "Asia/Manila",
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
+      hour12: false,
+    })
+      .format(date)
+      .replace(",", "");
+  }
+  
 
   // Helper function to format the date (MM/DD/YYYY HH:mm:ss)
   function formatDate(date) {
