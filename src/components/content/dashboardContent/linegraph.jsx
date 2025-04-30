@@ -107,18 +107,18 @@ const AlarmTypeLineGraph = () => {
                 marginBottom: 4,
               }}
               formatter={(value, name) => [`${value}`, name]}
-              labelFormatter={(date) => {
-                if (!date) return "";
-                const cleanedDate = String(date).replace(/,/g, "").trim(); // <-- REMOVE commas
-                const parsedDate = new Date(cleanedDate);
-                if (isNaN(parsedDate)) return cleanedDate; // fallback
+              labelFormatter={(label) => {
+                if (!label) return "";
+                const cleanedLabel = String(label).replace(/,/g, "").trim(); // SAME CLEANING
+                const parsedDate = new Date(cleanedLabel);
+                if (isNaN(parsedDate)) return cleanedLabel; // fallback
                 const year = parsedDate.getFullYear();
                 const month = String(parsedDate.getMonth() + 1).padStart(
                   2,
                   "0"
                 );
                 const day = String(parsedDate.getDate()).padStart(2, "0");
-                return `${year}-${month}-${day}`;
+                return `Date: ${year}-${month}-${day}`;
               }}
               wrapperStyle={{
                 backgroundColor: "rgba(255, 255, 255, 0.9)",
