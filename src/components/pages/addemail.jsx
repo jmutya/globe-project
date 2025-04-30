@@ -13,18 +13,20 @@ import {
   getDocs,
   deleteDoc,
   doc,
+  updateDoc,
 } from "firebase/firestore";
 
 import {
   FaKey,
   FaPlus,
-  FaTrash,
+  FaEdit,
   FaThLarge,
   FaList,
   FaSortAlphaDown,
   FaSortAlphaUp,
   FaSortAmountDown,
 } from "react-icons/fa";
+
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 
@@ -38,11 +40,14 @@ const AddEmail = () => {
   const [role, setRole] = useState("");
   const [status, setStatus] = useState(""); // Added this line
   const [loading, setLoading] = useState(false);
-  const [deletingId, setDeletingId] = useState(null);
   const [filterRole, setFilterRole] = useState("all");
   const [viewMode, setViewMode] = useState("list");
   const [searchTerm, setSearchTerm] = useState("");
   const [sortOption, setSortOption] = useState("recent");
+  const [editModalData, setEditModalData] = useState(null);
+  const [editPassword, setEditPassword] = useState("");
+  const [editRole, setEditRole] = useState("");
+  const [editStatus, setEditStatus] = useState("");
 
   useEffect(() => {
     const fetchEmails = async () => {
@@ -143,29 +148,6 @@ const AddEmail = () => {
     }
   };
 
-  const handleDeleteUserClick = async (id, email, role) => {
-    if (role === "admin") {
-      toast.error("Cannot revoke access from another admin.");
-      return;
-    }
-
-    if (currentUserRole !== "admin") {
-      toast.error("You do not have permission to revoke access.");
-      return;
-    }
-
-    setDeletingId(id);
-
-    try {
-      await handleDeleteUser(id, email, role, currentUserRole);
-      setEmails(emails.filter((user) => user.id !== id));
-    } catch (error) {
-      toast.error("Error revoking access: " + error.message);
-    } finally {
-      setDeletingId(null);
-    }
-  };
-
   const toggleSort = () => {
     if (sortOption === "az") {
       setSortOption("za");
@@ -204,6 +186,16 @@ const AddEmail = () => {
       {sortOption === "recent" && <FaSortAmountDown className="text-sm" />}
     </button>
   );
+
+  const handleUpdateUser = async (userId, updates) => {
+    try {
+      const userRef = doc(db2, "authorizedUsers", userId);
+      await updateDoc(userRef, updates);
+      toast.success("User updated successfully!");
+    } catch (error) {
+      toast.error("Failed to update user: " + error.message);
+    }
+  };
 
   return (
     <div className="p-6 h-[calc(100vh-100px)] flex flex-col bg-gray-50">
@@ -349,16 +341,15 @@ const AddEmail = () => {
                         </button>
                         <button
                           onClick={() =>
-                            handleDeleteUserClick(
-                              user.id,
-                              user.email,
-                              user.role
-                            )
+                            setEditModalData(user) ||
+                            setEditPassword("") ||
+                            setEditRole(user.role) ||
+                            setEditStatus(user.status || "active")
                           }
-                          className="text-red-500 hover:text-red-700"
-                          title="Revoke Access"
+                          className="text-blue-600 hover:text-blue-800"
+                          title="Edit User"
                         >
-                          <FaTrash size={16} />
+                          <FaEdit size={16} />
                         </button>
                       </div>
                     </li>
@@ -390,12 +381,15 @@ const AddEmail = () => {
                       </button>
                       <button
                         onClick={() =>
-                          handleDeleteUserClick(user.id, user.email, user.role)
+                          setEditModalData(user) ||
+                          setEditPassword("") ||
+                          setEditRole(user.role) ||
+                          setEditStatus(user.status || "active")
                         }
-                        className="text-red-500 hover:text-red-700"
-                        title="Revoke Access"
+                        className="text-blue-600 hover:text-blue-800"
+                        title="Edit User"
                       >
-                        <FaTrash size={16} />
+                        <FaEdit size={16} />
                       </button>
                     </div>
                   </div>
@@ -464,6 +458,71 @@ const AddEmail = () => {
                 }`}
               >
                 {loading ? "Adding..." : "Add User"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {editModalData && (
+        <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
+          <div className="bg-white rounded-xl shadow-lg p-6 w-full max-w-md">
+            <h3 className="text-xl font-semibold text-indigo-700 mb-4">
+              Edit User – {editModalData.email}
+            </h3>
+            <div className="space-y-4">
+              <select
+                value={editRole}
+                onChange={(e) => setEditRole(e.target.value)}
+                className="w-full p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-400"
+              >
+                <option value="admin">Admin</option>
+                <option value="user">User</option>
+              </select>
+              <select
+                value={editStatus}
+                onChange={(e) => setEditStatus(e.target.value)}
+                className="w-full p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-400"
+              >
+                <option value="active">Active</option>
+                <option value="inactive">Inactive</option>
+              </select>
+            </div>
+            <div className="flex justify-end mt-6 gap-3">
+              <button
+                onClick={() => setEditModalData(null)}
+                className="px-4 py-2 border rounded-lg text-gray-600 hover:bg-gray-100"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={async () => {
+                  if (currentUserRole !== "admin") {
+                    toast.error("Only admins can update user data.");
+                    return;
+                  }
+
+                  try {
+                    await handleUpdateUser(editModalData.id, {
+                      role: editRole,
+                      status: editStatus,
+                    });
+
+                    setEmails((prev) =>
+                      prev.map((u) =>
+                        u.id === editModalData.id
+                          ? { ...u, role: editRole, status: editStatus }
+                          : u
+                      )
+                    );
+                    setEditModalData(null);
+                  } catch (error) {
+                    toast.error("Failed to update user: " + error.message);
+                  }
+                }}
+                className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700"
+              >
+                Save Changes
               </button>
             </div>
           </div>
