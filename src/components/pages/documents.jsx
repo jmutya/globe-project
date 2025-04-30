@@ -14,6 +14,7 @@ const ExcelUploader = () => {
   const [fileToDelete, setFileToDelete] = useState(null);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [selectedFilesToDelete, setSelectedFilesToDelete] = useState([]);
+  const [showMultiDeleteModal, setShowMultiDeleteModal] = useState(false);
 
   useEffect(() => {
     fetchUploadedFiles();
@@ -314,24 +315,25 @@ const ExcelUploader = () => {
           <h2 className="text-3xl font-semibold text-indigo-700">
             Excel Files
           </h2>
-          {selectedFilesToDelete.length > 0 && (
-            <div className="flex justify-end mb-4">
+          <div className="flex items-center gap-3">
+            {selectedFilesToDelete.length > 0 && (
               <button
-                onClick={handleDeleteSelectedFiles}
+                onClick={() => setShowMultiDeleteModal(true)}
                 className="flex items-center gap-2 bg-red-600 text-white px-4 py-2 rounded-xl hover:bg-red-700 transition"
               >
                 <FaTrash className="w-4 h-4" />
                 Delete Selected ({selectedFilesToDelete.length})
               </button>
-            </div>
-          )}
-          <button
-            onClick={handleUploadClick}
-            className="flex items-center gap-2 bg-indigo-600 text-white px-4 py-2 rounded-xl hover:bg-indigo-700 transition"
-          >
-            <FaUpload className="w-4 h-4" />
-            Upload File
-          </button>
+            )}
+
+            <button
+              onClick={handleUploadClick}
+              className="flex items-center gap-2 bg-indigo-600 text-white px-4 py-2 rounded-xl hover:bg-indigo-700 transition"
+            >
+              <FaUpload className="w-4 h-4" />
+              Upload File
+            </button>
+          </div>
         </div>
 
         <div className="flex-1 border border-gray-200 rounded-xl bg-white p-6 shadow-sm">
@@ -471,6 +473,39 @@ const ExcelUploader = () => {
               </button>
               <button
                 onClick={handleDeleteFile}
+                className="px-4 py-2 rounded bg-red-600 text-white hover:bg-red-700"
+              >
+                Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Multi Delete Modal */}
+      {showMultiDeleteModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-50">
+          <div className="bg-white p-6 rounded-xl shadow-lg w-full max-w-md">
+            <h3 className="text-lg font-semibold mb-3">
+              Delete Selected Files
+            </h3>
+            <p className="text-sm text-gray-600 mb-6">
+              Are you sure you want to delete{" "}
+              <strong>{selectedFilesToDelete.length}</strong> selected{" "}
+              {selectedFilesToDelete.length === 1 ? "file" : "files"}?
+            </p>
+            <div className="flex justify-end gap-3">
+              <button
+                onClick={() => setShowMultiDeleteModal(false)}
+                className="px-4 py-2 rounded bg-gray-200 text-gray-800 hover:bg-gray-300"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => {
+                  handleDeleteSelectedFiles();
+                  setShowMultiDeleteModal(false);
+                }}
                 className="px-4 py-2 rounded bg-red-600 text-white hover:bg-red-700"
               >
                 Delete
