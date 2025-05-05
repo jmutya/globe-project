@@ -109,78 +109,87 @@ const ExcelUploader = () => {
   };
   const handleUploadFile = async () => {
     if (selectedFiles.length === 0) return;
-  
+
     setUploading(true);
     setUploadProgress(0);
-  
+
     let uploadedCount = 0;
-  
+
     for (let i = 0; i < selectedFiles.length; i++) {
       const file = selectedFiles[i];
-  
+
       try {
         const data = await file.arrayBuffer();
         const workbook = XLSX.read(data, { type: "array" });
         const sheet = workbook.Sheets[workbook.SheetNames[0]];
         const rows = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: "" });
-  
+
         if (rows.length === 0) continue;
-  
+
         const headers = rows[0];
         const openedIndex = headers.indexOf("Opened");
         if (openedIndex === -1) {
           throw new Error("No 'Opened' column found in the Excel file.");
         }
-  
+
         // Group by year-month (Philippine Time)
         const monthGroups = {};
-  
+
         for (const row of rows.slice(1)) {
           const openedRaw = row[openedIndex];
           let openedDate;
-  
+
           if (typeof openedRaw === "number") {
             const parsed = XLSX.SSF.parse_date_code(openedRaw);
-            openedDate = new Date(parsed.y, parsed.m - 1, parsed.d, parsed.H, parsed.M, parsed.S);
+            openedDate = new Date(
+              parsed.y,
+              parsed.m - 1,
+              parsed.d,
+              parsed.H,
+              parsed.M,
+              parsed.S
+            );
           } else {
             openedDate = new Date(openedRaw);
           }
-  
+
           if (!isNaN(openedDate)) {
-            const datePH = new Date(openedDate.toLocaleString("en-US", { timeZone: "Asia/Manila" }));
+            const datePH = new Date(
+              openedDate.toLocaleString("en-US", { timeZone: "Asia/Manila" })
+            );
             const year = datePH.getFullYear();
             const month = String(datePH.getMonth() + 1).padStart(2, "0");
             const groupKey = `${year}-${month}`;
-  
+
             // Replace 'Opened' column with formatted PH date string
             row[openedIndex] = formatDatePH(datePH); // "MM/DD/YYYY HH:mm:ss"
-  
+
             if (!monthGroups[groupKey]) {
               monthGroups[groupKey] = [];
             }
             monthGroups[groupKey].push(row);
           }
         }
-  
+
         // Upload one file per PH month
         const keys = Object.keys(monthGroups);
         for (const monthKey of keys) {
           const monthRows = monthGroups[monthKey];
-  
+
           const newWorkbook = XLSX.utils.book_new();
           const newSheet = XLSX.utils.aoa_to_sheet([headers, ...monthRows]);
           XLSX.utils.book_append_sheet(newWorkbook, newSheet, "Sheet1");
-  
+
           const excelBuffer = XLSX.write(newWorkbook, {
             type: "array",
             bookType: "xlsx",
           });
-  
+
           const blob = new Blob([excelBuffer], { type: file.type });
-  
+
           const fileNameWithoutExt = file.name.replace(/\.[^/.]+$/, "");
           const newFileName = `${fileNameWithoutExt}_${monthKey}.xlsx`;
-  
+
           // Upload to Supabase
           const { error } = await supabase.storage
             .from("uploads")
@@ -188,12 +197,12 @@ const ExcelUploader = () => {
               cacheControl: "3600",
               upsert: true,
             });
-  
+
           if (error) throw error;
-  
+
           uploadedCount++;
           setUploadProgress(Math.round((uploadedCount / keys.length) * 100));
-  
+
           setFiles((prev) => [
             ...prev,
             {
@@ -211,12 +220,12 @@ const ExcelUploader = () => {
         toast.error(`Failed to upload ${file.name}`);
       }
     }
-  
+
     toast.success("Upload completed");
     setUploading(false);
     setShowUploadModal(false);
   };
-  
+
   // Format as "MM/DD/YYYY HH:mm:ss" in PH time
   function formatDatePH(date) {
     return new Intl.DateTimeFormat("en-US", {
@@ -232,7 +241,6 @@ const ExcelUploader = () => {
       .format(date)
       .replace(",", "");
   }
-  
 
   // Helper function to format the date (MM/DD/YYYY HH:mm:ss)
   function formatDate(date) {
@@ -250,7 +258,6 @@ const ExcelUploader = () => {
       .format(date)
       .replace(",", "");
   }
-  
 
   const confirmDelete = (fileName) => {
     setFileToDelete(`excels/${fileName}`);
@@ -285,11 +292,16 @@ const ExcelUploader = () => {
 
   const isSelected = (fileName) => selectedFilesToDelete.includes(fileName);
 
+  const allVisibleFileNames = files.map((f) => f.name);
+  const areAllSelected = allVisibleFileNames.every((name) =>
+    selectedFilesToDelete.includes(name)
+  );
+
   const toggleSelectAll = () => {
-    if (selectedFilesToDelete.length === files.length) {
+    if (areAllSelected) {
       setSelectedFilesToDelete([]);
     } else {
-      setSelectedFilesToDelete(files.map((file) => file.name));
+      setSelectedFilesToDelete(allVisibleFileNames);
     }
   };
 
@@ -324,6 +336,12 @@ const ExcelUploader = () => {
             Excel Files
           </h2>
           <div className="flex items-center gap-3">
+            <button
+              onClick={toggleSelectAll}
+              className="flex items-center gap-2 bg-gray-100 text-gray-800 px-4 py-2 rounded-xl hover:bg-gray-200 transition"
+            >
+              {areAllSelected ? "Unselect All" : "Select All"}
+            </button>
             {selectedFilesToDelete.length > 0 && (
               <button
                 onClick={() => setShowMultiDeleteModal(true)}
@@ -365,12 +383,12 @@ const ExcelUploader = () => {
                   key={index}
                   className="grid grid-cols-12 gap-4 py-3 items-center hover:bg-indigo-50 transition rounded-lg px-4"
                 >
-                  <div className="col-span-5 flex gap-2 truncate justify-start items-center">
+                  <div className="col-span-5 flex items-center gap-2 truncate">
                     <input
                       type="checkbox"
                       checked={isSelected(file.name)}
                       onChange={() => toggleSelectFile(file.name)}
-                      className="w-4 h-4 text-indigo-600"
+                      className="w-4 h-4 shrink-0 text-indigo-600 rounded border-gray-300 focus:ring-indigo-500"
                     />
                     <FaFileExcel className="text-green-600 w-5 h-5" />
                     <span className="truncate">{file.name}</span>
