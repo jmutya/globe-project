@@ -4,16 +4,16 @@ import { getAnalytics } from "firebase/analytics";
 import { getFirestore } from "firebase/firestore";
 import { getStorage } from "firebase/storage"; 
 
-const firebaseConfig = {
-  apiKey: "AIzaSyBoW9fYNNX5eE46QftAK89gtk-uvVm2mgU",
-  authDomain: "globe-project-cdd3f.firebaseapp.com",
-  projectId: "globe-project-cdd3f",
-  storageBucket: "globe-project-cdd3f.firebasestorage.app",
-  messagingSenderId: "758541012292",
-  appId: "1:758541012292:web:0133177f54c242e44ddb11",
-  measurementId: "G-YN14Z9M4RE"
-};
 
+const firebaseConfig = {
+  apiKey: import.meta.env.VITE_API_KEY,
+  authDomain: import.meta.env.VITE_AUTH_DOMAIN,
+  projectId: import.meta.env.VITE_PROJECT_ID,
+  storageBucket: import.meta.env.VITE_STORAGE_BUCKET,
+  messagingSenderId: import.meta.env.VITE_MESSAGING_SENDER_ID,
+  appId: import.meta.env.VITE_APP_ID,
+  measurementId: import.meta.env.VITE_MEASUREMENT_ID,
+};
 const app = initializeApp(firebaseConfig);
 const analytics = getAnalytics(app);
 
