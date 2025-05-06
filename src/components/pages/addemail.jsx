@@ -340,12 +340,15 @@ const AddEmail = () => {
                           <FaKey size={16} />
                         </button>
                         <button
-                          onClick={() =>
+                          onClick={() => {
+                            if (currentUserRole !== "admin") {
+                              toast.error("You do not have permission to reset passwords.");
+                              return;
+                            }
                             setEditModalData(user) ||
-                            setEditPassword("") ||
                             setEditRole(user.role) ||
                             setEditStatus(user.status || "active")
-                          }
+                          }}
                           className="text-blue-600 hover:text-blue-800"
                           title="Edit User"
                         >
@@ -380,12 +383,15 @@ const AddEmail = () => {
                         <FaKey size={16} />
                       </button>
                       <button
-                        onClick={() =>
+                        onClick={() => {
+                          if (currentUserRole !== "admin") {
+                            toast.error("You do not have permission to reset passwords.");
+                            return;
+                          }
                           setEditModalData(user) ||
-                          setEditPassword("") ||
                           setEditRole(user.role) ||
                           setEditStatus(user.status || "active")
-                        }
+                        }}
                         className="text-blue-600 hover:text-blue-800"
                         title="Edit User"
                       >

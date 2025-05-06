@@ -3,16 +3,15 @@ import { getAuth } from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
 
 
-// ⚠️ Replace with your second Firebase project's config
 const firebaseConfig2 = {
-    apiKey: "AIzaSyBoW9fYNNX5eE46QftAK89gtk-uvVm2mgU",
-    authDomain: "globe-project-cdd3f.firebaseapp.com",
-    projectId: "globe-project-cdd3f",
-    storageBucket: "globe-project-cdd3f.firebasestorage.app",
-    messagingSenderId: "758541012292",
-    appId: "1:758541012292:web:0133177f54c242e44ddb11",
-    measurementId: "G-YN14Z9M4RE"
-};
+    apiKey: import.meta.env.VITE_API_KEY_ADDING_USERS,
+    authDomain: import.meta.env.VITE_AUTH_DOMAIN_ADDING_USERS,
+    projectId: import.meta.env.VITE_PROJECT_ID_ADDING_USERS,
+    storageBucket: import.meta.env.VITE_STORAGE_BUCKET_ADDING_USERS,
+    messagingSenderId: import.meta.env.VITE_MESSAGING_SENDER_ID_ADDING_USERS,
+    appId: import.meta.env.VITE_APP_ID_ADDING_USERS,
+    measurementId: import.meta.env.VITE_MEASUREMENT_ID_ADDING_USERS,
+  };
 
 const app2 = initializeApp(firebaseConfig2, "app2");
 const auth2 = getAuth(app2);
