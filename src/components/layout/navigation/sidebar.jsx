@@ -27,7 +27,7 @@ const componentMap = {
   "Mean Time To Investigate": lazy(() => import("../../content/mtti")),
   "Mean Time To Dispatch": lazy(() => import("../../content/mttd")),
   "First Touch Resolution": lazy(() => import("../../content/ftr")),
-  "Sample Excel Uploader To SQL": lazy(() => import("../sampleUpload")),
+  // "Sample Excel Uploader To SQL": lazy(() => import("../sampleUpload")),
  
 };
 
@@ -37,13 +37,13 @@ const navigationItems = [
     icon: ChartBarSquareIcon,
     subItems: [
 
-      { name: "Dashboard" }, // 👈 include itself here
+      { name: "Dashboard" }, 
       { name: "Insights" },   
       { name: "Mean Time To Ticket" },
       { name: "Mean Time To Investigate" },
        { name: "Mean Time To Dispatch" },
       { name: "First Touch Resolution" },
-      { name: "Sample Excel Uploader To SQL" },
+      // { name: "Sample Excel Uploader To SQL" },
 
    
     ],
@@ -192,7 +192,7 @@ const Sidebar = ({ user }) => {
        <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 transition-opacity duration-300 ease-out animate__animated animate__fadeIn">
        <div className="bg-white p-8 rounded-lg w-1/3 max-w-md shadow-lg transform transition-all duration-500 ease-in-out animate__animated animate__zoomIn flex flex-col items-center">
          <img
-           src="/sadCat.gif" // Replace with the actual path to your image/GIF
+           src="/sadCat.gif" //gif image
            alt="Crying Cat"
            className="w-32 h-32 object-contain mb-4" // Adjust size as needed
          />
