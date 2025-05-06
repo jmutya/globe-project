@@ -25,7 +25,7 @@ const componentMap = {
   "Authorized Users" :lazy(() => import("../../pages/addemail")),
   "Mean Time To Ticket": lazy(() => import("../../content/mttt")),
   "Mean Time To Investigate": lazy(() => import("../../content/mtti")),
-  "Mean Time To Dispatch": lazy(() => import("../../content/mttd")),
+  // "Mean Time To Dispatch": lazy(() => import("../../content/mttd")),
   "First Touch Resolution": lazy(() => import("../../content/ftr")),
   // "Sample Excel Uploader To SQL": lazy(() => import("../sampleUpload")),
  
@@ -41,7 +41,7 @@ const navigationItems = [
       { name: "Insights" },   
       { name: "Mean Time To Ticket" },
       { name: "Mean Time To Investigate" },
-       { name: "Mean Time To Dispatch" },
+      //  { name: "Mean Time To Dispatch" },
       { name: "First Touch Resolution" },
       // { name: "Sample Excel Uploader To SQL" },
 
