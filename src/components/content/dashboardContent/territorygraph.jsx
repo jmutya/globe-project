@@ -56,7 +56,7 @@ const TerritoryGraph = () => {
           </svg>
         </div>
         <h2 className="text-sm font-semibold text-gray-700 ml-3 uppercase tracking-wider">
-          Alarm Distribution by Territory
+          Overall Alarm Distribution by Territory
         </h2>
       </div>
 

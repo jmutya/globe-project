@@ -1,8 +1,9 @@
 import React, { useEffect, useState } from "react";
 import * as XLSX from "xlsx";
 import supabase from "../../backend/supabase/supabase";
+import { FaArrowUp, FaArrowDown } from "react-icons/fa"; // Import sorting icons
 
-// Custom date parser for "DD/MM/YYYY hh:mm:ss am/pm" format
+// Date conversion logic...
 const convertExcelDate = (value) => {
   if (typeof value === "string") {
     const cleaned = value.replace(/\s+/g, " ").trim();
@@ -21,9 +22,7 @@ const convertExcelDate = (value) => {
         "0"
       )}:${minute}:${second}`
     );
-    if (!isNaN(date)) {
-      return date.toISOString();
-    }
+    if (!isNaN(date)) return date.toISOString();
   }
 
   if (typeof value === "number") {
@@ -76,12 +75,12 @@ const fetchmtti = async () => {
       const icDate = new Date(icISO);
       const reportedDate = new Date(reportedISO);
       const diffInMtti = icDate - reportedDate;
-      mtti = parseFloat((diffInMtti / (1000 * 60)).toFixed(2)); // ✅ Convert to number
+      mtti = parseFloat((diffInMtti / (1000 * 60)).toFixed(2));
     }
 
     return {
-      caller: caller,
-      number: number,
+      caller,
+      number,
       ic: icISO ? icISO.replace("T", " ").slice(0, 19) : "",
       reported: reportedISO ? reportedISO.replace("T", " ").slice(0, 19) : "",
       mtti,
@@ -93,28 +92,27 @@ const fetchmtti = async () => {
 
 function MttiTable() {
   const [reportData, setReportData] = useState([]);
+  const [evaluationFilter, setEvaluationFilter] = useState("All");
+  const [sortConfig, setSortConfig] = useState({
+    column: "ticketcount", // Default column to sort by
+    direction: "asc", // Default sort direction
+  });
 
   useEffect(() => {
     const getReportData = async () => {
       const data = await fetchmtti();
       setReportData(data);
     };
-
     getReportData();
   }, []);
 
-  // Group data by caller and calculate total MTTI per caller
   const groupedByCaller = reportData.reduce((acc, item) => {
-    if (!acc[item.caller]) {
-      acc[item.caller] = { totalMTTI: 0, count: 0 };
-    }
-
-    const mttiValue = parseFloat(item.mtti); // ✅ corrected from mttt
+    if (!acc[item.caller]) acc[item.caller] = { totalMTTI: 0, count: 0 };
+    const mttiValue = parseFloat(item.mtti);
     if (!isNaN(mttiValue)) {
       acc[item.caller].totalMTTI += mttiValue;
       acc[item.caller].count += 1;
     }
-
     return acc;
   }, {});
 
@@ -125,6 +123,12 @@ function MttiTable() {
     }
   );
 
+  const filteredMTTIData = totalMTTIByCaller.filter((item) => {
+    if (evaluationFilter === "All") return true;
+    const isPassed = parseFloat(item.totalMTTI) < 16;
+    return evaluationFilter === "Passed" ? isPassed : !isPassed;
+  });
+
   const totalMTTI = reportData
     .reduce((sum, item) => {
       const value = parseFloat(item.mtti);
@@ -132,12 +136,14 @@ function MttiTable() {
     }, 0)
     .toFixed(2);
 
+  const validRows = reportData.filter((item) => !isNaN(parseFloat(item.mtti)));
+  const averageMTTIinMinutes =
+    validRows.length > 0 ? totalMTTI / validRows.length : 0;
+
   const formatMinutesToHMS = (minutes) => {
     const numMinutes = parseFloat(minutes);
     if (isNaN(numMinutes)) return "N/A";
-
     const totalSeconds = Math.floor(numMinutes * 60);
-
     const days = Math.floor(totalSeconds / (3600 * 24));
     const hrs = Math.floor((totalSeconds % (3600 * 24)) / 3600);
     const mins = Math.floor((totalSeconds % 3600) / 60);
@@ -152,14 +158,31 @@ function MttiTable() {
     return parts.length > 0 ? parts.join(" ") : "0s";
   };
 
-  const validRows = reportData.filter((item) => !isNaN(parseFloat(item.mtti)));
-  const averageMTTIinMinutes =
-    validRows.length > 0 ? totalMTTI / validRows.length : 0;
   const averageFormatted = formatMinutesToHMS(averageMTTIinMinutes);
 
+  const handleSort = (column) => {
+    let direction = "asc";
+    if (sortConfig.column === column && sortConfig.direction === "asc") {
+      direction = "desc";
+    }
+
+    setSortConfig({ column, direction });
+  };
+
+  const sortedData = [...filteredMTTIData].sort((a, b) => {
+    if (sortConfig.column === "ticketcount") {
+      if (sortConfig.direction === "asc") {
+        return a.ticketcount - b.ticketcount;
+      } else {
+        return b.ticketcount - a.ticketcount;
+      }
+    }
+    return 0; // Default sorting for other columns
+  });
+
   return (
-    <div className="max-h-[1100px] overflow-auto border rounded p-4">
-      <div className="flex justify-center items-center overflow-y-auto max-h-[300px] rounded-xl p-6 bg-gray-50">
+    <div className="max-h-[850px] overflow-auto border border-gray-200 rounded-2xl p-6 bg-white shadow-sm">
+      <div className="foverflow-y-auto max-h-[300px] rounded-xl p-6 bg-gray-50">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <h3 className="text-base font-medium text-gray-600 tracking-wide">
             Overall Average MTTI
@@ -170,7 +193,22 @@ function MttiTable() {
         </div>
       </div>
 
-     
+      {/* Filter Buttons */}
+      <div className="flex justify-left mb-4 space-x-2 mt-2">
+        {["All", "Passed", "Failed"].map((type) => (
+          <button
+            key={type}
+            onClick={() => setEvaluationFilter(type)}
+            className={`px-4 py-1.5 text-sm rounded-lg border ${
+              evaluationFilter === type
+                ? "bg-indigo-300 text-white border-indigo-300"
+                : "bg-white text-gray-700 border-gray-300 hover:bg-indigo-50"
+            } transition`}
+          >
+            {type}
+          </button>
+        ))}
+      </div>
 
       <div className="overflow-x-auto">
         <h3 className="text-lg font-semibold text-gray-800 mb-4">
@@ -182,8 +220,20 @@ function MttiTable() {
               <th className="px-6 py-3 text-left text-s font-medium text-indigo-700 uppercase tracking-wider">
                 Caller
               </th>
-              <th className="px-6 py-3 text-center text-s font-medium text-indigo-700 uppercase tracking-wider">
-                # of Assigned Tickets
+              <th
+                className="px-6 py-3 text-center text-s font-medium text-indigo-700 uppercase tracking-wider cursor-pointer"
+                onClick={() => handleSort("ticketcount")}
+              >
+                # of Assigned Tickets{" "}
+                {sortConfig.column === "ticketcount" && (
+                  <span>
+                    {sortConfig.direction === "asc" ? (
+                      <FaArrowUp className="inline-block ml-2" />
+                    ) : (
+                      <FaArrowDown className="inline-block ml-2" />
+                    )}
+                  </span>
+                )}
               </th>
               <th className="px-6 py-3 text-center text-s font-medium text-indigo-700 uppercase tracking-wider">
                 MTTI
@@ -194,7 +244,7 @@ function MttiTable() {
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
-            {totalMTTIByCaller.map((item, idx) => {
+            {sortedData.map((item, idx) => {
               const evaluationPassed = parseFloat(item.totalMTTI) < 16;
               return (
                 <tr key={idx} className="hover:bg-indigo-50 transition">

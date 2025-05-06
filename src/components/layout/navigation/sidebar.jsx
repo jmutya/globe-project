@@ -27,6 +27,7 @@ const componentMap = {
   "Mean Time To Investigate": lazy(() => import("../../content/mtti")),
   "Mean Time To Dispatch": lazy(() => import("../../content/mttd")),
   "First Touch Resolution": lazy(() => import("../../content/ftr")),
+  // "Sample Excel Uploader To SQL": lazy(() => import("../sampleUpload")),
  
 };
 
@@ -36,12 +37,14 @@ const navigationItems = [
     icon: ChartBarSquareIcon,
     subItems: [
 
-      { name: "Dashboard" }, // 👈 include itself here
+      { name: "Dashboard" }, 
       { name: "Insights" },   
       { name: "Mean Time To Ticket" },
       { name: "Mean Time To Investigate" },
-      { name: "Mean Time To Dispatch" },
+       { name: "Mean Time To Dispatch" },
       { name: "First Touch Resolution" },
+      // { name: "Sample Excel Uploader To SQL" },
+
    
     ],
   },
@@ -186,30 +189,35 @@ const Sidebar = ({ user }) => {
 
       {/* Logout Modal */}
       {showLogoutModal && (
-        <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 transition-opacity duration-300 ease-out animate__animated animate__fadeIn">
-          <div className="bg-white p-8 rounded-lg w-1/3 max-w-md shadow-lg transform transition-all duration-500 ease-in-out animate__animated animate__zoomIn">
-            <h2 className="text-2xl font-semibold text-center text-gray-900 mb-6">
-              Are you sure you want to logout?
-            </h2>
-            <div className="flex justify-between space-x-4">
-              <button
-                onClick={() => setShowLogoutModal(false)}
-                className="flex-1 px-6 py-3 text-gray-700 border border-gray-300 rounded-md transition duration-200 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-600"
-              >
-                <FaTimes className="inline-block mr-2" /> Cancel
-              </button>
-              <button
-                onClick={() => {
-                  handleLogout();
-                  setShowLogoutModal(false);
-                }}
-                className="flex-1 px-6 py-3 bg-red-600 text-white rounded-md transition duration-200 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500"
-              >
-                <FaSignOutAlt className="inline-block mr-2" /> Logout
-              </button>
-            </div>
-          </div>
-        </div>
+       <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 transition-opacity duration-300 ease-out animate__animated animate__fadeIn">
+       <div className="bg-white p-8 rounded-lg w-1/3 max-w-md shadow-lg transform transition-all duration-500 ease-in-out animate__animated animate__zoomIn flex flex-col items-center">
+         <img
+           src="/sadCat.gif" //gif image
+           alt="Crying Cat"
+           className="w-32 h-32 object-contain mb-4" // Adjust size as needed
+         />
+         <h2 className="text-xl font-semibold text-center text-gray-900 mb-4">
+           Are you sure you want to log out? 
+         </h2>
+         <div className="flex justify-between space-x-4 w-full">
+           <button
+             onClick={() => setShowLogoutModal(false)}
+             className="flex-1 px-6 py-3 text-gray-700 border border-gray-300 rounded-md transition duration-200 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-600 flex items-center justify-center"
+           >
+             <FaTimes className="inline-block mr-2" /> Cancel
+           </button>
+           <button
+             onClick={() => {
+               handleLogout();
+               setShowLogoutModal(false);
+             }}
+             className="flex-1 px-6 py-3 bg-red-600 text-white rounded-md transition duration-200 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 flex items-center justify-center"
+           >
+             <FaSignOutAlt className="inline-block mr-2" /> Logout
+           </button>
+         </div>
+       </div>
+     </div>
       )}
     </div>
   );

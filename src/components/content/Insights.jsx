@@ -6,6 +6,7 @@ import IncompleteRowsTable from "./InsightsContent/IncompleteRowsTable";
 import UnmatchedRowsTable from "./InsightsContent/UnmatchedRowsTable";
 import AccuracyByPersonTable from "./InsightsContent/AccuracyByPersonTable";
 import FilterData from "./InsightsContent/filter";
+import PercentageByPersonTable from "./InsightsContent/PercentageBypersonTable";
 
 const Insights = () => {
   const [timeRange, setTimeRange] = useState("daily");
@@ -60,7 +61,7 @@ const Insights = () => {
       style={{ maxHeight: "88vh" }}
     >
       {/* === Filters Section === */}
-      <div className="bg-gray-50 p-4 rounded-lg border border-gray-200 mb-6">
+      {/* <div className="bg-gray-50 p-4 rounded-lg border border-gray-200 mb-6">
         <h2 className="text-lg font-semibold text-gray-800 mb-4">Filters</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           <div>
@@ -141,7 +142,7 @@ const Insights = () => {
             colors={colors}
           />
         )}
-      </div>
+      </div> */}
 
       {/* === Custom Filters === */}
       <div className="bg-gray-50 p-4 rounded-lg border border-gray-200 mb-6">
@@ -180,161 +181,133 @@ const Insights = () => {
         </div>
 
         <div className="flex items-center gap-4">
-          <label className="text-sm font-medium text-gray-700">
-            Accuracy View:
-          </label>
-          <select
-            className="w-full sm:w-auto p-3 text-sm text-gray-900 bg-white border border-gray-300 rounded-md shadow-sm"
-            value={selectedAccuracyView}
-            onChange={(e) => setSelectedAccuracyView(e.target.value)}
-          >
-            <option value="ticketIssuance">Ticket Issuance</option>
-            <option value="closingAccuracy">Closing Accuracy</option>
-          </select>
+          <div className="flex items-center gap-2">
+            <label className="text-sm font-medium text-gray-700">
+              Accuracy View:
+            </label>
+            <select
+              className="w-full sm:w-auto p-3 text-sm text-gray-900 bg-white border border-gray-300 rounded-md shadow-sm"
+              value={selectedAccuracyView}
+              onChange={(e) => setSelectedAccuracyView(e.target.value)}
+            >
+              <option value="ticketIssuance">Ticket Issuance</option>
+              <option value="closingAccuracy">Closing Accuracy</option>
+            </select>
+          </div>
         </div>
+
+        {/* === Ticket Issuance Accuracy View === */}
+        {selectedAccuracyView === "ticketIssuance" && (
+          <div className="mb-10">
+            <div className="flex flex-col lg:flex-row gap-6">
+              <AccuracyProgress
+                percentage={accuracyPercentage}
+                title="Overall Ticket Issuance Accuracy"
+              />
+
+              <div className="flex-1">
+                <IncompleteRowsTable
+                  incompleteRows={incompleteRows}
+                  onRowClick={setSelectedRow}
+                  percentagePerAssignedPerson={percentagePerAssignedPerson}
+                />
+              </div>
+            </div>
+
+            <div className="flex items-center mt-6 mb-4 space-x-4">
+              {/* Toggle switch */}
+              <label
+                htmlFor="toggleAccuracyTable"
+                className="relative inline-flex items-center cursor-pointer"
+              >
+                <input
+                  type="checkbox"
+                  id="toggleAccuracyTable"
+                  className="sr-only peer"
+                  checked={showAccuracyTable}
+                  onChange={() => setShowAccuracyTable(!showAccuracyTable)}
+                />
+                <div className="w-11 h-6 bg-gray-300 rounded-full peer peer-checked:bg-blue-600 transition-colors duration-300"></div>
+                <div className="absolute left-1 top-1 w-4 h-4 bg-white rounded-full shadow transform peer-checked:translate-x-5 transition-transform duration-300"></div>
+              </label>
+
+              {/* Label text */}
+              <label
+                htmlFor="toggleAccuracyTable"
+                className="text-sm text-gray-700 font-medium"
+              >
+                Show Accuracy per Assigned Person
+              </label>
+            </div>
+
+            {showAccuracyTable && (
+              <div className="mt-6">
+                <PercentageByPersonTable
+                  accuracyData={percentagePerAssignedPerson}
+                  title="Ticket Issuance Accuracy per Assigned Person"
+                />
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* === Closing Accuracy View === */}
+        {selectedAccuracyView === "closingAccuracy" && (
+          <div className="mb-10">
+            <div className="flex flex-col lg:flex-row gap-6 mt-6">
+              <AccuracyProgress
+                percentage={closingAccuracy}
+                title="Overall Closing Accuracy"
+              />
+
+              <div className="flex-1">
+                <UnmatchedRowsTable
+                  unmatchedRows={unmatchedRows}
+                  onRowClick={setSelectedUnmatchedRow}
+                  individualAccuracy={individualAccuracy}
+                />
+              </div>
+            </div>
+
+            <div className="mt-4 flex items-center space-x-4">
+              {/* Toggle Switch */}
+              <label
+                htmlFor="toggleAccuracyByPerson"
+                className="relative inline-flex items-center cursor-pointer"
+              >
+                <input
+                  type="checkbox"
+                  id="toggleAccuracyByPerson"
+                  className="sr-only peer"
+                  checked={showAccuracyByPersonTable}
+                  onChange={() =>
+                    setShowAccuracyByPersonTable(!showAccuracyByPersonTable)
+                  }
+                />
+                <div className="w-11 h-6 bg-gray-300 rounded-full peer peer-checked:bg-blue-600 transition-colors duration-300"></div>
+                <div className="absolute left-1 top-1 w-4 h-4 bg-white rounded-full shadow transform peer-checked:translate-x-5 transition-transform duration-300"></div>
+              </label>
+
+              {/* Label */}
+              <label
+                htmlFor="toggleAccuracyByPerson"
+                className="text-sm text-gray-700 font-medium"
+              >
+                Show Completion Accuracy per Assigned Person
+              </label>
+            </div>
+
+            {showAccuracyByPersonTable && (
+              <div className="mt-6">
+                <AccuracyByPersonTable
+                  accuracyData={individualAccuracy}
+                  title="Completion Accuracy per Assigned Person"
+                />
+              </div>
+            )}
+          </div>
+        )}
       </div>
-
-      {/* === Ticket Issuance Accuracy View === */}
-      {selectedAccuracyView === "ticketIssuance" && (
-        <div className="mb-10">
-          <div className="flex flex-col lg:flex-row gap-6">
-            <AccuracyProgress
-              percentage={accuracyPercentage}
-              title="Overall Ticket Issuance Accuracy"
-            />
-
-            <div className="flex-1">
-              <IncompleteRowsTable
-                incompleteRows={incompleteRows}
-                onRowClick={setSelectedRow}
-                percentagePerAssignedPerson={percentagePerAssignedPerson}
-              />
-            </div>
-          </div>
-
-          <div className="flex items-center mt-6 mb-4 space-x-4">
-            {/* Toggle switch */}
-            <label
-              htmlFor="toggleAccuracyTable"
-              className="relative inline-flex items-center cursor-pointer"
-            >
-              <input
-                type="checkbox"
-                id="toggleAccuracyTable"
-                className="sr-only peer"
-                checked={showAccuracyTable}
-                onChange={() => setShowAccuracyTable(!showAccuracyTable)}
-              />
-              <div className="w-11 h-6 bg-gray-300 rounded-full peer peer-checked:bg-blue-600 transition-colors duration-300"></div>
-              <div className="absolute left-1 top-1 w-4 h-4 bg-white rounded-full shadow transform peer-checked:translate-x-5 transition-transform duration-300"></div>
-            </label>
-
-            {/* Label text */}
-            <label
-              htmlFor="toggleAccuracyTable"
-              className="text-sm text-gray-700 font-medium"
-            >
-              Show Accuracy per Assigned Person
-            </label>
-          </div>
-
-          {showAccuracyTable && (
-            <div className="mt-6">
-              <AccuracyByPersonTable
-                accuracyData={percentagePerAssignedPerson}
-                title="Ticket Issuance Accuracy per Assigned Person"
-              />
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* === Closing Accuracy View === */}
-      {selectedAccuracyView === "closingAccuracy" && (
-        <div className="mb-10">
-          <div className="flex flex-col lg:flex-row gap-6 mt-6">
-            <AccuracyProgress
-              percentage={closingAccuracy}
-              title="Overall Closing Accuracy"
-            />
-
-            <div className="flex-1">
-              <UnmatchedRowsTable
-                unmatchedRows={unmatchedRows}
-                onRowClick={setSelectedUnmatchedRow}
-                
-              />
-
-              {selectedUnmatchedRow && (
-                <div className="mt-4 p-4 bg-white border rounded shadow">
-                  <h4 className="text-lg font-semibold mb-2 text-gray-800">
-                    Selected Row Details
-                  </h4>
-                  <p>
-                    <strong>Ticket Number:</strong>{" "}
-                    {selectedUnmatchedRow.number}
-                  </p>
-                  <p>
-                    <strong>Resolved By:</strong>{" "}
-                    {selectedUnmatchedRow.resolvedBy || "Unassigned"}
-                  </p>
-                  <p>
-                    <strong>Cause:</strong>{" "}
-                    {selectedUnmatchedRow.cause || "Empty"}
-                  </p>
-                  <p>
-                    <strong>Reason for Outage:</strong>{" "}
-                    {selectedUnmatchedRow.reason || "Empty"}
-                  </p>
-                  <p>
-                    <strong>Closing Accuracy:</strong>{" "}
-                    {individualAccuracy[selectedUnmatchedRow.resolvedBy] ||
-                      "N/A"}
-                    %
-                  </p>
-                </div>
-              )}
-            </div>
-          </div>
-
-          <div className="mt-4 flex items-center space-x-4">
-            {/* Toggle Switch */}
-            <label
-              htmlFor="toggleAccuracyByPerson"
-              className="relative inline-flex items-center cursor-pointer"
-            >
-              <input
-                type="checkbox"
-                id="toggleAccuracyByPerson"
-                className="sr-only peer"
-                checked={showAccuracyByPersonTable}
-                onChange={() =>
-                  setShowAccuracyByPersonTable(!showAccuracyByPersonTable)
-                }
-              />
-              <div className="w-11 h-6 bg-gray-300 rounded-full peer peer-checked:bg-blue-600 transition-colors duration-300"></div>
-              <div className="absolute left-1 top-1 w-4 h-4 bg-white rounded-full shadow transform peer-checked:translate-x-5 transition-transform duration-300"></div>
-            </label>
-
-            {/* Label */}
-            <label
-              htmlFor="toggleAccuracyByPerson"
-              className="text-sm text-gray-700 font-medium"
-            >
-              Show Completion Accuracy per Assigned Person
-            </label>
-          </div>
-
-          {showAccuracyByPersonTable && (
-            <div className="mt-6">
-              <AccuracyByPersonTable
-                accuracyData={individualAccuracy}
-                title="Completion Accuracy per Assigned Person"
-              />
-            </div>
-          )}
-        </div>
-      )}
     </div>
   );
 };

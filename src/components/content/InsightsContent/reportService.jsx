@@ -23,6 +23,7 @@ const getIncompleteRows = (sheet, headers) => {
     "AOR001",
     "AOR002",
     "Number",
+    "Opened",
   ];
   const requiredIndices = requiredColumns.map((col) => headers.indexOf(col));
   const assignedToIndex = headers.indexOf("Assigned to");
@@ -43,19 +44,49 @@ const getIncompleteRows = (sheet, headers) => {
       }
     });
 
-    if (missingColumns.length > 0) {
-      const assignedTo = assignedToIndex !== -1 ? row[assignedToIndex] : "";
-      const number = row[headers.indexOf("Number")] || "Not Provided";
-      incompleteRows.push({
-        number: number,
-        assignedTo,
-        missingColumns,
-        rowData: row,
-      });
-    }
+    // Function to format the 'Opened' date
+
+
+
+if (missingColumns.length > 0) {
+  const assignedTo = assignedToIndex !== -1 ? row[assignedToIndex] : "";
+  const number = row[headers.indexOf("Number")] || "Not Provided";
+  const openedRaw = row[headers.indexOf("Opened")];
+
+  // Reuse the formatOpenedDate function
+  const openedFormatted = formatOpenedDate(openedRaw);
+
+  incompleteRows.push({
+    number: number,
+    assignedTo,
+    missingColumns,
+    rowData: row,
+    opened: openedFormatted, // Use the formatted date here
+  });
+}
+
+    
   });
 
   return incompleteRows;
+};
+
+const formatOpenedDate = (openedRaw) => {
+  if (!openedRaw) return "";
+  
+  if (typeof openedRaw === "number") {
+    // If it's a number (Excel serial date)
+    const date = new Date((openedRaw - 25569) * 86400 * 1000); // Excel serial to Date
+    const day = String(date.getDate()).padStart(2, "0");
+    const month = String(date.getMonth() + 1).padStart(2, "0");
+    const year = date.getFullYear();
+    return `${year}/${month}/${day}`;
+  } else if (typeof openedRaw === "string") {
+    // If it's already a string (formatted date)
+    return openedRaw;
+  }
+  
+  return ""; // Return empty string if not a valid date
 };
 
 const fetchReportData = async (timeRange, selectedMonth, selectedYear) => {
@@ -75,7 +106,6 @@ const fetchReportData = async (timeRange, selectedMonth, selectedYear) => {
     const seenUnmatchedNumbers = new Set(); // To track unique unmatched IDs
     let resolverStats = {};
     let allAlarmTypes = new Set();
-    
 
     for (const file of files) {
       const { data: fileUrl } = supabase.storage
@@ -165,6 +195,7 @@ const fetchReportData = async (timeRange, selectedMonth, selectedYear) => {
             const reason = row[reasonIndex];
             const resolvedBy = row[resolvedByIndex]?.trim();
             const number = row[numberByIndex];
+            const opened = formatOpenedDate(timestamp); // Use the formatted date function
 
             if (resolvedBy && !resolverStats[resolvedBy]) {
               resolverStats[resolvedBy] = { totalResolved: 0, errors: 0 };
@@ -182,7 +213,7 @@ const fetchReportData = async (timeRange, selectedMonth, selectedYear) => {
                 cause.trim().toLowerCase();
 
             if (hasError) {
-              unmatchedRows.push({ number, cause, reason, resolvedBy });
+              unmatchedRows.push({ number, cause, reason, resolvedBy, opened });
               if (resolvedBy) {
                 resolverStats[resolvedBy].errors += 1;
               }
@@ -193,11 +224,17 @@ const fetchReportData = async (timeRange, selectedMonth, selectedYear) => {
     }
 
     const percentagePerAssignedPerson = {};
+
     for (const [person, data] of Object.entries(assignedPersonsData)) {
-      const percentage = data.total
-        ? ((data.completed / data.total) * 100).toFixed(2)
-        : "0.00";
-      percentagePerAssignedPerson[person] = percentage;
+      const accurate = data.completed;
+      const total = data.total;
+      const percentage = total ? (accurate / total) * 100 : 0;
+
+      percentagePerAssignedPerson[person] = {
+        accurate,
+        total,
+        percentage: parseFloat(percentage),
+      };
     }
 
     let formattedData = Object.entries(alarmData).map(([date, alarms]) => {
@@ -285,22 +322,33 @@ const fetchReportData = async (timeRange, selectedMonth, selectedYear) => {
     formattedData = groupByTimeRange(formattedData, timeRange);
 
     const individualAccuracy = {};
+
     Object.entries(resolverStats).forEach(([resolver, stats]) => {
-      if (stats.totalResolved > 0) {
-        individualAccuracy[resolver] = (
-          ((stats.totalResolved - stats.errors) / stats.totalResolved) *
+      const totalAssigned = stats.totalResolved- stats.errors; // Assuming you have this data in `stats.totalAssigned`
+      const totalResolved = stats.totalResolved;
+
+      let accuracy = "0.00";
+
+      if (totalResolved > 0) {
+        accuracy = (
+          ((totalResolved - stats.errors) / totalResolved) *
           100
         ).toFixed(2);
-      } else {
-        individualAccuracy[resolver] = "0.00";
       }
+
+      individualAccuracy[resolver] = {
+        totalAssigned,
+        totalResolved,
+        accuracy: parseFloat(accuracy),
+      };
     });
 
     const closingAccuracy =
       totalRowCount > 0
-        ? (((totalRowCount - unmatchedRows.length) / totalRowCount) * 100).toFixed(
-            2
-          )
+        ? (
+            ((totalRowCount - unmatchedRows.length) / totalRowCount) *
+            100
+          ).toFixed(2)
         : "0.00";
 
     return {

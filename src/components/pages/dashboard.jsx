@@ -5,7 +5,7 @@ import LazyLoadWrapper from "../content/LazyLoadWrapper";
 // Lazy-loaded components
 const AlarmCount = lazy(() => import("../content/dashboardContent/alarmcount"));
 const AlarmsSeverity = lazy(() => import("../content/dashboardContent/alarmseveritygraph"));
-const AlarmCategory = lazy(() => import("../content/dashboardContent/alarmcategory"));
+const AlarmCategory = lazy(() => import("../content/dashboardContent/AlarmCauseOfOutage"));
 const AlarmTypeLineGraph = lazy(() => import("../content/dashboardContent/linegraph"));
 const AlarmTypeBarGraph = lazy(() => import("../content/dashboardContent/bargraph"));
 const TerritoryGraph = lazy(() => import("../content/dashboardContent/territorygraph"));

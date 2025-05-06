@@ -1,23 +1,32 @@
 import React, { useState, useEffect } from "react";
-import { fetchSeverityCounts } from "../../../backend/functions/alarmCountUtils"; // Adjust path if needed
+import { fetchSeverityCounts } from "../../../backend/functions/alarmCountUtils";
 import CountUp from "react-countup";
 
 const AlarmCount = () => {
   const [totalCount, setTotalCount] = useState(0);
+  const [monthName, setMonthName] = useState("");
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     const loadData = async () => {
       setIsLoading(true);
-      const counts = await fetchSeverityCounts();
-      setTotalCount(
-        Object.values(counts).reduce((acc, count) => acc + count, 0)
-      );
+      const { counts, mostRecentMonth } = await fetchSeverityCounts();
+  
+      setTotalCount(Object.values(counts).reduce((acc, count) => acc + count, 0));
+  
+      if (mostRecentMonth) {
+        const [year, month] = mostRecentMonth.split("-");
+        const date = new Date(`${year}-${month}-01`);
+        const name = date.toLocaleString("default", { month: "long" });
+        setMonthName(`${name} ${year}`);  // Include year with the month name
+      }
+  
       setIsLoading(false);
     };
-
+  
     loadData();
   }, []);
+  
 
   return (
     <div className="bg-white rounded-md shadow p-6 w-full h-[350px] flex flex-col justify-between">
@@ -39,8 +48,8 @@ const AlarmCount = () => {
               />
             </svg>
           </div>
-          <h2 className="text-sm font-semibold text-gray-700 ml-3 uppercase tracking-wider">
-            Ticket Count
+           <h2 className="text-sm font-semibold text-gray-700 ml-3 uppercase tracking-wider text-center"> {/* Added text-center here */}
+            Ticket Count {monthName && `(${monthName})`}
           </h2>
         </div>
 
@@ -59,16 +68,12 @@ const AlarmCount = () => {
             />
           </div>
         ) : (
-          <p className="text-gray-500 text-left py-6 text-sm">
-            No active tickets
-          </p>
+          <p className="text-gray-500 text-left py-6 text-sm">No active tickets</p>
         )}
       </div>
 
       <div className="mt-4">
-        <p className="text-xs text-gray-500">
-          See ticket details which require immediate attention.
-        </p>
+        <p className="text-xs text-gray-500">See ticket details which require immediate attention.</p>
       </div>
     </div>
   );

@@ -20,3 +20,17 @@ html, body {
   width: 100%;
   height: 100vh;
 }
+@keyframes runner {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+.animate-runner {
+  animation: runner 5s linear infinite;
+}
+
+

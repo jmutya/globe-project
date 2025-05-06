@@ -7,7 +7,7 @@ const getProgressBarColor = (value) => {
   return "bg-red-500";
 };
 
-const AccuracyByPersonTable = ({ accuracyData, title, valueAccessor = (item) => item }) => {
+const PercentageByPersonTable = ({ accuracyData, title, valueAccessor = (item) => item }) => {
   const [sortBy, setSortBy] = useState(null);
   const [sortDirection, setSortDirection] = useState("desc");
 
@@ -31,10 +31,8 @@ const AccuracyByPersonTable = ({ accuracyData, title, valueAccessor = (item) => 
     if (!sortBy) return 0;
 
     const compareVal = sortBy === "accurate"
-      ? aVal.totalAssigned - bVal.totalAssigned
-      : sortBy === "total"
-      ? aVal.totalResolved - bVal.totalResolved
-      : aVal.accuracy - bVal.accuracy;
+      ? aVal.accurate - bVal.accurate
+      : aVal.total - bVal.total;
 
     return sortDirection === "asc" ? compareVal : -compareVal;
   });
@@ -68,20 +66,20 @@ const AccuracyByPersonTable = ({ accuracyData, title, valueAccessor = (item) => 
               <th className="px-4 py-3 text-left font-medium w-1/2">Accuracy</th>
               <th
                 className="px-4 py-3 text-left font-medium cursor-pointer"
-                onClick={() => handleSort("accuracy")}
+                onClick={() => handleSort("total")}
               >
                 %
                 <SortIcon
-                  active={sortBy === "accuracy"}
-                  direction={sortBy === "accuracy" ? sortDirection : "desc"}
+                  active={sortBy === "total"}
+                  direction={sortBy === "total" ? sortDirection : "desc"}
                 />
               </th>
             </tr>
           </thead>
           <tbody>
             {sortedEntries.map(([person, data], idx) => {
-              const { totalAssigned, totalResolved, accuracy } = valueAccessor(data);
-              const barColor = getProgressBarColor(accuracy);
+              const { accurate, total, percentage } = valueAccessor(data);
+              const barColor = getProgressBarColor(percentage);
 
               return (
                 <tr
@@ -89,17 +87,17 @@ const AccuracyByPersonTable = ({ accuracyData, title, valueAccessor = (item) => 
                   className={`border-b ${idx % 2 === 0 ? "bg-white" : "bg-gray-50"} hover:bg-indigo-50 transition`}
                 >
                   <td className="px-4 py-3">{person}</td>
-                  <td className="px-4 py-3 text-center">{`${totalAssigned} / ${totalResolved}`}</td>
+                  <td className="px-4 py-3 text-center">{`${accurate} / ${total}`}</td>
                   <td className="px-4 py-3">
                     <div className="w-full bg-gray-200 rounded-full h-4">
                       <div
                         className={`h-4 rounded-full ${barColor} transition-all duration-500 ease-out`}
-                        style={{ width: `${accuracy}%` }}
+                        style={{ width: `${percentage}%` }}
                       />
                     </div>
                   </td>
                   <td className="px-4 py-3 font-semibold text-indigo-600">
-                    {accuracy.toFixed(1)}%
+                    {percentage.toFixed(1)}%
                   </td>
                 </tr>
               );
@@ -111,4 +109,4 @@ const AccuracyByPersonTable = ({ accuracyData, title, valueAccessor = (item) => 
   );
 };
 
-export default AccuracyByPersonTable;
+export default PercentageByPersonTable;

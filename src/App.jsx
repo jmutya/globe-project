@@ -1,4 +1,4 @@
-import './index.css'; // Or './App.css'
+import "./index.css"; // Or './App.css'
 import React from "react";
 import {
   BrowserRouter as Router,
@@ -20,19 +20,30 @@ function App() {
   if (loading) {
     return (
       <div className="fixed inset-0 flex justify-center items-center bg-white z-50">
-        <div className="flex flex-col items-center space-y-4">
-          {/* Spinner */}
-          <div className="w-8 h-8 border-4 border-gray-300 border-t-indigo-500 rounded-full animate-spin" />
-          
-          {/* Message */}
+      <div className="relative w-64 h-40 overflow-hidden mx-auto">
+
+        {/* Running Dino across screen */}
+        <img
+         src="/DinosaursGIF.gif"
+          alt="Running Dino"
+          className="absolute top-4 left-1/2 transform -translate-x-2/4 h-20 animate-runner"
+          style={{ visibility: 'hidden' }}
+          onLoad={(e) => e.target.style.visibility = 'visible'}
+        />
+    
+        {/* Message */}
+        <div className="absolute bottom-2 w-full text-center">
           <p className="text-gray-600 font-medium text-sm">
-            Loading, please wait...
+            Loading... Dino dodging obstacles!
           </p>
         </div>
       </div>
+    </div>
+    
+
     );
   }
-  
+
   return (
     <Router>
       <Routes>
@@ -56,7 +67,7 @@ function App() {
           path="/addemail"
           element={
             <ProtectedRoute>
-              <AddEmail user={user}/>
+              <AddEmail user={user} />
             </ProtectedRoute>
           }
         />
