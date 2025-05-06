@@ -25,17 +25,23 @@ const FilterData = () => {
   const [selectedMonth, setSelectedMonth] = useState("");
 
   const convertExcelDate = (value) => {
+    const formatDate = (date) =>
+      `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(
+        date.getDate()
+      ).padStart(2, "0")}`;
+  
     if (typeof value === "number") {
       const millisecondsPerDay = 86400000;
       const excelEpoch = new Date(Date.UTC(1899, 11, 30));
       const date = new Date(excelEpoch.getTime() + value * millisecondsPerDay);
-      return date.toISOString().split("T")[0];
+      return formatDate(date);
     } else if (typeof value === "string") {
       const date = new Date(value);
-      if (!isNaN(date)) return date.toISOString().split("T")[0];
+      if (!isNaN(date)) return formatDate(date);
     }
     return "";
   };
+  
 
   const processExcelData = async (fileUrl) => {
     const response = await fetch(fileUrl);
