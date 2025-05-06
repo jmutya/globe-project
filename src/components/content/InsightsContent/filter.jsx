@@ -70,13 +70,18 @@ const FilterData = () => {
       allData = [...allData, ...sheet];
     }
 
+     // new array to store errors
     const errors = []; // new array to store errors
     const parsed = allData
       .map((row, idx) => {
+ 
         const desc = row["Short description"];
+      
+    
         const cleanDesc = desc?.replace(/^[\s']+/, "");
         const match = cleanDesc?.match(/\(([^)]+)\)/);
         const date = convertExcelDate(row["Opened"]);
+     
         const reason = row["Reason For Outage"] || "Empty";
         const number = row["Number"] || "";
 
@@ -108,6 +113,9 @@ const FilterData = () => {
         };
       })
       .filter(Boolean);
+
+    // Save to state
+    setParsingErrors(errors);
 
     // Save to state
     setParsingErrors(errors);
@@ -200,13 +208,17 @@ const FilterData = () => {
       console.log("Total parsed structuredData:", structuredData.length);
       console.log("Filtered data before counting:", filtered.length);
 
+     
+
       filtered.forEach((item) => {
         console.log("Total parsed structuredData:", structuredData.length);
         console.log("Filtered data before counting:", filtered.length);
 
+
         const date = item.date || "Unknown";
         const reason = item.reason?.split("-")[0]?.trim() || "Unknown";
         const fullReason = item.reason || "Empty"; // Get the full reason text
+      
 
         if (!groupedByDate[date]) {
           groupedByDate[date] = {};
@@ -262,6 +274,7 @@ const FilterData = () => {
       const keyGroup = item[groupKey] || "Unknown";
       const keyDate = item.date || "Unknown";
       const reason = item.reason?.split("-")[0]?.trim() || "Empty"; // NEW
+     
 
       if (!grouped[keyGroup]) grouped[keyGroup] = {};
       grouped[keyGroup][keyDate] = (grouped[keyGroup][keyDate] || 0) + 1;
@@ -308,6 +321,7 @@ const FilterData = () => {
   return (
     <div>
       {/* Dropdown Filters */}
+
 
       <div className="mb-4 flex gap-4 items-center flex-wrap">
         <div>
@@ -495,6 +509,18 @@ const FilterData = () => {
           </div>
         )}
       </div>
+
+      {/* Error Messages */}
+      {parsingErrors.length > 0 && (
+        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4 max-h-60 overflow-auto mt-10">
+          <strong className="font-bold">Parsing Issues:</strong>
+          <ul className="mt-2 list-disc list-inside">
+            {parsingErrors.map((error, idx) => (
+              <li key={idx}>{error}</li>
+            ))}
+          </ul>
+        </div>
+      )}
 
       {/* Error Messages */}
       {parsingErrors.length > 0 && (
