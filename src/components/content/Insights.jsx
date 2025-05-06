@@ -61,7 +61,7 @@ const Insights = () => {
       style={{ maxHeight: "88vh" }}
     >
       {/* === Filters Section === */}
-      <div className="bg-gray-50 p-4 rounded-lg border border-gray-200 mb-6">
+      {/* <div className="bg-gray-50 p-4 rounded-lg border border-gray-200 mb-6">
         <h2 className="text-lg font-semibold text-gray-800 mb-4">Filters</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           <div>
@@ -142,7 +142,7 @@ const Insights = () => {
             colors={colors}
           />
         )}
-      </div>
+      </div> */}
 
       {/* === Custom Filters === */}
       <div className="bg-gray-50 p-4 rounded-lg border border-gray-200 mb-6">
