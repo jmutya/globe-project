@@ -115,6 +115,52 @@ const ExcelUploader = () => {
 
     let uploadedCount = 0;
 
+    // Step 1: Gather all existing "Number" values from uploaded files
+    const existingNumbers = new Set();
+
+    try {
+      const { data: existingFiles, error: listError } = await supabase.storage
+        .from("uploads")
+        .list("excels", { limit: 1000 });
+
+      if (listError) {
+        console.error("Error listing existing files:", listError);
+      } else {
+        for (const file of existingFiles) {
+          const { data: fileData, error: downloadError } =
+            await supabase.storage
+              .from("uploads")
+              .download(`excels/${file.name}`);
+
+          if (downloadError) {
+            console.warn(`Skipping ${file.name} due to download error.`);
+            continue;
+          }
+
+          const arrayBuffer = await fileData.arrayBuffer();
+          const workbook = XLSX.read(arrayBuffer, { type: "array" });
+          const sheet = workbook.Sheets[workbook.SheetNames[0]];
+          const rows = XLSX.utils.sheet_to_json(sheet, {
+            header: 1,
+            defval: "",
+          });
+
+          if (rows.length === 0) continue;
+          const headers = rows[0];
+          const numberIndex = headers.indexOf("Number");
+          if (numberIndex === -1) continue;
+
+          for (const row of rows.slice(1)) {
+            const numberValue = row[numberIndex];
+            if (numberValue) existingNumbers.add(numberValue.toString());
+          }
+        }
+      }
+    } catch (err) {
+      console.error("Error while collecting existing Numbers:", err);
+    }
+
+    // Step 2: Handle selected files
     for (let i = 0; i < selectedFiles.length; i++) {
       const file = selectedFiles[i];
 
@@ -128,14 +174,28 @@ const ExcelUploader = () => {
 
         const headers = rows[0];
         const openedIndex = headers.indexOf("Opened");
+        const numberIndex = headers.indexOf("Number");
+
         if (openedIndex === -1) {
           throw new Error("No 'Opened' column found in the Excel file.");
+        }
+
+        if (numberIndex === -1) {
+          throw new Error("No 'Number' column found in the Excel file.");
         }
 
         // Group by year-month (Philippine Time)
         const monthGroups = {};
 
         for (const row of rows.slice(1)) {
+          const numberValue = row[numberIndex]?.toString();
+          if (numberValue && existingNumbers.has(numberValue)) {
+            toast.error(
+              `Duplicate 'Number' detected: ${numberValue} in ${file.name}`
+            );
+            continue; // Skip duplicate
+          }
+
           const openedRaw = row[openedIndex];
           let openedDate;
 
@@ -161,13 +221,15 @@ const ExcelUploader = () => {
             const month = String(datePH.getMonth() + 1).padStart(2, "0");
             const groupKey = `${year}-${month}`;
 
-            // Replace 'Opened' column with formatted PH date string
             row[openedIndex] = formatDatePH(datePH); // "MM/DD/YYYY HH:mm:ss"
 
             if (!monthGroups[groupKey]) {
               monthGroups[groupKey] = [];
             }
             monthGroups[groupKey].push(row);
+
+            // Add to the existingNumbers set to prevent re-uploading within the same batch
+            if (numberValue) existingNumbers.add(numberValue);
           }
         }
 
