@@ -119,7 +119,7 @@ const fetchReportData = async (timeRange, selectedMonth, selectedYear) => {
         const alarmTypeIndex = headers.indexOf("AOR002");
         const causeIndex = headers.indexOf("Cause");
         const reasonIndex = headers.indexOf("Reason For Outage");
-        const resolvedByIndex = headers.indexOf("Resolved by");
+        const resolvedByIndex = headers.indexOf("Assigned to");
         const numberByIndex = headers.indexOf("Number");
         const assignedToIndex = headers.indexOf("Assigned to");
 
