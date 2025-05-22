@@ -1,8 +1,8 @@
 
 import React, { useState } from "react";
 import FilterData from "../InsightsContent/filter";
-import TicketIssuance from "./TicketIssuance";
-import ClosingAccuracy from "./ClosingAccuracy";
+import TicketIssuance from "./InsightContent/TicketIssuance";
+import ClosingAccuracy from "./InsightContent/ClosingAccuracy";
 
 const InsightLayout = () => {
   const [selectedAccuracyView, setSelectedAccuracyView] =
