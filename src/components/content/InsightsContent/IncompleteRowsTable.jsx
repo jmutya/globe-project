@@ -83,6 +83,7 @@ const IncompleteRowsTable = ({
             onChange={handleSearchChange}
             className="w-full md:w-1/2 p-2 border border-gray-300 rounded-lg focus:ring focus:ring-yellow-200 text-sm"
           />
+          {/* filter by month here -----------------------------------------> */}
           <select
             value={selectedMonth}
             onChange={handleMonthChange}

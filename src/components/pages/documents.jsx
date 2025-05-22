@@ -12,7 +12,7 @@ const ExcelUploader = () => {
   const [showUploadModal, setShowUploadModal] = useState(false);
   const [selectedFiles, setSelectedFiles] = useState([]);
   const [fileToDelete, setFileToDelete] = useState(null);
-  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [showDeleteModal, setShowDelete] = useState(false); // Renamed to avoid conflict
   const [selectedFilesToDelete, setSelectedFilesToDelete] = useState([]);
   const [showMultiDeleteModal, setShowMultiDeleteModal] = useState(false);
 
@@ -25,13 +25,23 @@ const ExcelUploader = () => {
     const months = [];
 
     json.forEach((row) => {
-      const value = row["Opened"] || row["Created"];
+      const value = row["Opened"] || row["Created"]; 
       let parsedDate;
 
       if (typeof value === "number") {
         parsedDate = new Date(Math.round((value - 25569) * 86400 * 1000));
-      } else if (typeof value === "string") {
-        parsedDate = new Date(value);
+      } 
+      else if (typeof value === "string") {
+        try {
+          parsedDate = new Date(value);
+          if (isNaN(parsedDate.getTime()) && value.match(/^\d{1,2}\/\d{1,2}\/\d{4} \d{1,2}:\d{2}(:\d{2})?$/)) {
+              const parts = value.split(/[\/\s:]/);
+              parsedDate = new Date(parts[2], parts[0] - 1, parts[1], parts[3], parts[4], parts[5] || 0);
+          }
+        } catch (e) {
+          console.warn("Failed to parse date string:", value, e);
+          parsedDate = null;
+        }
       }
 
       if (parsedDate && !isNaN(parsedDate.getTime())) {
@@ -54,7 +64,7 @@ const ExcelUploader = () => {
     try {
       const { data, error } = await supabase.storage
         .from("uploads")
-        .list("excels");
+        .list("excels", { limit: 1000 });
       if (error) throw error;
 
       const validFiles = data.filter((file) => !file.name.startsWith("."));
@@ -67,32 +77,48 @@ const ExcelUploader = () => {
             .getPublicUrl(fullPath).data.publicUrl;
 
           let month = "—";
-          try {
-            const res = await fetch(fileUrl);
-            const arrayBuffer = await res.arrayBuffer();
-            const workbook = XLSX.read(arrayBuffer, { type: "array" });
-            const sheet = workbook.Sheets[workbook.SheetNames[0]];
-            const json = XLSX.utils.sheet_to_json(sheet, { defval: "" });
+          if (file.name.endsWith('.xlsx') || file.name.endsWith('.xls')) {
+            try {
+              const res = await fetch(fileUrl);
+              const arrayBuffer = await res.arrayBuffer();
+              const workbook = XLSX.read(arrayBuffer, { type: "array" });
+              const sheet = workbook.Sheets[workbook.SheetNames[0]];
+              const json = XLSX.utils.sheet_to_json(sheet, { defval: "" });
 
-            if (json.length > 0) {
-              month = parseExcelMonths(json);
+              if (json.length > 0) {
+                month = parseExcelMonths(json);
+              }
+            } catch (err) {
+              console.warn(`Could not parse ${file.name} for month info:`, err.message);
+              month = "Error parsing file";
             }
-          } catch (err) {
-            console.warn(`Could not parse ${file.name}:`, err.message);
+          } else {
+            month = "N/A";
           }
+
+          const uploadedDate = new Date(file.created_at).toLocaleString("en-PH", {
+            year: 'numeric',
+            month: 'numeric',
+            day: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit',
+            second: '2-digit',
+            hour12: true,
+          });
 
           return {
             name: file.name,
-            date: new Date().toLocaleDateString(),
+            date: uploadedDate,
             month,
             url: fileUrl,
           };
         })
       );
 
-      setFiles(fileList);
+      setFiles(fileList.sort((a, b) => new Date(b.date) - new Date(a.date)));
     } catch (err) {
       console.error("Error loading files:", err.message);
+      toast.error("Failed to load uploaded files.");
     } finally {
       setLoadingFiles(false);
     }
@@ -107,62 +133,22 @@ const ExcelUploader = () => {
   const handleFilesSelected = (e) => {
     setSelectedFiles(Array.from(e.target.files));
   };
+
   const handleUploadFile = async () => {
-    if (selectedFiles.length === 0) return;
+    if (selectedFiles.length === 0) {
+      toast.error("Please select files to upload.");
+      return;
+    }
 
     setUploading(true);
     setUploadProgress(0);
 
-    let uploadedCount = 0;
+    let successfullyProcessedOriginalFiles = 0;
+    const totalSelectedFiles = selectedFiles.length;
 
-    // Step 1: Gather all existing "Number" values from uploaded files
-    const existingNumbers = new Set();
-
-    try {
-      const { data: existingFiles, error: listError } = await supabase.storage
-        .from("uploads")
-        .list("excels", { limit: 1000 });
-
-      if (listError) {
-        console.error("Error listing existing files:", listError);
-      } else {
-        for (const file of existingFiles) {
-          const { data: fileData, error: downloadError } =
-            await supabase.storage
-              .from("uploads")
-              .download(`excels/${file.name}`);
-
-          if (downloadError) {
-            console.warn(`Skipping ${file.name} due to download error.`);
-            continue;
-          }
-
-          const arrayBuffer = await fileData.arrayBuffer();
-          const workbook = XLSX.read(arrayBuffer, { type: "array" });
-          const sheet = workbook.Sheets[workbook.SheetNames[0]];
-          const rows = XLSX.utils.sheet_to_json(sheet, {
-            header: 1,
-            defval: "",
-          });
-
-          if (rows.length === 0) continue;
-          const headers = rows[0];
-          const numberIndex = headers.indexOf("Number");
-          if (numberIndex === -1) continue;
-
-          for (const row of rows.slice(1)) {
-            const numberValue = row[numberIndex];
-            if (numberValue) existingNumbers.add(numberValue.toString());
-          }
-        }
-      }
-    } catch (err) {
-      console.error("Error while collecting existing Numbers:", err);
-    }
-
-    // Step 2: Handle selected files
-    for (let i = 0; i < selectedFiles.length; i++) {
+    for (let i = 0; i < totalSelectedFiles; i++) {
       const file = selectedFiles[i];
+      let currentFileStatusToast = toast.loading(`Processing ${file.name}...`);
 
       try {
         const data = await file.arrayBuffer();
@@ -170,72 +156,85 @@ const ExcelUploader = () => {
         const sheet = workbook.Sheets[workbook.SheetNames[0]];
         const rows = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: "" });
 
-        if (rows.length === 0) continue;
+        if (rows.length === 0) {
+          toast.dismiss(currentFileStatusToast);
+          toast(`Skipping empty file: ${file.name}`, { icon: 'ℹ️' });
+          continue;
+        }
 
         const headers = rows[0];
         const openedIndex = headers.indexOf("Opened");
-        const numberIndex = headers.indexOf("Number");
+        const createdIndex = headers.indexOf("Created"); // Get Created index as well
 
-        if (openedIndex === -1) {
-          throw new Error("No 'Opened' column found in the Excel file.");
+        const dateColumnToUse = openedIndex !== -1 ? "Opened" : (createdIndex !== -1 ? "Created" : null);
+        const dateColumnIndex = dateColumnToUse ? headers.indexOf(dateColumnToUse) : -1;
+
+        if (dateColumnIndex === -1) {
+            toast.dismiss(currentFileStatusToast);
+            toast.error(`Neither 'Opened' nor 'Created' column found in ${file.name}. Skipping file.`);
+            continue;
         }
 
-        if (numberIndex === -1) {
-          throw new Error("No 'Number' column found in the Excel file.");
-        }
-
-        // Group by year-month (Philippine Time)
         const monthGroups = {};
 
-        for (const row of rows.slice(1)) {
-          const numberValue = row[numberIndex]?.toString();
-          if (numberValue && existingNumbers.has(numberValue)) {
-            toast.error(
-              `Duplicate 'Number' detected: ${numberValue} in ${file.name}`
-            );
-            continue; // Skip duplicate
+        for (let j = 1; j < rows.length; j++) {
+          const row = rows[j];
+          const rawDateValue = row[dateColumnIndex];
+          let parsedDate;
+
+          if (typeof rawDateValue === "number") {
+            const parsed = XLSX.SSF.parse_date_code(rawDateValue);
+            if (parsed) {
+                parsedDate = new Date(parsed.y, parsed.m - 1, parsed.d, parsed.H, parsed.M, parsed.S);
+            }
+          } else if (typeof rawDateValue === "string") {
+            try {
+                parsedDate = new Date(rawDateValue);
+                if (isNaN(parsedDate.getTime()) && rawDateValue.match(/^\d{1,2}\/\d{1,2}\/\d{4} \d{1,2}:\d{2}(:\d{2})?$/)) {
+                    const parts = rawDateValue.split(/[\/\s:]/);
+                    parsedDate = new Date(parts[2], parts[0] - 1, parts[1], parts[3], parts[4], parts[5] || 0);
+                }
+            } catch (e) {
+                console.warn(`Failed to parse date string in row ${j+1}:`, rawDateValue, e);
+                parsedDate = null;
+            }
           }
 
-          const openedRaw = row[openedIndex];
-          let openedDate;
-
-          if (typeof openedRaw === "number") {
-            const parsed = XLSX.SSF.parse_date_code(openedRaw);
-            openedDate = new Date(
-              parsed.y,
-              parsed.m - 1,
-              parsed.d,
-              parsed.H,
-              parsed.M,
-              parsed.S
-            );
-          } else {
-            openedDate = new Date(openedRaw);
-          }
-
-          if (!isNaN(openedDate)) {
+          if (parsedDate && !isNaN(parsedDate.getTime())) {
             const datePH = new Date(
-              openedDate.toLocaleString("en-US", { timeZone: "Asia/Manila" })
+              parsedDate.toLocaleString("en-US", { timeZone: "Asia/Manila" })
             );
             const year = datePH.getFullYear();
             const month = String(datePH.getMonth() + 1).padStart(2, "0");
             const groupKey = `${year}-${month}`;
 
-            row[openedIndex] = formatDatePH(datePH); // "MM/DD/YYYY HH:mm:ss"
+            row[dateColumnIndex] = formatDatePH(datePH); 
 
             if (!monthGroups[groupKey]) {
               monthGroups[groupKey] = [];
             }
             monthGroups[groupKey].push(row);
-
-            // Add to the existingNumbers set to prevent re-uploading within the same batch
-            if (numberValue) existingNumbers.add(numberValue);
+          } else {
+            console.warn(`Skipping row ${j+1} in ${file.name} due to invalid or unparseable date in '${dateColumnToUse}' column:`, rawDateValue);
           }
         }
 
-        // Upload one file per PH month
-        const keys = Object.keys(monthGroups);
-        for (const monthKey of keys) {
+        const monthlyGroupKeys = Object.keys(monthGroups);
+        const totalPartsForFile = monthlyGroupKeys.length;
+
+        if (totalPartsForFile === 0) {
+            toast.dismiss(currentFileStatusToast);
+            toast.error(`No valid date entries found in ${file.name} for splitting. Skipping.`);
+            continue;
+        }
+
+        let partsUploadedForThisFile = 0;
+        let filesUploadedFromThisOriginal = [];
+
+        // Generate a unique timestamp for this upload batch
+        const uniqueTimestamp = Date.now(); 
+
+        for (const monthKey of monthlyGroupKeys) {
           const monthRows = monthGroups[monthKey];
 
           const newWorkbook = XLSX.utils.book_new();
@@ -250,45 +249,50 @@ const ExcelUploader = () => {
           const blob = new Blob([excelBuffer], { type: file.type });
 
           const fileNameWithoutExt = file.name.replace(/\.[^/.]+$/, "");
-          const newFileName = `${fileNameWithoutExt}_${monthKey}.xlsx`;
+          // IMPORTANT CHANGE: Append unique timestamp to the filename
+          const newFileName = `${fileNameWithoutExt}_${monthKey}_${uniqueTimestamp}.xlsx`; 
 
-          // Upload to Supabase
           const { error } = await supabase.storage
             .from("uploads")
             .upload(`excels/${newFileName}`, blob, {
               cacheControl: "3600",
-              upsert: true,
+              upsert: false, // Set upsert to false, as we're generating unique names
             });
 
-          if (error) throw error;
-
-          uploadedCount++;
-          setUploadProgress(Math.round((uploadedCount / keys.length) * 100));
-
-          setFiles((prev) => [
-            ...prev,
-            {
-              name: newFileName,
-              date: new Date().toLocaleDateString("en-PH"),
-              month: monthKey,
-              url: supabase.storage
-                .from("uploads")
-                .getPublicUrl(`excels/${newFileName}`).data.publicUrl,
-            },
-          ]);
+          if (error) {
+            console.error(`Supabase upload error for ${newFileName}:`, error);
+            throw error; // Re-throw to be caught by the outer try/catch
+          }
+          filesUploadedFromThisOriginal.push(newFileName);
+          partsUploadedForThisFile++;
+          setUploadProgress(
+            Math.round(
+              ((i + (partsUploadedForThisFile / totalPartsForFile)) / totalSelectedFiles) * 100
+            )
+          );
         }
+        successfullyProcessedOriginalFiles++;
+        toast.dismiss(currentFileStatusToast);
+        toast.success(`Successfully processed ${file.name}. Uploaded ${filesUploadedFromThisOriginal.length} unique monthly files.`);
+        console.log(`Uploaded unique files from ${file.name}:`, filesUploadedFromThisOriginal);
       } catch (error) {
-        console.error("Upload failed:", error);
-        toast.error(`Failed to upload ${file.name}`);
+        toast.dismiss(currentFileStatusToast);
+        console.error("Upload failed for file:", file.name, error);
+        toast.error(`Failed to process or upload ${file.name}: ${error.message}`);
       }
     }
 
-    toast.success("Upload completed");
+    if (successfullyProcessedOriginalFiles > 0) {
+      toast.success("All selected files have been processed and uploaded uniquely!");
+    } else {
+        toast.error("No files were successfully processed or uploaded.");
+    }
+    
     setUploading(false);
     setShowUploadModal(false);
+    fetchUploadedFiles();
   };
 
-  // Format as "MM/DD/YYYY HH:mm:ss" in PH time
   function formatDatePH(date) {
     return new Intl.DateTimeFormat("en-US", {
       timeZone: "Asia/Manila",
@@ -300,23 +304,6 @@ const ExcelUploader = () => {
       second: "2-digit",
       hour12: false,
     })
-      .format(date)
-      .replace(",", "");
-  }
-
-  // Helper function to format the date (MM/DD/YYYY HH:mm:ss)
-  function formatDate(date) {
-    const options = {
-      year: "numeric",
-      month: "2-digit",
-      day: "2-digit",
-      hour: "2-digit",
-      minute: "2-digit",
-      second: "2-digit",
-      hour12: false,
-      timeZone: "Asia/Manila", // Set to Philippine Time (PHT)
-    };
-    return new Intl.DateTimeFormat("en-US", options)
       .format(date)
       .replace(",", "");
   }
@@ -355,7 +342,7 @@ const ExcelUploader = () => {
   const isSelected = (fileName) => selectedFilesToDelete.includes(fileName);
 
   const allVisibleFileNames = files.map((f) => f.name);
-  const areAllSelected = allVisibleFileNames.every((name) =>
+  const areAllSelected = allVisibleFileNames.length > 0 && allVisibleFileNames.every((name) =>
     selectedFilesToDelete.includes(name)
   );
 
@@ -386,6 +373,8 @@ const ExcelUploader = () => {
     } catch (error) {
       console.error("Delete failed:", error);
       toast.error("Failed to delete selected files");
+    } finally {
+      setShowMultiDeleteModal(false);
     }
   };
 
@@ -398,12 +387,15 @@ const ExcelUploader = () => {
             Excel Files
           </h2>
           <div className="flex items-center gap-3">
-            <button
-              onClick={toggleSelectAll}
-              className="flex items-center gap-2 bg-gray-100 text-gray-800 px-4 py-2 rounded-xl hover:bg-gray-200 transition"
-            >
-              {areAllSelected ? "Unselect All" : "Select All"}
-            </button>
+            {files.length > 0 && (
+              <button
+                onClick={toggleSelectAll}
+                className="flex items-center gap-2 bg-gray-100 text-gray-800 px-4 py-2 rounded-xl hover:bg-gray-200 transition"
+              >
+                {areAllSelected ? "Unselect All" : "Select All"}
+              </button>
+            )}
+            
             {selectedFilesToDelete.length > 0 && (
               <button
                 onClick={() => setShowMultiDeleteModal(true)}
@@ -424,10 +416,11 @@ const ExcelUploader = () => {
           </div>
         </div>
 
-        <div className="flex-1 border border-gray-200 rounded-xl bg-white p-6 shadow-sm">
-          <div className="grid grid-cols-12 gap-4 pb-3 border-b border-gray-300 text-gray-700 font-bold text-sm px-4">
-            <div className="col-span-5">File</div>
-            <div className="col-span-5">Month</div>
+        <div className="flex-1 border border-gray-200 rounded-xl bg-white p-6 shadow-sm overflow-auto">
+          <div className="grid grid-cols-12 gap-4 pb-3 border-b border-gray-300 text-gray-700 font-bold text-sm px-4 sticky top-0 bg-white z-10">
+            <div className="col-span-4">File</div>
+            <div className="col-span-4">Month</div>
+            <div className="col-span-2">Added On</div>
             <div className="col-span-2 text-right">Action</div>
           </div>
 
@@ -445,7 +438,7 @@ const ExcelUploader = () => {
                   key={index}
                   className="grid grid-cols-12 gap-4 py-3 items-center hover:bg-indigo-50 transition rounded-lg px-4"
                 >
-                  <div className="col-span-5 flex items-center gap-2 truncate">
+                  <div className="col-span-4 flex items-center gap-2 truncate">
                     <input
                       type="checkbox"
                       checked={isSelected(file.name)}
@@ -455,7 +448,8 @@ const ExcelUploader = () => {
                     <FaFileExcel className="text-green-600 w-5 h-5" />
                     <span className="truncate">{file.name}</span>
                   </div>
-                  <div className="col-span-5">{file.month || "—"}</div>
+                  <div className="col-span-4 text-sm">{file.month || "—"}</div>
+                  <div className="col-span-2 text-sm">{file.date}</div>
                   <div className="col-span-2 text-right">
                     <button
                       onClick={() => confirmDelete(file.name)}
@@ -507,7 +501,7 @@ const ExcelUploader = () => {
             </div>
 
             {selectedFiles.length > 0 && (
-              <ul className="text-sm text-gray-700 mb-3 space-y-1 max-h-24 overflow-y-auto">
+              <ul className="text-sm text-gray-700 mb-3 space-y-1 max-h-24 overflow-y-auto border p-2 rounded">
                 {selectedFiles.map((file, index) => (
                   <li key={index}>• {file.name}</li>
                 ))}
@@ -527,6 +521,7 @@ const ExcelUploader = () => {
               <button
                 onClick={() => setShowUploadModal(false)}
                 className="px-4 py-2 rounded bg-gray-200 text-gray-800 hover:bg-gray-300"
+                disabled={uploading}
               >
                 Cancel
               </button>

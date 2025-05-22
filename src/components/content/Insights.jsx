@@ -200,6 +200,7 @@ const Insights = () => {
         {selectedAccuracyView === "ticketIssuance" && (
           <div className="mb-10">
             <div className="flex flex-col lg:flex-row gap-6">
+            {/* accuracy progress is here-------------------------------------- */}
               <AccuracyProgress
                 percentage={accuracyPercentage}
                 title="Overall Ticket Issuance Accuracy"

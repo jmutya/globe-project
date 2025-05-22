@@ -27,7 +27,7 @@ const componentMap = {
   "Mean Time To Investigate": lazy(() => import("../../content/mtti")),
   // "Mean Time To Dispatch": lazy(() => import("../../content/mttd")),
   "First Touch Resolution": lazy(() => import("../../content/ftr")),
-  // "Sample Excel Uploader To SQL": lazy(() => import("../sampleUpload")),
+  //  "Sample Excel Uploader To SQL": lazy(() => import("../sampleUpload")),
  
 };
 
@@ -43,7 +43,7 @@ const navigationItems = [
       { name: "Mean Time To Investigate" },
       //  { name: "Mean Time To Dispatch" },
       { name: "First Touch Resolution" },
-      // { name: "Sample Excel Uploader To SQL" },
+    //  { name: "Sample Excel Uploader To SQL" },
 
    
     ],
