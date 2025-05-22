@@ -115,7 +115,7 @@ const UnmatchedRowsTable = ({
                         Ticket #{row.number}
                       </p>
                       <p className="text-sm text-gray-600">
-                        Resolved By:{" "}
+                        Assigned To:{" "}
                         <span className="font-semibold text-gray-800">
                           {row.resolvedBy || (
                             <span className="text-red-600">Not Assigned</span>

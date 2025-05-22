@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import * as XLSX from "xlsx";
+import { saveAs } from "file-saver";
 import supabase from "../../backend/supabase/supabase";
 
 const processExcelData = async (fileUrl) => {
@@ -73,12 +74,33 @@ function ftrTable() {
     setTicketsPerCaller(sorted);
   };
 
+  const handleExportExcel = () => {
+    // Create a new workbook and append the table data
+    const wb = XLSX.utils.book_new();
+    const ws = XLSX.utils.json_to_sheet(ticketsPerCaller);
+    XLSX.utils.book_append_sheet(wb, ws, "Tickets Per Caller");
+
+    // Generate and download
+    const wbout = XLSX.write(wb, { bookType: "xlsx", type: "array" });
+    saveAs(
+      new Blob([wbout], { type: "application/octet-stream" }),
+      "ftr_report.xlsx"
+    );
+  };
+
   return (
     <div className="max-h-[850px] overflow-auto border border-gray-200 rounded-2xl p-6 bg-white shadow-sm">
-      <div className="foverflow-y-auto max-h-[300px] rounded-xl p-6 bg-gray-50">
-        <h3 className="text-lg font-semibold text-gray-800 mb-4">
+      <div className="foverflow-y-auto max-h-[300px] rounded-xl p-6 bg-gray-50 flex items-center justify-between">
+        <h3 className="text-lg font-semibold text-gray-800">
           Total Tickets Per Caller
         </h3>
+        {/* Export Button */}
+        <button
+          onClick={handleExportExcel}
+          className="bg-green-500 text-white text-sm px-4 py-1.5 rounded-lg shadow hover:bg-green-600 transition"
+        >
+          Export as Excel
+        </button>
       </div>
 
       <div className="overflow-x-auto">
@@ -99,15 +121,19 @@ function ftrTable() {
           <tbody className="bg-white divide-y divide-gray-200">
             {ticketsPerCaller.map((row, index) => (
               <tr key={index} className="hover:bg-gray-50">
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{row.caller}</td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{row.totalTickets}</td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                  {row.caller}
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                  {row.totalTickets}
+                </td>
               </tr>
             ))}
           </tbody>
         </table>
       </div>
     </div>
-  ); 
+  );
 }
 
 export default ftrTable;

@@ -200,10 +200,19 @@ const Insights = () => {
         {selectedAccuracyView === "ticketIssuance" && (
           <div className="mb-10">
             <div className="flex flex-col lg:flex-row gap-6">
+              
+              <div className="flex flex-col w-full lg:w-1/4">  
               <AccuracyProgress
                 percentage={accuracyPercentage}
                 title="Overall Ticket Issuance Accuracy"
-              />
+                onMonthChange={setSelectedMonth}
+              />  
+              <AccuracyProgress
+                percentage={accuracyPercentage}               
+              />  
+
+
+            </div>  
 
               <div className="flex-1">
                 <IncompleteRowsTable
@@ -212,6 +221,7 @@ const Insights = () => {
                   percentagePerAssignedPerson={percentagePerAssignedPerson}
                 />
               </div>
+              
             </div>
 
             <div className="flex items-center mt-6 mb-4 space-x-4">

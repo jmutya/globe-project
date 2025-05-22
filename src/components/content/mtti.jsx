@@ -1,9 +1,9 @@
 import React, { useEffect, useState } from "react";
 import * as XLSX from "xlsx";
 import supabase from "../../backend/supabase/supabase";
-import { FaArrowUp, FaArrowDown } from "react-icons/fa"; // Import sorting icons
+import { FaArrowUp, FaArrowDown } from "react-icons/fa";
 
-// Date conversion logic...
+// Convert Excel Date to ISO String
 const convertExcelDate = (value) => {
   if (typeof value === "string") {
     const cleaned = value.replace(/\s+/g, " ").trim();
@@ -17,10 +17,7 @@ const convertExcelDate = (value) => {
     if (ampm.toLowerCase() === "am" && hour === 12) hour = 0;
 
     const date = new Date(
-      `${year}-${month}-${day}T${String(hour).padStart(
-        2,
-        "0"
-      )}:${minute}:${second}`
+      `${year}-${month}-${day}T${String(hour).padStart(2, "0")}:${minute}:${second}`
     );
     if (!isNaN(date)) return date.toISOString();
   }
@@ -44,10 +41,7 @@ const processExcelData = async (fileUrl) => {
 };
 
 const fetchmtti = async () => {
-  const { data: files, error } = await supabase.storage
-    .from("uploads")
-    .list("excels");
-
+  const { data: files, error } = await supabase.storage.from("uploads").list("excels");
   if (error) return console.error("Supabase error:", error);
 
   let allData = [];
@@ -56,12 +50,11 @@ const fetchmtti = async () => {
     const { data: fileUrl } = supabase.storage
       .from("uploads")
       .getPublicUrl(`excels/${file.name}`);
-
     const sheet = await processExcelData(fileUrl.publicUrl);
     allData = [...allData, ...sheet];
   }
 
-  const reportData = allData.map((row) => {
+  return allData.map((row) => {
     const icRaw = row["Investigation Completed"];
     const reportedRaw = row["Reported"];
     const caller = row["Caller"];
@@ -86,17 +79,12 @@ const fetchmtti = async () => {
       mtti,
     };
   });
-
-  return reportData;
 };
 
 function MttiTable() {
   const [reportData, setReportData] = useState([]);
   const [evaluationFilter, setEvaluationFilter] = useState("All");
-  const [sortConfig, setSortConfig] = useState({
-    column: "ticketcount", // Default column to sort by
-    direction: "asc", // Default sort direction
-  });
+  const [sortConfig, setSortConfig] = useState({ column: "ticketcount", direction: "asc" });
 
   useEffect(() => {
     const getReportData = async () => {
@@ -116,12 +104,10 @@ function MttiTable() {
     return acc;
   }, {});
 
-  const totalMTTIByCaller = Object.entries(groupedByCaller).map(
-    ([caller, data]) => {
-      const avgMTTI = (data.totalMTTI / data.count).toFixed(2);
-      return { caller, totalMTTI: avgMTTI, ticketcount: data.count };
-    }
-  );
+  const totalMTTIByCaller = Object.entries(groupedByCaller).map(([caller, data]) => {
+    const avgMTTI = (data.totalMTTI / data.count).toFixed(2);
+    return { caller, totalMTTI: avgMTTI, ticketcount: data.count };
+  });
 
   const filteredMTTIData = totalMTTIByCaller.filter((item) => {
     if (evaluationFilter === "All") return true;
@@ -129,16 +115,13 @@ function MttiTable() {
     return evaluationFilter === "Passed" ? isPassed : !isPassed;
   });
 
-  const totalMTTI = reportData
-    .reduce((sum, item) => {
-      const value = parseFloat(item.mtti);
-      return !isNaN(value) ? sum + value : sum;
-    }, 0)
-    .toFixed(2);
+  const totalMTTI = reportData.reduce((sum, item) => {
+    const value = parseFloat(item.mtti);
+    return !isNaN(value) ? sum + value : sum;
+  }, 0);
 
   const validRows = reportData.filter((item) => !isNaN(parseFloat(item.mtti)));
-  const averageMTTIinMinutes =
-    validRows.length > 0 ? totalMTTI / validRows.length : 0;
+  const averageMTTIinMinutes = validRows.length > 0 ? totalMTTI / validRows.length : 0;
 
   const formatMinutesToHMS = (minutes) => {
     const numMinutes = parseFloat(minutes);
@@ -158,27 +141,46 @@ function MttiTable() {
     return parts.length > 0 ? parts.join(" ") : "0s";
   };
 
-  const averageFormatted = formatMinutesToHMS(averageMTTIinMinutes);
-
   const handleSort = (column) => {
     let direction = "asc";
     if (sortConfig.column === column && sortConfig.direction === "asc") {
       direction = "desc";
     }
-
     setSortConfig({ column, direction });
   };
 
   const sortedData = [...filteredMTTIData].sort((a, b) => {
     if (sortConfig.column === "ticketcount") {
-      if (sortConfig.direction === "asc") {
-        return a.ticketcount - b.ticketcount;
-      } else {
-        return b.ticketcount - a.ticketcount;
-      }
+      return sortConfig.direction === "asc"
+        ? a.ticketcount - b.ticketcount
+        : b.ticketcount - a.ticketcount;
     }
-    return 0; // Default sorting for other columns
+    return 0;
   });
+
+  const exportToCSV = () => {
+    const headers = ["Caller", "# of Assigned Tickets", "MTTI", "Evaluation"];
+    const rows = sortedData.map((item) => [
+      item.caller,
+      item.ticketcount,
+      formatMinutesToHMS(item.totalMTTI),
+      parseFloat(item.totalMTTI) < 16 ? "Passed" : "Failed",
+    ]);
+
+    const csvContent =
+      [headers, ...rows]
+        .map((e) => e.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(","))
+        .join("\n");
+
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.setAttribute("href", url);
+    link.setAttribute("download", "mtti_report.csv");
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
 
   return (
     <div className="max-h-[850px] overflow-auto border border-gray-200 rounded-2xl p-6 bg-white shadow-sm">
@@ -188,32 +190,39 @@ function MttiTable() {
             Overall Average MTTI
           </h3>
           <span className="inline-block text-lg font-semibold text-blue-600 bg-blue-50 px-4 py-1.5 rounded-xl shadow-sm">
-            {averageFormatted}
+            {formatMinutesToHMS(averageMTTIinMinutes)}
           </span>
         </div>
       </div>
 
-      {/* Filter Buttons */}
-      <div className="flex justify-left mb-4 space-x-2 mt-2">
-        {["All", "Passed", "Failed"].map((type) => (
-          <button
-            key={type}
-            onClick={() => setEvaluationFilter(type)}
-            className={`px-4 py-1.5 text-sm rounded-lg border ${
-              evaluationFilter === type
-                ? "bg-indigo-300 text-white border-indigo-300"
-                : "bg-white text-gray-700 border-gray-300 hover:bg-indigo-50"
-            } transition`}
-          >
-            {type}
-          </button>
-        ))}
+      {/* Filters & Export */}
+      <div className="flex flex-wrap justify-between items-center my-4">
+        <div className="flex space-x-2">
+          {["All", "Passed", "Failed"].map((type) => (
+            <button
+              key={type}
+              onClick={() => setEvaluationFilter(type)}
+              className={`px-4 py-1.5 text-sm rounded-lg border ${
+                evaluationFilter === type
+                  ? "bg-indigo-300 text-white border-indigo-300"
+                  : "bg-white text-gray-700 border-gray-300 hover:bg-indigo-50"
+              } transition`}
+            >
+              {type}
+            </button>
+          ))}
+        </div>
+
+        <button
+          onClick={exportToCSV}
+          className="bg-green-500 text-white text-sm px-4 py-1.5 rounded-lg shadow hover:bg-green-600 transition"
+        >
+          Export as Excel
+        </button>
       </div>
 
       <div className="overflow-x-auto">
-        <h3 className="text-lg font-semibold text-gray-800 mb-4">
-          MTTI by Caller
-        </h3>
+        <h3 className="text-lg font-semibold text-gray-800 mb-4">MTTI by Caller</h3>
         <table className="min-w-full divide-y divide-gray-200">
           <thead className="bg-indigo-50">
             <tr>

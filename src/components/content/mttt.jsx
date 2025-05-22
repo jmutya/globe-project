@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from "react";
 import * as XLSX from "xlsx";
+import { saveAs } from "file-saver";
+import { FaArrowUp, FaArrowDown } from "react-icons/fa";
 import supabase from "../../backend/supabase/supabase";
-import { FaArrowUp, FaArrowDown } from "react-icons/fa"; // Import sorting icons
 
 // Convert Excel date to ISO format
 const convertExcelDate = (value) => {
@@ -17,10 +18,7 @@ const convertExcelDate = (value) => {
     if (ampm.toLowerCase() === "am" && hour === 12) hour = 0;
 
     const date = new Date(
-      `${year}-${month}-${day}T${String(hour).padStart(
-        2,
-        "0"
-      )}:${minute}:${second}`
+      `${year}-${month}-${day}T${String(hour).padStart(2, "0")}:${minute}:${second}`
     );
     return !isNaN(date) ? date.toISOString() : "";
   }
@@ -53,17 +51,15 @@ const fetchReportedAndCreated = async () => {
   if (error) return console.error("Supabase error:", error);
 
   let allData = [];
-
   for (const file of files) {
     const { data: fileUrl } = supabase.storage
       .from("uploads")
       .getPublicUrl(`excels/${file.name}`);
-
     const sheet = await processExcelData(fileUrl.publicUrl);
     allData = [...allData, ...sheet];
   }
 
-  const reportData = allData.map((row) => {
+  return allData.map((row) => {
     const reportedRaw = row["Reported"];
     const createdRaw = row["Created"];
     const caller = row["Caller"];
@@ -77,7 +73,7 @@ const fetchReportedAndCreated = async () => {
       const reportedDate = new Date(reportedISO);
       const createdDate = new Date(createdISO);
       const diffInMs = createdDate - reportedDate;
-      mttt = (diffInMs / (1000 * 60)).toFixed(2); // in minutes
+      mttt = (diffInMs / (1000 * 60)).toFixed(2);
     }
 
     return {
@@ -88,16 +84,14 @@ const fetchReportedAndCreated = async () => {
       mttt,
     };
   });
-
-  return reportData;
 };
 
 const ReportedCreatedTable = () => {
   const [reportData, setReportData] = useState([]);
   const [evaluationFilter, setEvaluationFilter] = useState("All");
   const [sortConfig, setSortConfig] = useState({
-    column: "ticketcount", // Default column to sort by
-    direction: "asc", // Default sort direction
+    column: "ticketcount",
+    direction: "asc",
   });
 
   useEffect(() => {
@@ -108,141 +102,156 @@ const ReportedCreatedTable = () => {
     getReportData();
   }, []);
 
+  // Group by caller and compute average MTTT
   const groupedByCaller = reportData.reduce((acc, item) => {
     if (!acc[item.caller]) acc[item.caller] = { totalMTTT: 0, count: 0 };
-    const mtttValue = parseFloat(item.mttt);
-    if (!isNaN(mtttValue)) {
-      acc[item.caller].totalMTTT += mtttValue;
+    const val = parseFloat(item.mttt);
+    if (!isNaN(val)) {
+      acc[item.caller].totalMTTT += val;
       acc[item.caller].count += 1;
     }
     return acc;
   }, {});
 
   const totalMTTTByCaller = Object.entries(groupedByCaller).map(
-    ([caller, data]) => {
-      const avgMTTT = (data.totalMTTT / data.count).toFixed(2);
-      return { caller, totalMTTT: avgMTTT, ticketcount: data.count };
-    }
+    ([caller, data]) => ({
+      caller,
+      totalMTTT: (data.totalMTTT / data.count).toFixed(2),
+      ticketcount: data.count,
+    })
   );
 
-  const totalMTTT = reportData
-    .reduce((sum, item) => {
-      const value = parseFloat(item.mttt);
-      return !isNaN(value) ? sum + value : sum;
-    }, 0)
-    .toFixed(2);
-
-  const formatMinutesToHMS = (minutes) => {
-    const totalSeconds = Math.floor(minutes * 60);
-    const days = Math.floor(totalSeconds / (3600 * 24));
-    const hrs = Math.floor((totalSeconds % (3600 * 24)) / 3600);
-    const mins = Math.floor((totalSeconds % 3600) / 60);
-    const secs = totalSeconds % 60;
-
-    const parts = [];
-    if (days > 0) parts.push(`${days}d`);
-    if (hrs > 0) parts.push(`${hrs}h`);
-    if (mins > 0) parts.push(`${mins}m`);
-    if (secs > 0) parts.push(`${secs}s`);
-
-    return parts.length > 0 ? parts.join(" ") : "0s";
-  };
-
-  const validRows = reportData.filter((item) => !isNaN(parseFloat(item.mttt)));
-  const averageMTTTinMinutes =
-    validRows.length > 0 ? totalMTTT / validRows.length : 0;
-
-  const averageFormatted = formatMinutesToHMS(averageMTTTinMinutes);
-
+  // Filter passed/failed
   const filteredRows = totalMTTTByCaller.filter((item) => {
     if (evaluationFilter === "All") return true;
     const passed = parseFloat(item.totalMTTT) < 16;
     return evaluationFilter === "Passed" ? passed : !passed;
   });
 
-  const handleSort = (column) => {
-    let direction = "asc";
-    if (sortConfig.column === column && sortConfig.direction === "asc") {
-      direction = "desc";
-    }
-
-    setSortConfig({ column, direction });
-    console.log(sortConfig);  // Add this to check if sortConfig is correctly updated
-
-  };
-
+  // Sort
   const sortedData = [...filteredRows].sort((a, b) => {
     if (sortConfig.column === "ticketcount") {
-      if (sortConfig.direction === "asc") {
-        return a.ticketcount - b.ticketcount;
-      } else {
-        return b.ticketcount - a.ticketcount;
-      }
+      return sortConfig.direction === "asc"
+        ? a.ticketcount - b.ticketcount
+        : b.ticketcount - a.ticketcount;
     }
-    return 0; // Default sorting for other columns
+    return 0;
   });
+
+  // Format minutes → d/h/m/s
+  const formatMinutesToHMS = (minutes) => {
+    const num = parseFloat(minutes);
+    if (isNaN(num)) return "N/A";
+    const secs = Math.floor(num * 60);
+    const days = Math.floor(secs / 86400);
+    const hrs = Math.floor((secs % 86400) / 3600);
+    const mins = Math.floor((secs % 3600) / 60);
+    const rem = secs % 60;
+    return [
+      days > 0 && `${days}d`,
+      hrs > 0 && `${hrs}h`,
+      mins > 0 && `${mins}m`,
+      rem > 0 && `${rem}s`,
+    ]
+      .filter(Boolean)
+      .join(" ") || "0s";
+  };
+
+  const handleSort = (col) => {
+    const dir =
+      sortConfig.column === col && sortConfig.direction === "asc"
+        ? "desc"
+        : "asc";
+    setSortConfig({ column: col, direction: dir });
+  };
+
+  // Export to Excel
+  const handleExportExcel = () => {
+    const rows = sortedData.map((item) => ({
+      Caller: item.caller,
+      "Assigned Tickets": item.ticketcount,
+      MTTT: formatMinutesToHMS (item.totalMTTT),
+      Evaluation: parseFloat(item.totalMTTT) < 16 ? "Passed" : "Failed",
+    }));
+    const wb = XLSX.utils.book_new();
+    const ws = XLSX.utils.json_to_sheet(rows);
+    XLSX.utils.book_append_sheet(wb, ws, "MTTT by Caller");
+    const wbout = XLSX.write(wb, { bookType: "xlsx", type: "array" });
+    saveAs(
+      new Blob([wbout], { type: "application/octet-stream" }),
+      "mttt_report.xlsx"
+    );
+  };
+
+  // Compute overall average for header
+  const validRows = reportData.filter((r) => !isNaN(parseFloat(r.mttt)));
+  const avg =
+    validRows.reduce((sum, r) => sum + parseFloat(r.mttt), 0) /
+    (validRows.length || 1);
 
   return (
     <div className="max-h-[850px] overflow-auto border border-gray-200 rounded-2xl p-6 bg-white shadow-sm">
-      {/* Overall Average MTTT */}
+      {/* Overall Average */}
       <div className="overflow-y-auto max-h-[300px] rounded-xl p-6 bg-gray-50 mb-4">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <h3 className="text-lg font-medium text-gray-600 tracking-wide">
-            Overall Average MTTT
-          </h3>
-          <span className="inline-block text-lg font-semibold text-blue-600 bg-blue-50 px-4 py-1.5 rounded-xl shadow-sm">
-            {averageFormatted}
+        <div className="flex flex-col sm:flex-row sm:justify-between gap-4">
+          <h3 className="text-lg font-medium text-gray-600">Overall Average MTTT</h3>
+          <span className="inline-block text-lg font-semibold text-blue-600 bg-blue-50 px-4 py-1.5 rounded-xl">
+            {formatMinutesToHMS(avg)}
           </span>
         </div>
       </div>
 
-      {/* Filter Buttons */}
-      <div className="flex justify-left mb-4 space-x-2 mt-2">
-        {["All", "Passed", "Failed"].map((type) => (
-          <button
-            key={type}
-            onClick={() => setEvaluationFilter(type)}
-            className={`px-4 py-1.5 text-sm rounded-lg border ${
-              evaluationFilter === type
-                ? "bg-indigo-300 text-white border-indigo-300"
-                : "bg-white text-gray-700 border-gray-300 hover:bg-indigo-50"
-            } transition`}
-          >
-            {type}
-          </button>
-        ))}
+      {/* Filters & Export */}
+      <div className="flex justify-between items-center mb-4">
+        <div className="flex space-x-2">
+          {["All", "Passed", "Failed"].map((t) => (
+            <button
+              key={t}
+              onClick={() => setEvaluationFilter(t)}
+              className={`px-4 py-1.5 text-sm rounded-lg border ${
+                evaluationFilter === t
+                  ? "bg-indigo-300 text-white"
+                  : "bg-white text-gray-700 hover:bg-indigo-50"
+              }`}
+            >
+              {t}
+            </button>
+          ))}
+        </div>
+        <button
+          onClick={handleExportExcel}
+          className="bg-green-500 text-white text-sm px-4 py-1.5 rounded-lg shadow hover:bg-green-600 transition"
+        >
+          Export as Excel
+        </button>
       </div>
 
       {/* Table */}
       <div className="overflow-x-auto">
-        <h3 className="text-lg font-semibold text-gray-800 mb-2">
-          MTTT by Caller
-        </h3>
+        <h3 className="text-lg font-semibold text-gray-800 mb-2">MTTT by Caller</h3>
         <table className="min-w-full divide-y divide-gray-200">
           <thead className="bg-indigo-50">
             <tr>
-              <th className="px-6 py-3 text-left text-s font-medium text-indigo-700 uppercase tracking-wider">
+              <th className="px-6 py-3 text-left text-indigo-700 uppercase tracking-wider">
                 Caller
               </th>
               <th
-                className="px-6 py-3 text-center text-s font-medium text-indigo-700 uppercase tracking-wider"
+                className="px-6 py-3 text-center text-indigo-700 uppercase tracking-wider cursor-pointer"
                 onClick={() => handleSort("ticketcount")}
               >
                 # of Assigned Tickets{" "}
                 {sortConfig.column === "ticketcount" && (
-                  <span>
-                    {sortConfig.direction === "asc" ? (
-                      <FaArrowUp className="inline-block ml-2" />
-                    ) : (
-                      <FaArrowDown className="inline-block ml-2" />
-                    )}
-                  </span>
+                  sortConfig.direction === "asc" ? (
+                    <FaArrowUp className="inline-block ml-2" />
+                  ) : (
+                    <FaArrowDown className="inline-block ml-2" />
+                  )
                 )}
               </th>
-              <th className="px-6 py-3 text-center text-s font-medium text-indigo-700 uppercase tracking-wider">
+              <th className="px-6 py-3 text-center text-indigo-700 uppercase tracking-wider">
                 MTTT
               </th>
-              <th className="px-6 py-3 text-center text-s font-medium text-indigo-700 uppercase tracking-wider">
+              <th className="px-6 py-3 text-center text-indigo-700 uppercase tracking-wider">
                 Evaluation
               </th>
             </tr>
@@ -251,10 +260,8 @@ const ReportedCreatedTable = () => {
             {sortedData.map((item, idx) => {
               const passed = parseFloat(item.totalMTTT) < 16;
               return (
-                <tr key={idx} className="hover:bg-indigo-50 transition">
-                  <td className="px-6 py-4 text-sm text-gray-900">
-                    {item.caller}
-                  </td>
+                <tr key={idx} className="hover:bg-indigo-50">
+                  <td className="px-6 py-4 text-sm text-gray-900">{item.caller}</td>
                   <td className="px-6 py-4 text-sm text-center text-gray-900">
                     {item.ticketcount}
                   </td>
@@ -263,10 +270,8 @@ const ReportedCreatedTable = () => {
                   </td>
                   <td className="px-6 py-4 text-sm text-center">
                     <span
-                      className={`inline-block px-2 py-1 text-xs font-semibold rounded-full ${
-                        passed
-                          ? "bg-green-100 text-green-800"
-                          : "bg-red-100 text-red-800"
+                      className={`px-2 py-1 text-xs font-semibold rounded-full ${
+                        passed ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"
                       }`}
                     >
                       {passed ? "Passed" : "Failed"}
