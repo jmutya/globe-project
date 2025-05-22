@@ -121,8 +121,9 @@ const Insights = () => {
               <AccuracyProgress
                 percentage={accuracyPercentage}
                 title="Overall Ticket Issuance Accuracy"
-              />
-
+                onMonthChange={setSelectedMonth}
+              />  
+            </div> 
               <div className="flex-1">
                 <IncompleteRowsTable
                   incompleteRows={incompleteRows}
@@ -130,7 +131,6 @@ const Insights = () => {
                   percentagePerAssignedPerson={percentagePerAssignedPerson}
                 />
               </div>
-            </div>
 
             <div className="flex items-center mt-6 mb-4 space-x-4">
               {/* Toggle switch */}
