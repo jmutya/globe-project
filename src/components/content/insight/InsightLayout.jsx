@@ -1,9 +1,10 @@
 import React from 'react'
+import ComingSoon from '../../pages/comingSoon'
 
 const InsightLayout = () => {
   return (
     <div>
-      this is lay out
+     <ComingSoon />
     </div>
   )
 }
