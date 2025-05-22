@@ -20,7 +20,7 @@ import Logo from "./logo";
 // ⬇️ Add subcomponents to the component map
 const componentMap = {
   Dashboard: lazy(() => import("../../pages/dashboard")),
-  "Insights": lazy(() => import("../../content/Insights")),
+  "Insights": lazy(() => import("../../content/insight/InsightLayout")),
   "Upload Files": lazy(() => import("../../pages/documents")),
   "Authorized Users" :lazy(() => import("../../pages/addemail")),
   "Mean Time To Ticket": lazy(() => import("../../content/mttt")),
