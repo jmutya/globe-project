@@ -60,89 +60,6 @@ const Insights = () => {
       className="p-6 bg-white shadow-md rounded-lg overflow-y-auto"
       style={{ maxHeight: "88vh" }}
     >
-      {/* === Filters Section === */}
-      {/* <div className="bg-gray-50 p-4 rounded-lg border border-gray-200 mb-6">
-        <h2 className="text-lg font-semibold text-gray-800 mb-4">Filters</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          <div>
-            <label className="block mb-1 font-medium">Time Range</label>
-            <select
-              className="w-full p-2 border rounded-md"
-              value={timeRange}
-              onChange={(e) => setTimeRange(e.target.value)}
-            >
-              <option value="daily">Daily</option>
-              <option value="weekly">Weekly</option>
-              <option value="monthly">Monthly</option>
-              <option value="yearly">Yearly</option>
-            </select>
-          </div>
-
-          {timeRange === "monthly" && (
-            <div>
-              <label className="block mb-1 font-medium">Month</label>
-              <select
-                className="w-full p-2 border rounded-md"
-                value={selectedMonth}
-                onChange={(e) => setSelectedMonth(parseInt(e.target.value))}
-              >
-                {[...Array(12)].map((_, i) => (
-                  <option key={i + 1} value={i + 1}>
-                    {new Date(0, i).toLocaleString("default", {
-                      month: "long",
-                    })}
-                  </option>
-                ))}
-              </select>
-            </div>
-          )}
-
-          {(timeRange === "monthly" || timeRange === "yearly") && (
-            <div>
-              <label className="block mb-1 font-medium">Year</label>
-              <select
-                className="w-full p-2 border rounded-md"
-                value={selectedYear}
-                onChange={(e) => setSelectedYear(parseInt(e.target.value))}
-              >
-                {availableYears.map((year) => (
-                  <option key={year} value={year}>
-                    {year}
-                  </option>
-                ))}
-              </select>
-            </div>
-          )}
-
-          <div>
-            <label className="block mb-1 font-medium">Sort By</label>
-            <select
-              className="w-full p-2 border rounded-md"
-              value={sortBy}
-              onChange={(e) => setSortBy(e.target.value)}
-            >
-              <option value="date">Date</option>
-              <option value="total">Total Alarms</option>
-            </select>
-          </div>
-        </div>
-
-        <h2 className="text-lg font-semibold text-gray-800 mt-6 mb-4">
-          Alarm Overview
-        </h2>
-        {isLoading ? (
-          <div className="flex justify-center items-center h-[300px]">
-            <div className="animate-spin rounded-full h-10 w-10 border-t-4 border-b-4 border-indigo-500"></div>
-            <p className="ml-3 text-gray-600">Generating Graph</p>
-          </div>
-        ) : (
-          <AlarmLineChart
-            chartData={chartData}
-            alarmTypes={alarmTypes}
-            colors={colors}
-          />
-        )}
-      </div> */}
 
       {/* === Custom Filters === */}
       <div className="bg-gray-50 p-4 rounded-lg border border-gray-200 mb-6">
@@ -200,8 +117,6 @@ const Insights = () => {
         {selectedAccuracyView === "ticketIssuance" && (
           <div className="mb-10">
             <div className="flex flex-col lg:flex-row gap-6">
-              
-              <div className="flex flex-col w-full lg:w-1/4">  
               <AccuracyProgress
                 percentage={accuracyPercentage}
                 title="Overall Ticket Issuance Accuracy"

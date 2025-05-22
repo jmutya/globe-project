@@ -2,9 +2,9 @@ import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { signInWithEmailAndPassword, signOut } from "firebase/auth";
 import { auth, db } from "../backend/firebase/firebaseconfig";
-import { collection, query, where, getDocs, doc, setDoc, deleteDoc } from "firebase/firestore";
+import { collection, query, where, getDocs, doc, setDoc } from "firebase/firestore";
 import logo from "../assets/globe-logo-name.png";
-import { FaEye, FaEyeSlash } from "react-icons/fa"; // Eye icon for showing password
+import { FaEye, FaEyeSlash } from "react-icons/fa";
 
 const Login = () => {
   const navigate = useNavigate();
@@ -13,15 +13,14 @@ const Login = () => {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
-  const [showPassword, setShowPassword] = useState(false); // For toggling password visibility
+  const [showPassword, setShowPassword] = useState(false);
 
-  // Check if the user is already saved in localStorage (email and password)
   useEffect(() => {
     const savedUser = JSON.parse(localStorage.getItem("user"));
     if (savedUser) {
       setEmail(savedUser.email);
-      setPassword(savedUser.password); // Auto-fill password if stored
-      setRememberMe(true); // Automatically check remember me if data exists
+      setPassword(savedUser.password);
+      setRememberMe(true);
     }
   }, []);
 
@@ -29,9 +28,15 @@ const Login = () => {
     try {
       const q = query(collection(db, "authorizedUsers"), where("email", "==", email));
       const querySnapshot = await getDocs(q);
-      return !querySnapshot.empty;
+
+      if (querySnapshot.empty) return { allowed: false, reason: "unauthorized" };
+
+      const userDoc = querySnapshot.docs[0].data();
+      if (userDoc.status !== "active") return { allowed: false, reason: "inactive" };
+
+      return { allowed: true };
     } catch (error) {
-      return false;
+      return { allowed: false, reason: "error" };
     }
   };
 
@@ -55,9 +60,13 @@ const Login = () => {
         return;
       }
 
-      const authorized = await isAuthorized(trimmedEmail);
-      if (!authorized) {
-        setError("You are not authorized. Contact admin.");
+      const authCheck = await isAuthorized(trimmedEmail);
+      if (!authCheck.allowed) {
+        if (authCheck.reason === "inactive") {
+          setError("Your account is inactive. Contact admin.");
+        } else {
+          setError("You are not authorized. Contact admin.");
+        }
         setLoading(false);
         return;
       }
@@ -66,14 +75,12 @@ const Login = () => {
       const uid = userCredential.user.uid;
       const loggedInUser = { email: trimmedEmail, password: trimmedPassword, uid };
 
-      // Store user in localStorage if Remember Me is checked (store email and password)
       if (rememberMe) {
         localStorage.setItem("user", JSON.stringify(loggedInUser));
       } else {
         localStorage.removeItem("user");
       }
 
-      // Check for active session
       const hasActiveSession = await checkActiveSession(uid);
       if (hasActiveSession) {
         setError("This account is already logged in elsewhere.");
@@ -82,7 +89,6 @@ const Login = () => {
         return;
       }
 
-      // Store session in Firestore
       await setDoc(doc(db, "activeSessions", uid), { uid, email: trimmedEmail, timestamp: Date.now() });
 
       navigate("/dashboard");
@@ -101,13 +107,13 @@ const Login = () => {
 
   return (
     <div className="relative flex justify-center items-center h-screen bg-[#0f172a] overflow-hidden">
-      {/* Random Animated Bubbles */}
+      {/* Background Bubbles */}
       <div className="absolute w-96 h-96 bg-blue-500 rounded-full opacity-30 blur-[100px] animate-float1" />
       <div className="absolute w-80 h-80 bg-purple-500 rounded-full opacity-30 blur-[90px] animate-float2 top-1/4 right-10" />
       <div className="absolute w-72 h-72 bg-pink-500 rounded-full opacity-30 blur-[80px] animate-float3 bottom-20 left-1/4" />
       <div className="absolute w-64 h-64 bg-cyan-500 rounded-full opacity-30 blur-[90px] animate-float4 bottom-10 right-10" />
 
-      {/* 3D Login Box */}
+      {/* Login Box */}
       <div className="z-10 bg-white p-10 rounded-xl w-[500px] text-center shadow-xl transition-transform duration-300">
         <div className="flex justify-center mb-6">
           <img src={logo} alt="Logo" className="w-32 h-auto" />
@@ -139,7 +145,7 @@ const Login = () => {
             </span>
           </div>
           {error && <p className="text-red-500 text-sm">{error}</p>}
-          
+
           <div className="flex items-center justify-between">
             <label className="flex items-center space-x-2">
               <input
@@ -151,13 +157,11 @@ const Login = () => {
               <span className="text-gray-700">Remember Me</span>
             </label>
           </div>
-        
+
           <button
             type="submit"
             className={`w-full p-3 rounded-md transition ${
-              loading
-                ? "bg-gray-400 cursor-not-allowed"
-                : "bg-blue-500 text-white hover:bg-blue-600"
+              loading ? "bg-gray-400 cursor-not-allowed" : "bg-blue-500 text-white hover:bg-blue-600"
             }`}
             disabled={loading}
           >

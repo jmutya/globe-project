@@ -32,7 +32,7 @@ const Dashboard = () => {
   return (
     <div className="p-6 bg-white shadow-lg rounded-lg h-[88vh] overflow-y-auto space-y-6">
       
-      {/* Row 1: Count and Severity */}
+      {/* Row 1: Ticket Count */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <Suspense fallback={<div>Loading Alarm Count...</div>}>
           <LazyLoadWrapper onLoaded={() => handleComponentLoaded("alarmCount")}>
@@ -46,7 +46,7 @@ const Dashboard = () => {
         </Suspense>
       </div>
 
-      {/* Row 2: Category and Bar Graph */}
+      {/* Row 2: donut chart alarm severity*/}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
         <Suspense fallback={<div>Loading Alarm Category...</div>}>
           <LazyLoadWrapper onLoaded={() => handleComponentLoaded("alarmCategory")}>

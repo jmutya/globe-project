@@ -20,14 +20,14 @@ import Logo from "./logo";
 // ⬇️ Add subcomponents to the component map
 const componentMap = {
   Dashboard: lazy(() => import("../../pages/dashboard")),
-  "Insights": lazy(() => import("../../content/Insights")),
+  "Insights": lazy(() => import("../../content/insight/InsightLayout")),
   "Upload Files": lazy(() => import("../../pages/documents")),
   "Authorized Users" :lazy(() => import("../../pages/addemail")),
   "Mean Time To Ticket": lazy(() => import("../../content/mttt")),
   "Mean Time To Investigate": lazy(() => import("../../content/mtti")),
   // "Mean Time To Dispatch": lazy(() => import("../../content/mttd")),
   "First Touch Resolution": lazy(() => import("../../content/ftr")),
-  // "Sample Excel Uploader To SQL": lazy(() => import("../sampleUpload")),
+  //  "Sample Excel Uploader To SQL": lazy(() => import("../sampleUpload")),
  
 };
 
@@ -43,7 +43,7 @@ const navigationItems = [
       { name: "Mean Time To Investigate" },
       //  { name: "Mean Time To Dispatch" },
       { name: "First Touch Resolution" },
-      // { name: "Sample Excel Uploader To SQL" },
+    //  { name: "Sample Excel Uploader To SQL" },
 
    
     ],
@@ -153,7 +153,7 @@ const Sidebar = ({ user }) => {
 
         {/* Social Media Links */}
         <div className="mt-auto pt-10">
-          <h2 className="mb-2 text-2xl font-bold font-poppins">RSC Mindanao</h2>
+          <h2 className="mb-2 text-2xl font-bold font-poppins">RSC - OMPI</h2>
           <div className="border-t border-gray-300 my-4"></div>
           <button
             onClick={() => setShowLogoutModal(true)}
@@ -207,8 +207,8 @@ const Sidebar = ({ user }) => {
              <FaTimes className="inline-block mr-2" /> Cancel
            </button>
            <button
-             onClick={() => {
-               handleLogout();
+             onClick={async() => {
+              await handleLogout();
                setShowLogoutModal(false);
              }}
              className="flex-1 px-6 py-3 bg-red-600 text-white rounded-md transition duration-200 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 flex items-center justify-center"
