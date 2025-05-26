@@ -3,6 +3,7 @@ import React, { useState, useEffect } from "react";
 import * as XLSX from "xlsx";
 import AccuracyProgress from "../InsightsContent/AccuracyProgress";
 import supabase from "../../../backend/supabase/supabase";
+import { ArrowUp, ArrowDown } from "lucide-react";
 import {
   ChevronDownIcon,
   ChevronUpIcon,
@@ -10,17 +11,18 @@ import {
 } from "@heroicons/react/24/solid";
 
 function TicketIssuance() {
-  // ─── All React Hooks ────────────────────────────────────────────────
   const [accuracyPercentage, setAccuracyPercentage] = useState("0.00");
   const [incompleteRows, setIncompleteRows] = useState([]);
+  const [personAccuracyMap, setPersonAccuracyMap] = useState({});
+  const [monthlyAccuracyMap, setMonthlyAccuracyMap] = useState({});
+  const [monthlyPersonAccuracyMap, setMonthlyPersonAccuracyMap] = useState({});
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
-
   const [expandedIndex, setExpandedIndex] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedMonth, setSelectedMonth] = useState("");
+  const [sortOrder, setSortOrder] = useState("desc");
 
-  // ─── Utilities ───────────────────────────────────────────────────────
   const formatOpenedDate = (value) => {
     if (!value) return "";
     if (typeof value === "number") {
@@ -41,7 +43,7 @@ function TicketIssuance() {
   };
 
   const getIncompleteRows = (rows, headers) => {
-    const required = [
+    const required = [ 
       "Failure Category",
       "Cause",
       "AOR001",
@@ -83,7 +85,6 @@ function TicketIssuance() {
       : "0.00";
   };
 
-  // ─── Fetch Data ──────────────────────────────────────────────────────
   useEffect(() => {
     const fetchData = async () => {
       try {
@@ -97,6 +98,9 @@ function TicketIssuance() {
         let totalRows = 0;
         let totalIncomplete = 0;
         let allIncomplete = [];
+        let personStats = {};
+        let monthlyStats = {};
+        let monthPersonStats = {};
 
         for (const file of files) {
           const {
@@ -116,13 +120,52 @@ function TicketIssuance() {
           if (sheet.length <= 1) continue;
 
           const headers = sheet[0];
+          const dataRows = sheet.slice(1);
           const incomplete = getIncompleteRows(sheet, headers);
-          totalRows += sheet.length - 1;
+          const openedIdx = headers.indexOf("Opened");
+          const assignedToIdx = headers.indexOf("Assigned to");
+
+          dataRows.forEach((row) => {
+            const assignedTo = row[assignedToIdx] || "Not Assigned";
+            const openedDate = formatOpenedDate(row[openedIdx]);
+            const month = getMonthFromDate(openedDate);
+
+            personStats[assignedTo] = personStats[assignedTo] || {
+              total: 0,
+              incomplete: 0,
+            };
+            monthlyStats[month] = monthlyStats[month] || {
+              total: 0,
+              incomplete: 0,
+            };
+            monthPersonStats[month] = monthPersonStats[month] || {};
+            monthPersonStats[month][assignedTo] = monthPersonStats[month][
+              assignedTo
+            ] || { total: 0, incomplete: 0 };
+
+            personStats[assignedTo].total++;
+            monthlyStats[month].total++;
+            monthPersonStats[month][assignedTo].total++;
+          });
+
+          incomplete.forEach((inc) => {
+            const month = getMonthFromDate(inc.opened);
+            const assignedTo = inc.assignedTo || "Not Assigned";
+
+            personStats[assignedTo].incomplete++;
+            monthlyStats[month].incomplete++;
+            monthPersonStats[month][assignedTo].incomplete++;
+          });
+
+          totalRows += dataRows.length;
           totalIncomplete += incomplete.length;
           allIncomplete.push(...incomplete);
         }
 
         setIncompleteRows(allIncomplete);
+        setPersonAccuracyMap(personStats);
+        setMonthlyAccuracyMap(monthlyStats);
+        setMonthlyPersonAccuracyMap(monthPersonStats);
         setAccuracyPercentage(calculateAccuracy(totalRows, totalIncomplete));
       } catch (err) {
         console.error(err);
@@ -135,11 +178,9 @@ function TicketIssuance() {
     fetchData();
   }, []);
 
-  // ─── Handle Loading & Errors ─────────────────────────────────────────
   if (isLoading) return <p>Loading ticket issuance data...</p>;
   if (error) return <p className="text-red-600">Error: {error.message}</p>;
 
-  // ─── Filtering ───────────────────────────────────────────────────────
   const filteredRows = incompleteRows.filter((row) => {
     const nameMatch = (row.assignedTo || "Not Assigned")
       .toLowerCase()
@@ -154,21 +195,50 @@ function TicketIssuance() {
     new Set(incompleteRows.map((r) => getMonthFromDate(r.opened)))
   );
 
-  // ─── JSX Render ──────────────────────────────────────────────────────
+  const getPersonAccuracy = (name) => {
+    if (selectedMonth && monthlyPersonAccuracyMap[selectedMonth]) {
+      const person = monthlyPersonAccuracyMap[selectedMonth][name] || {
+        total: 0,
+        incomplete: 0,
+      };
+      return calculateAccuracy(person.total, person.incomplete);
+    }
+    const person = personAccuracyMap[name] || { total: 0, incomplete: 0 };
+    return calculateAccuracy(person.total, person.incomplete);
+  };
+
+  const getMonthAccuracy = (month) => {
+    const stats = monthlyAccuracyMap[month] || { total: 0, incomplete: 0 };
+    return calculateAccuracy(stats.total, stats.incomplete);
+  };
+
+  const displayAccuracy = selectedMonth
+    ? getMonthAccuracy(selectedMonth)
+    : accuracyPercentage;
+
+  const tableMap = selectedMonth
+    ? monthlyPersonAccuracyMap[selectedMonth] || {}
+    : personAccuracyMap;
+
+  const sortedEntries = Object.entries(tableMap).sort((a, b) => {
+    const accA = parseFloat(calculateAccuracy(a[1].total, a[1].incomplete));
+    const accB = parseFloat(calculateAccuracy(b[1].total, b[1].incomplete));
+    return sortOrder === "asc" ? accA - accB : accB - accA;
+  });
   return (
-    <div className="mb-10">
-      <div className="flex flex-col lg:flex-row gap-6  bg-white p-4 rounded-lg shadow">
+    <div className="mb-10 mt-10">
+      <div className="flex flex-col lg:flex-row gap-6 bg-white p-4 rounded-lg shadow">
         {/* Left: Accuracy Overview */}
-        <div className="flex-1">
+        <div className="lg:basis-1/4">
           <h3 className="font-semibold mb-2">Ticket Issuance Accuracy</h3>
-          <AccuracyProgress percentage={parseFloat(accuracyPercentage)} />
+          <AccuracyProgress percentage={parseFloat(displayAccuracy)} />
         </div>
 
         {/* Right: Incomplete Rows */}
-        <div className="flex-1">
+        <div className="lg:basis-3/4">
           <h4 className="flex items-center gap-2 font-semibold text-yellow-600">
             <ExclamationCircleIcon className="h-5 w-5" />
-            Incomplete Data – Requires Attention{" "}
+            Incomplete Data – Requires Attention
           </h4>
 
           {/* Search & Month Filters */}
@@ -201,7 +271,7 @@ function TicketIssuance() {
           </div>
 
           {/* Incomplete Row Cards */}
-          <div className="space-y-4 max-h-96 overflow-y-auto">
+          <div className="space-y-4 max-h-96 overflow-y-auto mb-5">
             {filteredRows.length > 0 ? (
               filteredRows.map((row, idx) => (
                 <div
@@ -214,11 +284,10 @@ function TicketIssuance() {
                   <div className="flex justify-between items-center">
                     <div>
                       <p className="font-bold">#{row.number}</p>
-                      <p className="mt-2 text-m text-black-600">
+                      <p className=" text-m text-black-600">
                         Assigned To: {row.assignedTo}
                       </p>
                       <p className="text-sm text-gray-600">{row.opened}</p>
-                      <p className="text-sm text-gray-600"> Accuracy Percentage: {} </p>
                     </div>
                     {expandedIndex === idx ? (
                       <ChevronUpIcon className="w-5 h-5" />
@@ -227,9 +296,15 @@ function TicketIssuance() {
                     )}
                   </div>
                   {expandedIndex === idx && (
-                    <p className="mt-2 text-sm text-red-600">
-                      Missing: {row.missingColumns.join(", ")}
-                    </p>
+                    <div>
+                      <p className="text-sm text-gray-600">
+                        Accuracy Percentage: {getPersonAccuracy(row.assignedTo)}
+                        %
+                      </p>
+                      <p className=" text-sm text-red-600">
+                        Missing: {row.missingColumns.join(", ")}
+                      </p>
+                    </div>
                   )}
                 </div>
               ))
@@ -238,6 +313,69 @@ function TicketIssuance() {
             )}
           </div>
         </div>
+      </div>
+
+      {/* Accuracy Table */}
+      <div className="mt-10">
+        <h3 className="font-semibold mb-4">
+          Completion Accuracy per Assigned Person
+        </h3>
+        <table className="w-full table-auto border border-gray-300">
+          <thead>
+            <tr className="bg-gray-100">
+              <th className="border px-4 py-2 text-left">Name</th>
+              <th
+                className="border px-4 py-2 text-left cursor-pointer select-none"
+                onClick={() =>
+                  setSortOrder(sortOrder === "asc" ? "desc" : "asc")
+                }
+              >
+                <div className="flex items-center gap-1">
+                  Accurate Tickets / Tickets Issued
+                  {sortOrder === "asc" ? (
+                    <ArrowUp size={16} className="text-blue-600" />
+                  ) : (
+                    <ArrowDown size={16} className="text-blue-600" />
+                  )}
+                </div>
+              </th>
+
+              <th className="border px-4 py-2 text-left">Accuracy (%)</th>
+            </tr>
+          </thead>
+          <tbody>
+            {sortedEntries.map(([name, stats]) => {
+              const accuracy = parseFloat(
+                calculateAccuracy(stats.total, stats.incomplete)
+              );
+              const color =
+                accuracy >= 90
+                  ? "bg-green-500"
+                  : accuracy >= 85
+                  ? "bg-yellow-400"
+                  : "bg-red-500";
+
+              return (
+                <tr key={name}>
+                  <td className="border px-4 py-2">{name}</td>
+                  <td className="border px-4 py-2">
+                    {stats.total - stats.incomplete} / {stats.total}
+                  </td>
+                  <td className="border px-4 py-2">
+                    <div className="w-full bg-gray-200 rounded-full h-4">
+                      <div
+                        className={`${color} h-4 rounded-full text-xs text-white text-center`}
+                        style={{ width: `${accuracy}%` }}
+                      >
+                        {accuracy}%
+                      </div>
+                    </div>
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
       </div>
     </div>
   );

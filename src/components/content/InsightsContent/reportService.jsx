@@ -46,26 +46,22 @@ const getIncompleteRows = (sheet, headers) => {
 
     // Function to format the 'Opened' date
 
+    if (missingColumns.length > 0) {
+      const assignedTo = assignedToIndex !== -1 ? row[assignedToIndex] : "";
+      const number = row[headers.indexOf("Number")] || "Not Provided";
+      const openedRaw = row[headers.indexOf("Opened")];
 
+      // Reuse the formatOpenedDate function
+      const openedFormatted = formatOpenedDate(openedRaw);
 
-if (missingColumns.length > 0) {
-  const assignedTo = assignedToIndex !== -1 ? row[assignedToIndex] : "";
-  const number = row[headers.indexOf("Number")] || "Not Provided";
-  const openedRaw = row[headers.indexOf("Opened")];
-
-  // Reuse the formatOpenedDate function
-  const openedFormatted = formatOpenedDate(openedRaw);
-
-  incompleteRows.push({
-    number: number,
-    assignedTo,
-    missingColumns,
-    rowData: row,
-    opened: openedFormatted, // Use the formatted date here
-  });
-}
-
-    
+      incompleteRows.push({
+        number: number,
+        assignedTo,
+        missingColumns,
+        rowData: row,
+        opened: openedFormatted, // Use the formatted date here
+      });
+    }
   });
 
   return incompleteRows;
@@ -73,7 +69,7 @@ if (missingColumns.length > 0) {
 
 const formatOpenedDate = (openedRaw) => {
   if (!openedRaw) return "";
-  
+
   if (typeof openedRaw === "number") {
     // If it's a number (Excel serial date)
     const date = new Date((openedRaw - 25569) * 86400 * 1000); // Excel serial to Date
@@ -85,7 +81,7 @@ const formatOpenedDate = (openedRaw) => {
     // If it's already a string (formatted date)
     return openedRaw;
   }
-  
+
   return ""; // Return empty string if not a valid date
 };
 
@@ -222,7 +218,7 @@ const fetchReportData = async (timeRange, selectedMonth, selectedYear) => {
         });
       }
     }
-
+    
     const percentagePerAssignedPerson = {};
 
     for (const [person, data] of Object.entries(assignedPersonsData)) {
@@ -248,7 +244,7 @@ const fetchReportData = async (timeRange, selectedMonth, selectedYear) => {
     const individualAccuracy = {};
 
     Object.entries(resolverStats).forEach(([resolver, stats]) => {
-      const totalAssigned = stats.totalResolved- stats.errors; // Assuming you have this data in `stats.totalAssigned`
+      const totalAssigned = stats.totalResolved - stats.errors; // Assuming you have this data in `stats.totalAssigned`
       const totalResolved = stats.totalResolved;
 
       let accuracy = "0.00";
