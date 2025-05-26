@@ -61,13 +61,25 @@ export const fetchSeverityCounts = async () => {
 
     if (allRows.length === 0) return { counts: {}, mostRecentMonth: null };
 
+    // Get the most recent month string
     const mostRecentMonth = allRows.map(r => r.yearMonth).sort().reverse()[0];
 
+    // Filter rows for the most recent month only
+    const recentMonthRows = allRows.filter(r => r.yearMonth === mostRecentMonth);
+
+    // Deduplicate by exact openedDate time (using getTime)
+    const seenDates = new Set();
+    const uniqueRows = recentMonthRows.filter(r => {
+      const time = r.openedDate.getTime();
+      if (seenDates.has(time)) return false;
+      seenDates.add(time);
+      return true;
+    });
+
+    // Count severity from unique rows
     const counts = {};
-    allRows.forEach(({ yearMonth, severity }) => {
-      if (yearMonth === mostRecentMonth) {
-        counts[severity] = (counts[severity] || 0) + 1;
-      }
+    uniqueRows.forEach(({ severity }) => {
+      counts[severity] = (counts[severity] || 0) + 1;
     });
 
     return { counts, mostRecentMonth };

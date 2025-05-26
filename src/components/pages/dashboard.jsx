@@ -67,71 +67,60 @@ const Dashboard = () => {
   };
 
   return (
-    <div className="p-6 bg-white shadow-lg rounded-lg h-[88vh] overflow-y-auto space-y-6">
-      {/* Export Button */}
-      <div className="flex justify-end mb-4">
-        <button
-          onClick={exportToPDF}
-          className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded"
-        >
-          Export Dashboard as PDF
-        </button>
-      </div>
+  <div className="p-6 bg-white shadow-lg rounded-lg h-[88vh] overflow-y-auto space-y-6">
+    {/* Export Button */}
+    <div className="flex justify-end mb-4">
+      <button
+        onClick={exportToPDF}
+        className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded"
+      >
+        Export Dashboard as PDF
+      </button>
+    </div>
 
-      {/* Dashboard sections with individual refs */}
+    {/* Single Suspense for all components */}
+    <Suspense fallback={<div className="text-center py-8 text-lg font-semibold">Loading Dashboard...</div>}>
       <div className="space-y-6">
         <div ref={sectionRefs.alarmCount} className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <Suspense fallback={<div>Loading Alarm Count...</div>}>
-            <LazyLoadWrapper onLoaded={() => handleComponentLoaded("alarmCount")}>
-              <Card><AlarmCount /></Card>
-            </LazyLoadWrapper>
-          </Suspense>
-          <Suspense fallback={<div>Loading Alarms Severity...</div>}>
-            <LazyLoadWrapper onLoaded={() => handleComponentLoaded("alarmsSeverity")}>
-              <Card><AlarmsSeverity /></Card>
-            </LazyLoadWrapper>
-          </Suspense>
+          <LazyLoadWrapper onLoaded={() => handleComponentLoaded("alarmCount")}>
+            <Card><AlarmCount /></Card>
+          </LazyLoadWrapper>
+          <LazyLoadWrapper onLoaded={() => handleComponentLoaded("alarmsSeverity")}>
+            <Card><AlarmsSeverity /></Card>
+          </LazyLoadWrapper>
         </div>
 
         <div ref={sectionRefs.alarmCategory} className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-          <Suspense fallback={<div>Loading Alarm Category...</div>}>
-            <LazyLoadWrapper onLoaded={() => handleComponentLoaded("alarmCategory")}>
-              <Card><AlarmCategory /></Card>
-            </LazyLoadWrapper>
-          </Suspense>
-          <Suspense fallback={<div>Loading Alarm Type Bar Graph...</div>}>
-            <LazyLoadWrapper onLoaded={() => handleComponentLoaded("alarmTypeBarGraph")}>
-              <Card><AlarmTypeBarGraph /></Card>
-            </LazyLoadWrapper>
-          </Suspense>
+          <LazyLoadWrapper onLoaded={() => handleComponentLoaded("alarmCategory")}>
+            <Card><AlarmCategory /></Card>
+          </LazyLoadWrapper>
+          <LazyLoadWrapper onLoaded={() => handleComponentLoaded("alarmTypeBarGraph")}>
+            <Card><AlarmTypeBarGraph /></Card>
+          </LazyLoadWrapper>
         </div>
 
         <div ref={sectionRefs.territoryGraph}>
-          <Suspense fallback={<div>Loading Territory Graph...</div>}>
-            <LazyLoadWrapper onLoaded={() => handleComponentLoaded("territoryGraph")}>
-              <Card><TerritoryGraph /></Card>
-            </LazyLoadWrapper>
-          </Suspense>
+          <LazyLoadWrapper onLoaded={() => handleComponentLoaded("territoryGraph")}>
+            <Card><TerritoryGraph /></Card>
+          </LazyLoadWrapper>
         </div>
 
         <div ref={sectionRefs.areaLineGraph}>
-          <Suspense fallback={<div>Loading Area Line Graph...</div>}>
-            <LazyLoadWrapper onLoaded={() => handleComponentLoaded("areaLineGraph")}>
-              <Card><AreaLineGraph /></Card>
-            </LazyLoadWrapper>
-          </Suspense>
+          <LazyLoadWrapper onLoaded={() => handleComponentLoaded("areaLineGraph")}>
+            <Card><AreaLineGraph /></Card>
+          </LazyLoadWrapper>
         </div>
 
         <div ref={sectionRefs.alarmTypeLineGraph}>
-          <Suspense fallback={<div>Loading Alarm Type Line Graph...</div>}>
-            <LazyLoadWrapper onLoaded={() => handleComponentLoaded("alarmTypeLineGraph")}>
-              <Card><AlarmTypeLineGraph /></Card>
-            </LazyLoadWrapper>
-          </Suspense>
+          <LazyLoadWrapper onLoaded={() => handleComponentLoaded("alarmTypeLineGraph")}>
+            <Card><AlarmTypeLineGraph /></Card>
+          </LazyLoadWrapper>
         </div>
       </div>
-    </div>
-  );
+    </Suspense>
+  </div>
+);
+
 };
 
 export default Dashboard;

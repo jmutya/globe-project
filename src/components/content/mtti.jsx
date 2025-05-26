@@ -158,29 +158,26 @@ function MttiTable() {
     return 0;
   });
 
-  const exportToCSV = () => {
-    const headers = ["Caller", "# of Assigned Tickets", "MTTI", "Evaluation"];
-    const rows = sortedData.map((item) => [
-      item.caller,
-      item.ticketcount,
-      formatMinutesToHMS(item.totalMTTI),
-      parseFloat(item.totalMTTI) < 16 ? "Passed" : "Failed",
-    ]);
+  const exportToExcel = () => {
+  const headers = ["Caller", "# of Assigned Tickets", "MTTI", "Evaluation"];
+  const rows = sortedData.map((item) => [
+    item.caller,
+    item.ticketcount,
+    formatMinutesToHMS(item.totalMTTI),
+    parseFloat(item.totalMTTI) < 16 ? "Passed" : "Failed",
+  ]);
 
-    const csvContent =
-      [headers, ...rows]
-        .map((e) => e.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(","))
-        .join("\n");
+  // Convert to worksheet
+  const worksheetData = [headers, ...rows];
+  const worksheet = XLSX.utils.aoa_to_sheet(worksheetData);
 
-    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.setAttribute("href", url);
-    link.setAttribute("download", "mtti_report.csv");
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-  };
+  // Create a new workbook and append the sheet
+  const workbook = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(workbook, worksheet, "MTTI Report");
+
+  // Use `writeFile` for clean file creation
+  XLSX.writeFile(workbook, "mtti_report.xlsx");
+};
 
   return (
     <div className="max-h-[850px] overflow-auto border border-gray-200 rounded-2xl p-6 bg-white shadow-sm">
@@ -214,7 +211,7 @@ function MttiTable() {
         </div>
 
         <button
-          onClick={exportToCSV}
+          onClick={exportToExcel}
           className="bg-green-500 text-white text-sm px-4 py-1.5 rounded-lg shadow hover:bg-green-600 transition"
         >
           Export as Excel
