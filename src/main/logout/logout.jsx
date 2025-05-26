@@ -3,8 +3,7 @@ import { Menu, MenuButton, MenuItems, MenuItem } from "@headlessui/react";
 const LogOut = ({ handleLogout }) => {
   return (
     <div className="flex items-center space-x-4">
-      
-       
+         
           <MenuItem>
             {({ active }) => (
               <button

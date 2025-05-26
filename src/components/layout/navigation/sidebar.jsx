@@ -6,29 +6,25 @@ import {
   FaTimes,
   FaChevronDown,
   FaChevronUp,
-} from "react-icons/fa"; // ⬅️ Add these icons
+  FaUserCircle,
+} from "react-icons/fa";
 import {
   ChartBarSquareIcon,
   UsersIcon,
-  DocumentIcon,
   ArrowUpTrayIcon,
 } from "@heroicons/react/24/outline";
 
 import MainContent from "../../../main/mainContent";
 import Logo from "./logo";
 
-// ⬇️ Add subcomponents to the component map
 const componentMap = {
   Dashboard: lazy(() => import("../../pages/dashboard")),
   "Insights": lazy(() => import("../../content/insight/InsightLayout")),
   "Upload Files": lazy(() => import("../../pages/documents")),
-  "Authorized Users" :lazy(() => import("../../pages/addemail")),
+  "Authorized Users": lazy(() => import("../../pages/addemail")),
   "Mean Time To Ticket": lazy(() => import("../../content/mttt")),
   "Mean Time To Investigate": lazy(() => import("../../content/mtti")),
-  // "Mean Time To Dispatch": lazy(() => import("../../content/mttd")),
   "First Touch Resolution": lazy(() => import("../../content/ftr")),
-  //  "Sample Excel Uploader To SQL": lazy(() => import("../sampleUpload")),
- 
 };
 
 const navigationItems = [
@@ -36,40 +32,23 @@ const navigationItems = [
     name: "Dashboard",
     icon: ChartBarSquareIcon,
     subItems: [
-
-      { name: "Dashboard" }, 
-      { name: "Insights" },   
+      { name: "Dashboard" },
+      { name: "Insights" },
       { name: "Mean Time To Ticket" },
       { name: "Mean Time To Investigate" },
-      //  { name: "Mean Time To Dispatch" },
       { name: "First Touch Resolution" },
-    //  { name: "Sample Excel Uploader To SQL" },
-
-   
     ],
   },
   { name: "Upload Files", icon: ArrowUpTrayIcon },
   { name: "Authorized Users", icon: UsersIcon },
 ];
 
-const SocialLink = memo(({ link }) => (
-  <a
-    href={link.link}
-    target="_blank"
-    rel="noopener noreferrer"
-    className="flex items-center p-2 space-x-3 rounded-md hover:bg-indigo-700"
-  >
-    <link.icon className="w-6 h-6" />
-    <span>{link.name}</span>
-  </a>
-));
-
 const Sidebar = ({ user }) => {
   const auth = getAuth();
   const navigate = useNavigate();
   const [selected, setSelected] = useState("Dashboard");
   const [showLogoutModal, setShowLogoutModal] = useState(false);
-  const [dropdowns, setDropdowns] = useState({}); // ✅ Dropdown state
+  const [dropdowns, setDropdowns] = useState({});
 
   const handleLogout = useCallback(async () => {
     try {
@@ -84,20 +63,41 @@ const Sidebar = ({ user }) => {
     const SelectedComponent = componentMap[selected];
     if (SelectedComponent) {
       return (
-        <Suspense fallback={<div>Loading {selected}....</div>}>
+        <Suspense
+          fallback={
+            <div className="relative h-full w-full flex flex-col items-center justify-center">
+              <div className="text-gray-600 mb-10 animate-pulse">Loading {selected}....</div>
+              <div className="absolute bottom-0 left-0 right-0 h-1.5 bg-indigo-200 overflow-hidden">
+                <div className="h-full w-1/4 bg-indigo-500 animate-pulse-fast origin-left"></div>
+              </div>
+            </div>
+          }
+        >
           <SelectedComponent />
         </Suspense>
       );
     }
-    return <div>Select an option from the sidebar.</div>;
+    return <div className="text-gray-600">Select an option from the sidebar.</div>;
   }, [selected]);
 
   return (
-    <div className="flex h-screen bg-gray-100 overflow-hidden">
+    <div className="flex h-screen bg-gray-100 font-sans">
       {/* Sidebar */}
-      <div className="flex flex-col w-64 bg-indigo-600 p-4 text-white h-screen overflow-y-auto">
+      <div className="flex flex-col w-64 bg-gradient-to-b from-indigo-800 to-indigo-900 p-5 text-white shadow-xl h-screen overflow-y-auto">
         <Logo />
-        <nav className="space-y-2">
+
+        {/* User Info Section */}
+        <div className="mt-4 mb-6 p-3 bg-indigo-700 bg-opacity-50 rounded-lg flex items-center space-x-3 shadow-inner">
+          <FaUserCircle className="w-8 h-8 text-indigo-300" />
+          <div className="flex flex-col">
+            <span className="text-base font-medium text-indigo-100 font-poppins">
+              {user?.email?.split("@")[0]}
+            </span>
+            <span className="text-xs text-indigo-200 opacity-80">Logged In</span>
+          </div>
+        </div>
+
+        <nav className="flex-1 space-y-3">
           {navigationItems.map((item) => (
             <div key={item.name}>
               <button
@@ -111,36 +111,39 @@ const Sidebar = ({ user }) => {
                     setSelected(item.name);
                   }
                 }}
-                className={`flex items-center justify-between w-full p-2 space-x-3 rounded-md ${
-                  selected === item.name
-                    ? "bg-indigo-700 font-bold border-l-[3px] border-white pl-4"
-                    : "hover:bg-indigo-700"
-                }`}
+                className={`flex items-center justify-between w-full py-2.5 px-4 rounded-lg transition-all duration-200 ease-in-out
+                  ${
+                    selected === item.name ||
+                    (item.subItems &&
+                      item.subItems.some((sub) => sub.name === selected))
+                      ? "bg-indigo-700 bg-opacity-70 font-semibold border-l-4 border-indigo-300 text-indigo-100 shadow-md"
+                      : "hover:bg-indigo-700 hover:bg-opacity-50 text-indigo-200"
+                  }`}
               >
                 <div className="flex items-center space-x-3">
-                  <item.icon className="w-6 h-6" />
-                  <span className="text-lg">{item.name}</span>
+                  <item.icon className="w-5 h-5 opacity-90" />
+                  <span className="text-base">{item.name}</span>
                 </div>
                 {item.subItems &&
                   (dropdowns[item.name] ? (
-                    <FaChevronUp className="w-4 h-4" />
+                    <FaChevronUp className="w-3 h-3 text-indigo-300" />
                   ) : (
-                    <FaChevronDown className="w-4 h-4" />
+                    <FaChevronDown className="w-3 h-3 text-indigo-300" />
                   ))}
               </button>
 
-              {/* ✅ Dropdown subItems under Dashboard */}
               {item.subItems && dropdowns[item.name] && (
-                <div className="ml-8 mt-1 space-y-1">
+                <div className="ml-7 mt-1.5 space-y-1 border-l border-indigo-700 pl-3">
                   {item.subItems.map((subItem) => (
                     <button
                       key={subItem.name}
                       onClick={() => setSelected(subItem.name)}
-                      className={`block text-left w-full text-sm text-white px-3 py-1 rounded-md ${
-                        selected === subItem.name
-                          ? "bg-indigo-500"
-                          : "hover:bg-indigo-600"
-                      }`}
+                      className={`block text-left w-full text-sm py-1.5 px-3 rounded-md transition-colors duration-200 ease-in-out
+                        ${
+                          selected === subItem.name
+                            ? "bg-indigo-600 font-medium text-white shadow-sm"
+                            : "text-indigo-200 hover:bg-indigo-700 hover:bg-opacity-40"
+                        }`}
                     >
                       {subItem.name}
                     </button>
@@ -151,36 +154,30 @@ const Sidebar = ({ user }) => {
           ))}
         </nav>
 
-        {/* Social Media Links */}
-        <div className="mt-auto pt-10">
-          <h2 className="mb-2 text-2xl font-bold font-poppins">RSC - OMPI</h2>
-          <div className="border-t border-gray-300 my-4"></div>
+        {/* Logout Button Section - Option 1: Darker Indigo with Red Hint */}
+        <div className="mt-auto pt-7 border-t border-indigo-700">
           <button
             onClick={() => setShowLogoutModal(true)}
-            className="flex items-center p-2 mt-4 space-x-3 rounded-md hover:bg-indigo-700"
+            className="flex items-center justify-center w-full py-3 px-4 space-x-3 rounded-lg bg-red-800 text-red-100 font-semibold transition-all duration-300 ease-in-out hover:bg-red-700 hover:scale-105 focus:outline-none focus:ring-2 focus:ring-red-600 focus:ring-offset-2 focus:ring-offset-indigo-800 shadow-lg"
           >
-            <FaSignOutAlt className="w-6 h-6" />
+            <FaSignOutAlt className="w-5 h-5" />
             <span>Logout</span>
           </button>
         </div>
       </div>
 
       {/* Main Content */}
-      <div className="flex-1 p-4">
-        <div className="flex justify-between items-center mb-6">
-          <h1 className="text-3xl font-semibold text-gray-900 tracking-tight capitalize font-poppins">
+      <div className="flex-1 p-8 overflow-y-auto bg-gray-50">
+        <div className="flex justify-between items-center mb-7 pb-4 border-b border-gray-200">
+          <h1 className="text-3xl font-extrabold text-gray-900 tracking-tight capitalize font-poppins">
             {selected}
           </h1>
 
+          {/* RSC - OMPI title with subtle gradient and tracking */}
           <div className="flex items-center space-x-4">
-            <div className="w-4 h-4 rounded-full bg-green-500" />
-            <div className="flex items-center space-x-2">
-              <span>
-                <p className="text-sm font-medium text-gray-700 font-poppins">
-                  {user?.email?.split("@")[0]}
-                </p>
-              </span>
-            </div>
+            <h2 className="text-2xl font-extrabold font-poppins bg-gradient-to-r from-indigo-600 to-indigo-800 text-transparent bg-clip-text tracking-wide drop-shadow-sm">
+              RSC - OMPI
+            </h2>
           </div>
         </div>
 
@@ -189,35 +186,35 @@ const Sidebar = ({ user }) => {
 
       {/* Logout Modal */}
       {showLogoutModal && (
-       <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 transition-opacity duration-300 ease-out animate__animated animate__fadeIn">
-       <div className="bg-white p-8 rounded-lg w-1/3 max-w-md shadow-lg transform transition-all duration-500 ease-in-out animate__animated animate__zoomIn flex flex-col items-center">
-         <img
-           src="/sadCat.gif" //gif image
-           alt="Crying Cat"
-           className="w-32 h-32 object-contain mb-4" // Adjust size as needed
-         />
-         <h2 className="text-xl font-semibold text-center text-gray-900 mb-4">
-           Are you sure you want to log out? 
-         </h2>
-         <div className="flex justify-between space-x-4 w-full">
-           <button
-             onClick={() => setShowLogoutModal(false)}
-             className="flex-1 px-6 py-3 text-gray-700 border border-gray-300 rounded-md transition duration-200 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-600 flex items-center justify-center"
-           >
-             <FaTimes className="inline-block mr-2" /> Cancel
-           </button>
-           <button
-             onClick={async() => {
-              await handleLogout();
-               setShowLogoutModal(false);
-             }}
-             className="flex-1 px-6 py-3 bg-red-600 text-white rounded-md transition duration-200 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 flex items-center justify-center"
-           >
-             <FaSignOutAlt className="inline-block mr-2" /> Logout
-           </button>
-         </div>
-       </div>
-     </div>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 transition-opacity duration-300 ease-out animate__animated animate__fadeIn">
+          <div className="bg-white p-8 rounded-xl w-full max-w-md shadow-2xl transform transition-all duration-500 ease-in-out animate__animated animate__zoomIn flex flex-col items-center border border-gray-200">
+            <img
+              src="/sadCat.gif"
+              alt="Crying Cat"
+              className="w-36 h-36 object-contain mb-6"
+            />
+            <h2 className="text-2xl font-bold text-center text-gray-900 mb-7">
+              Are you sure you want to log out?
+            </h2>
+            <div className="flex justify-center space-x-4 w-full">
+              <button
+                onClick={() => setShowLogoutModal(false)}
+                className="flex-1 px-6 py-3 text-gray-700 border border-gray-300 rounded-lg transition duration-200 hover:bg-gray-100 hover:border-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 flex items-center justify-center font-medium text-base"
+              >
+                <FaTimes className="inline-block mr-2 text-lg" /> Cancel
+              </button>
+              <button
+                onClick={async () => {
+                  await handleLogout();
+                  setShowLogoutModal(false);
+                }}
+                className="flex-1 px-6 py-3 bg-red-500 text-white rounded-lg transition duration-200 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 flex items-center justify-center font-medium text-base"
+              >
+                <FaSignOutAlt className="inline-block mr-2 text-lg" /> Logout
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

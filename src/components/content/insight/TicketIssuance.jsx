@@ -1,14 +1,16 @@
 // src/components/TicketIssuance.jsx
 import React, { useState, useEffect } from "react";
 import * as XLSX from "xlsx";
-import AccuracyProgress from "../InsightsContent/AccuracyProgress";
-import supabase from "../../../backend/supabase/supabase";
-import { ArrowUp, ArrowDown } from "lucide-react";
+
+import AccuracyProgress from "../../Insights/accuracy";
+import supabase from "../../../../backend/supabase/supabase";
 import {
   ChevronDownIcon,
   ChevronUpIcon,
   ExclamationCircleIcon,
-} from "@heroicons/react/24/solid";
+} from "@heroicons/react/24/solid";   
+
+import Insights from "../../Insights";
 
 function TicketIssuance() {
   const [accuracyPercentage, setAccuracyPercentage] = useState("0.00");
