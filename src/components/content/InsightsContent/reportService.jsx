@@ -218,7 +218,7 @@ const fetchReportData = async (timeRange, selectedMonth, selectedYear) => {
         });
       }
     }
-    
+
     const percentagePerAssignedPerson = {};
 
     for (const [person, data] of Object.entries(assignedPersonsData)) {
