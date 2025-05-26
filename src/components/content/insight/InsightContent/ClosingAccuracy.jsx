@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import * as XLSX from "xlsx";
-import AccuracyProgress from "../InsightsContent/AccuracyProgress";
-import supabase from "../../../backend/supabase/supabase";
+import AccuracyProgress from "../../InsightsContent/AccuracyProgress";
+import supabase from "../../../../backend/supabase/supabase";
 import { ExclamationCircleIcon, ChevronUpIcon, ChevronDownIcon } from "@heroicons/react/24/solid";
 import { ArrowUp, ArrowDown } from "lucide-react";
 

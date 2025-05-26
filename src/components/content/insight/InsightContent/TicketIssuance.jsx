@@ -1,8 +1,8 @@
 // src/components/TicketIssuance.jsx
 import React, { useState, useEffect } from "react";
 import * as XLSX from "xlsx";
-
-import AccuracyProgress from "../../Insights/accuracy";
+import { ArrowUp, ArrowDown } from "lucide-react";
+import AccuracyProgress from "../../InsightsContent/AccuracyProgress";
 import supabase from "../../../../backend/supabase/supabase";
 import {
   ChevronDownIcon,
