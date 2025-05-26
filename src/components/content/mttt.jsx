@@ -239,7 +239,7 @@ const ReportedCreatedTable = () => {
                 className="px-6 py-3 text-center text-indigo-700 uppercase tracking-wider cursor-pointer"
                 onClick={() => handleSort("ticketcount")}
               >
-                # of Assigned Tickets{" "}
+                Number of Assigned Tickets{" "}
                 {sortConfig.column === "ticketcount" && (
                   sortConfig.direction === "asc" ? (
                     <FaArrowUp className="inline-block ml-2" />

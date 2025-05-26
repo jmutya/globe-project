@@ -230,7 +230,7 @@ function MttiTable() {
                 className="px-6 py-3 text-center text-s font-medium text-indigo-700 uppercase tracking-wider cursor-pointer"
                 onClick={() => handleSort("ticketcount")}
               >
-                # of Assigned Tickets{" "}
+                Number of Assigned Tickets{" "}
                 {sortConfig.column === "ticketcount" && (
                   <span>
                     {sortConfig.direction === "asc" ? (

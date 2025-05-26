@@ -1,5 +1,6 @@
-import React, { useEffect, useState, useRef } from "react"; // Import useRef
+import React, { useEffect, useState, useRef } from "react";
 import * as XLSX from "xlsx";
+import { saveAs } from 'file-saver'; // Import saveAs from file-saver
 import {
   LineChart,
   Line,
@@ -10,8 +11,8 @@ import {
   Legend,
 } from "recharts";
 import supabase from "../../../backend/supabase/supabase";
-import jsPDF from "jspdf"; // Import jsPDF
-import html2canvas from "html2canvas"; // Import html2canvas
+import jsPDF from "jspdf";
+import html2canvas from "html2canvas";
 
 const FilterData = () => {
   const [selectTerritory, setSelectTerritory] = useState("");
@@ -25,7 +26,6 @@ const FilterData = () => {
   const [selectedMonth, setSelectedMonth] = useState("");
   const [parsingErrors, setParsingErrors] = useState([]);
 
-  // Create a ref for the content you want to export
   const contentRef = useRef(null);
 
   const convertExcelDate = (value) => {
@@ -62,12 +62,23 @@ const FilterData = () => {
     if (error) return console.error("Supabase error:", error);
 
     let allData = [];
+    const processedNumbers = new Set();
+
     for (const file of files) {
       const { data: fileUrl } = supabase.storage
         .from("uploads")
         .getPublicUrl(`excels/${file.name}`);
       const sheet = await processExcelData(fileUrl.publicUrl);
-      allData = [...allData, ...sheet];
+
+      const uniqueRowsFromFile = sheet.filter(row => {
+        const number = row["Number"];
+        if (number && !processedNumbers.has(number)) {
+          processedNumbers.add(number);
+          return true;
+        }
+        return false;
+      });
+      allData = [...allData, ...uniqueRowsFromFile];
     }
 
     const errors = [];
@@ -167,7 +178,7 @@ const FilterData = () => {
     if (selectedMonth)
       filtered = filtered.filter((item) => item.date?.startsWith(selectedMonth));
 
-    setTableData(filtered);
+    setTableData(filtered); // This is the detailed table data
 
     if (selectedProvince) {
       const groupedByDate = {};
@@ -254,13 +265,13 @@ const FilterData = () => {
   const handleExportPdf = async () => {
     if (contentRef.current) {
       const canvas = await html2canvas(contentRef.current, {
-        scale: 2, // Increase scale for better resolution
-        useCORS: true, // If your images are from a different origin
+        scale: 2,
+        useCORS: true,
       });
       const imgData = canvas.toDataURL("image/png");
-      const pdf = new jsPDF("p", "mm", "a4"); // 'p' for portrait, 'mm' for millimeters, 'a4' for size
-      const imgWidth = 210; // A4 width in mm
-      const pageHeight = 295; // A4 height in mm
+      const pdf = new jsPDF("p", "mm", "a4");
+      const imgWidth = 210;
+      const pageHeight = 295;
       const imgHeight = (canvas.height * imgWidth) / canvas.width;
       let heightLeft = imgHeight;
       let position = 0;
@@ -278,6 +289,47 @@ const FilterData = () => {
     }
   };
 
+  const handleExportExcel = () => {
+    const workbook = XLSX.utils.book_new();
+
+    // 1. Add Chart Data
+    if (chartData.length > 0) {
+      const chartSheet = XLSX.utils.json_to_sheet(chartData);
+      XLSX.utils.book_append_sheet(workbook, chartSheet, "Chart Data");
+    }
+
+    // 2. Add Reason Summary Table Data
+    if (reasonSummary.length > 0) {
+      const reasonSummarySheet = XLSX.utils.json_to_sheet(reasonSummary);
+      XLSX.utils.book_append_sheet(workbook, reasonSummarySheet, "Reason Summary");
+    }
+
+    // 3. Add Unique Reasons Table Data (if applicable)
+    if (selectedProvince && uniqueReasonTableData.length > 0) {
+      const uniqueReasonSheet = XLSX.utils.json_to_sheet(uniqueReasonTableData);
+      XLSX.utils.book_append_sheet(workbook, uniqueReasonSheet, "Unique Reasons");
+    }
+
+    // 4. Add Raw Filtered Data (tableData) - This is the complete filtered dataset
+    if (tableData.length > 0) {
+        // You might want to select specific columns from tableData if it contains many fields
+        const simplifiedTableData = tableData.map(item => ({
+            Region: item.region,
+            Area: item.area,
+            Territory: item.territory,
+            Province: item.province,
+            Date: item.date,
+            Reason: item.reason,
+            Number: item.number,
+        }));
+        const rawDataSheet = XLSX.utils.json_to_sheet(simplifiedTableData);
+        XLSX.utils.book_append_sheet(workbook, rawDataSheet, "Filtered Raw Data");
+    }
+
+
+    // Generate and download the Excel file
+    XLSX.writeFile(workbook, "filtered_data.xlsx");
+  };
 
   return (
     <div>
@@ -351,29 +403,34 @@ const FilterData = () => {
         )}
 
         {selectTerritory && (
-          <div className="ml-auto flex gap-2"> {/* Added flex and gap */}
+          <div className="ml-auto flex gap-2">
             <button
               onClick={handleGenerateChart}
               className="px-4 py-2 bg-blue-500 text-white rounded-md shadow hover:bg-blue-600 transition"
             >
               Generate Graph
             </button>
-            {/* New PDF Export Button */}
-            {(chartData.length > 0 || reasonSummary.length > 0 || uniqueReasonTableData.length > 0) && (
-              <button
-                onClick={handleExportPdf}
-                className="px-4 py-2 bg-red-500 text-white rounded-md shadow hover:bg-red-600 transition"
-              >
-                Export to PDF
-              </button>
+            {(chartData.length > 0 || reasonSummary.length > 0 || uniqueReasonTableData.length > 0 || tableData.length > 0) && (
+              <>
+                <button
+                  onClick={handleExportPdf}
+                  className="px-4 py-2 bg-red-500 text-white rounded-md shadow hover:bg-red-600 transition"
+                >
+                  Export to PDF
+                </button>
+                <button
+                  onClick={handleExportExcel}
+                  className="px-4 py-2 bg-green-500 text-white rounded-md shadow hover:bg-green-600 transition"
+                >
+                  Export to Excel
+                </button>
+              </>
             )}
           </div>
         )}
       </div>
 
-      {/* Wrap the content you want to export in the ref */}
       <div ref={contentRef}>
-        {/* Line Chart */}
         {chartData.length > 0 && (
           <div className="mt-8 overflow-x-auto">
             <LineChart
@@ -407,9 +464,7 @@ const FilterData = () => {
           </div>
         )}
 
-        {/* Combined Tables Container */}
         <div className="flex flex-wrap gap-4 mt-6">
-          {/* Reason Summary Table */}
           {reasonSummary.length > 0 && (
             <div className="flex-1 min-w-[300px]">
               <h3 className="text-lg font-semibold mb-2">
@@ -434,7 +489,6 @@ const FilterData = () => {
             </div>
           )}
 
-          {/* Unique Reasons Table */}
           {selectedProvince && uniqueReasonTableData.length > 0 && (
             <div className="flex-1 min-w-[300px]">
               <h3 className="text-lg font-semibold mb-2">
@@ -459,9 +513,8 @@ const FilterData = () => {
             </div>
           )}
         </div>
-      </div> {/* End of contentRef div */}
+      </div>
 
-      {/* Error Messages */}
       {parsingErrors.length > 0 && (
         <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4 max-h-60 overflow-auto mt-10">
           <strong className="font-bold">Parsing Issues:</strong>
