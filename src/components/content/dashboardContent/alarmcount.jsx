@@ -55,8 +55,8 @@ const AlarmCount = () => {
 
         {isLoading ? (
           <div className="flex justify-center items-center py-6">
-            <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-gray-300"></div>
-            <p className="text-gray-500 ml-2 text-sm">Loading...</p>
+           <div className="w-6 h-6 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin" />
+            <p className="text-gray-500 ml-2 text-sm">Loading Please Wait...</p>
           </div>
         ) : totalCount > 0 ? (
           <div className="flex items-center justify-start mt-2">

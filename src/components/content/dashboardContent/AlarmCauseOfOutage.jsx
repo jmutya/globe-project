@@ -54,7 +54,7 @@ const AlarmCategory = () => {
       {isLoading ? (
         <div className="flex justify-center items-center py-8">
           <div className="w-6 h-6 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin" />
-          <p className="text-sm text-gray-500 ml-2">Fetching chart data...</p>
+          <p className="text-sm text-gray-500 ml-2">Loading Please Wait...</p>
         </div>
       ) : chartData.length > 0 ? (
         <>
