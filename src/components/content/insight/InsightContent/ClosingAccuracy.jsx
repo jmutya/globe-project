@@ -7,7 +7,9 @@ import {
   ChevronUpIcon,
   ChevronDownIcon,
 } from "@heroicons/react/24/solid";
-import { ArrowUp, ArrowDown } from "lucide-react";
+import { ArrowUp, ArrowDown, FileText } from "lucide-react";
+import html2canvas from "html2canvas";
+import jsPDF from "jspdf";
 
 // Format Excel serial to "YYYY/MM/DD"
 const formatOpenedDate = (value) => {
@@ -44,6 +46,7 @@ const getMonthYearFromISO = (isoDateString) => {
     }
     const month = String(date.getMonth() + 1).padStart(2, "0");
     const year = date.getFullYear();
+    const day = String(date.getDate()).padStart(2, "0");
 
     let hours = date.getHours();
     const minutes = String(date.getMinutes()).padStart(2, "0");
@@ -54,7 +57,7 @@ const getMonthYearFromISO = (isoDateString) => {
     hours = hours === 0 ? 12 : hours; // The hour '0' should be '12'
     const hours12 = String(hours).padStart(2, "0");
 
-    return `${month}/${year} ${hours12}:${minutes} ${ampm}`; // Return MM/YYYY HH:MM AM/PM format
+    return `${month}/${day}/${year} ${hours12}:${minutes} ${ampm}`; // Return MM/YYYY HH:MM AM/PM format
   } catch (error) {
     console.error(
       "Error parsing ISO date string for month/year:",
@@ -276,9 +279,7 @@ function ClosingAccuracy() {
       (row.assignedTo &&
         row.assignedTo.toLowerCase().includes(searchTerm.toLowerCase())) ||
       (row.number &&
-        String(row.number)
-          .toLowerCase()
-          .includes(searchTerm.toLowerCase())); // Added ticketNumber to search
+        String(row.number).toLowerCase().includes(searchTerm.toLowerCase())); // Added ticketNumber to search
     return matchesOpenedMonth && matchesUploadedMonth && matchesSearch;
   });
   // --- Calculate Overall Accuracy for the Selected Filters ---
@@ -360,7 +361,60 @@ function ClosingAccuracy() {
     }
   );
 
-   // --- New Function for Exporting to Excel ---
+  const exportToPdf = () => {
+    // We no longer need to toggle row expansion here, as we're targeting only the accuracy table.
+    // const initialExpandedIndices = new Set(expandedIndices);
+    // const allFilteredUnmatchedIndices = new Set(filteredUnmatchedRows.map((_, idx) => idx));
+    // setExpandedIndices(allFilteredUnmatchedIndices);
+
+    // Give React a moment to render (though not strictly necessary if no state changes for this section)
+    setTimeout(() => {
+      // CHANGE THIS ID!
+      const input = document.getElementById("accuracy-table-report");
+      if (!input) {
+        console.error("Element with ID 'accuracy-table-report' not found.");
+        // If you had any previous temporary state changes, revert them here
+        // setExpandedIndices(initialExpandedIndices);
+        return;
+      }
+
+      html2canvas(input, {
+        scale: 2,
+        useCORS: true,
+        logging: true,
+      })
+        .then((canvas) => {
+          const imgData = canvas.toDataURL("image/png");
+          const pdf = new jsPDF("p", "mm", "a4");
+          const imgWidth = 210; // A4 width in mm
+          const pageHeight = 297; // A4 height in mm
+          const imgHeight = (canvas.height * imgWidth) / canvas.width;
+          let heightLeft = imgHeight;
+          let position = 0;
+
+          pdf.addImage(imgData, "PNG", 0, position, imgWidth, imgHeight);
+          heightLeft -= pageHeight;
+
+          while (heightLeft >= 0) {
+            position = heightLeft - imgHeight;
+            pdf.addPage();
+            pdf.addImage(imgData, "PNG", 0, position, imgWidth, imgHeight);
+            heightLeft -= pageHeight;
+          }
+          pdf.save("accuracy_table_report.pdf"); // Give it a more specific file name
+
+          // 3. Revert to initial expanded state after PDF is generated (if you had any)
+          // setExpandedIndices(initialExpandedIndices);
+        })
+        .catch((err) => {
+          console.error("Error generating PDF:", err);
+          // Revert expansion even if PDF generation fails (if you had any)
+          // setExpandedIndices(initialExpandedIndices);
+        });
+    }, 100); // Small delay to allow re-render
+  };
+
+  // --- New Function for Exporting to Excel ---
   const handleExportToExcel = () => {
     const dataToExport = filteredUnmatchedRows.map((row) => ({
       "Ticket Number": row.number || "N/A",
@@ -391,7 +445,7 @@ function ClosingAccuracy() {
       <div className="flex flex-col lg:flex-row gap-6 bg-white p-4 rounded-lg shadow">
         {/* Left: Accuracy Overview */}
         <div className="lg:basis-1/4">
-          <h3 className="font-semibold mb-2">Ticket Issuance Accuracy</h3>
+          <h3 className="font-semibold mb-2">Closing Ticket Accuracy</h3>
           <AccuracyProgress
             percentage={parseFloat(displayAccuracyForProgressBar)}
           />
@@ -457,7 +511,6 @@ function ClosingAccuracy() {
             >
               Export Incomplete to Excel
             </button>
-
           </div>
 
           {/* Error and No Data Messages */}
@@ -541,17 +594,32 @@ function ClosingAccuracy() {
       </div>
 
       {/* Accuracy Table */}
-      <div className="mt-10 bg-white p-4 rounded-lg shadow">
-        <h3 className="font-semibold mb-4">
-          Completion Accuracy per Assigned Person{" "}
-          {selectedMonth && selectedUploadedMonth
-            ? `for tickets opened in ${selectedMonth} from files uploaded in ${selectedUploadedMonth}`
-            : selectedMonth
-            ? `for tickets opened in ${selectedMonth}`
-            : selectedUploadedMonth
-            ? `for files uploaded in ${selectedUploadedMonth}`
-            : "Overall"}
-        </h3>
+      <div
+        className="mt-10 bg-white p-4 rounded-lg shadow"
+        id="accuracy-table-report"
+      >
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="font-semibold mb-4">
+            Completion Accuracy per Assigned Person - Closing Ticket - {" "}
+            {selectedMonth && selectedUploadedMonth
+              ? `for tickets opened in ${selectedMonth} from files uploaded in ${selectedUploadedMonth}`
+              : selectedMonth
+              ? `for tickets opened in ${selectedMonth}`
+              : selectedUploadedMonth
+              ? `for files uploaded in ${selectedUploadedMonth}`
+              : "Overall"}
+          </h3>
+          <div className="flex items-center gap-2">
+            <label className="text-sm text-gray-600 justify-end">
+              Export to PDF:
+            </label>
+            <FileText
+              className="h-7 w-7 text-red-600 cursor-pointer hover:text-red-800 transition-colors"
+              onClick={exportToPdf}
+              title="Export to PDF" // Add a title for accessibility and hover tooltip
+            />
+          </div>
+        </div>
         <table className="w-full table-auto border border-gray-300">
           <thead>
             <tr className="bg-gray-100">
@@ -571,7 +639,9 @@ function ClosingAccuracy() {
                   )}
                 </div>
               </th>
-              <th className="border px-4 py-2 text-left">Accuracy Percentage</th>
+              <th className="border px-4 py-2 text-left">
+                Accuracy Percentage
+              </th>
             </tr>
           </thead>
           <tbody>
