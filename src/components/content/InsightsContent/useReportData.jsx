@@ -25,6 +25,8 @@ const useReportData = (timeRange, selectedMonth, selectedYear, sortBy) => {
     return accuracy.toFixed(2);
   };
 
+  
+ 
   useEffect(() => {
     const fetchData = async () => {
       setReportData((prevState) => ({ ...prevState, isLoading: true, error: null }));

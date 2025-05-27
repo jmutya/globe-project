@@ -5,7 +5,7 @@ import "react-circular-progressbar/dist/styles.css";
 
 const AccuracyProgress = ({ percentage, title }) => (
   <div className="w-1/4">
-    <h3 className="text-lg font-semibold mr-4 ml-6 mt-4">{title}:</h3>
+    <h3 className="text-lg font-semibold mr-4 ml-6 mt-4">{title}</h3>
     <div className="w-60 h-60 mt-8 ml-12">
       <CircularProgressbar
         value={parseFloat(percentage)}

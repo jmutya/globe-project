@@ -46,26 +46,22 @@ const getIncompleteRows = (sheet, headers) => {
 
     // Function to format the 'Opened' date
 
+    if (missingColumns.length > 0) {
+      const assignedTo = assignedToIndex !== -1 ? row[assignedToIndex] : "";
+      const number = row[headers.indexOf("Number")] || "Not Provided";
+      const openedRaw = row[headers.indexOf("Opened")];
 
+      // Reuse the formatOpenedDate function
+      const openedFormatted = formatOpenedDate(openedRaw);
 
-if (missingColumns.length > 0) {
-  const assignedTo = assignedToIndex !== -1 ? row[assignedToIndex] : "";
-  const number = row[headers.indexOf("Number")] || "Not Provided";
-  const openedRaw = row[headers.indexOf("Opened")];
-
-  // Reuse the formatOpenedDate function
-  const openedFormatted = formatOpenedDate(openedRaw);
-
-  incompleteRows.push({
-    number: number,
-    assignedTo,
-    missingColumns,
-    rowData: row,
-    opened: openedFormatted, // Use the formatted date here
-  });
-}
-
-    
+      incompleteRows.push({
+        number: number,
+        assignedTo,
+        missingColumns,
+        rowData: row,
+        opened: openedFormatted, // Use the formatted date here
+      });
+    }
   });
 
   return incompleteRows;
@@ -73,7 +69,7 @@ if (missingColumns.length > 0) {
 
 const formatOpenedDate = (openedRaw) => {
   if (!openedRaw) return "";
-  
+
   if (typeof openedRaw === "number") {
     // If it's a number (Excel serial date)
     const date = new Date((openedRaw - 25569) * 86400 * 1000); // Excel serial to Date
@@ -85,7 +81,7 @@ const formatOpenedDate = (openedRaw) => {
     // If it's already a string (formatted date)
     return openedRaw;
   }
-  
+
   return ""; // Return empty string if not a valid date
 };
 
@@ -119,7 +115,7 @@ const fetchReportData = async (timeRange, selectedMonth, selectedYear) => {
         const alarmTypeIndex = headers.indexOf("AOR002");
         const causeIndex = headers.indexOf("Cause");
         const reasonIndex = headers.indexOf("Reason For Outage");
-        const resolvedByIndex = headers.indexOf("Resolved by");
+        const resolvedByIndex = headers.indexOf("Assigned to");
         const numberByIndex = headers.indexOf("Number");
         const assignedToIndex = headers.indexOf("Assigned to");
 
@@ -245,86 +241,10 @@ const fetchReportData = async (timeRange, selectedMonth, selectedYear) => {
       return entry;
     });
 
-    const groupByTimeRange = (data, timeRange) => {
-      switch (timeRange) {
-        case "weekly":
-          return groupDataByWeek(data);
-        case "monthly":
-          return groupDataByMonth(data);
-        case "yearly":
-          return groupDataByYear(data);
-        default:
-          return data;
-      }
-    };
-
-    const groupDataByWeek = (data) => {
-      const groupedData = {};
-      data.forEach((entry) => {
-        const date = new Date(entry.date);
-        const startOfWeek = new Date(
-          date.setDate(date.getDate() - date.getDay())
-        );
-        const weekKey = `${startOfWeek.getFullYear()}-${
-          startOfWeek.getMonth() + 1
-        }-${startOfWeek.getDate()}`;
-        if (!groupedData[weekKey]) {
-          groupedData[weekKey] = { date: weekKey };
-        }
-        Object.keys(entry).forEach((key) => {
-          if (key !== "date") {
-            groupedData[weekKey][key] =
-              (groupedData[weekKey][key] || 0) + entry[key];
-          }
-        });
-      });
-      return Object.values(groupedData);
-    };
-
-    const groupDataByMonth = (data) => {
-      const groupedData = {};
-      data.forEach((entry) => {
-        const date = new Date(entry.date);
-        const month = date.getMonth() + 1;
-        const year = date.getFullYear();
-        const monthKey = `${year}-${month.toString().padStart(2, "0")}`;
-        if (!groupedData[monthKey]) {
-          groupedData[monthKey] = { date: monthKey };
-        }
-        Object.keys(entry).forEach((key) => {
-          if (key !== "date") {
-            groupedData[monthKey][key] =
-              (groupedData[monthKey][key] || 0) + entry[key];
-          }
-        });
-      });
-      return Object.values(groupedData);
-    };
-
-    const groupDataByYear = (data) => {
-      const groupedData = {};
-      data.forEach((entry) => {
-        const date = new Date(entry.date);
-        const yearKey = `${date.getFullYear()}`;
-        if (!groupedData[yearKey]) {
-          groupedData[yearKey] = { date: yearKey };
-        }
-        Object.keys(entry).forEach((key) => {
-          if (key !== "date") {
-            groupedData[yearKey][key] =
-              (groupedData[yearKey][key] || 0) + entry[key];
-          }
-        });
-      });
-      return Object.values(groupedData);
-    };
-
-    formattedData = groupByTimeRange(formattedData, timeRange);
-
     const individualAccuracy = {};
 
     Object.entries(resolverStats).forEach(([resolver, stats]) => {
-      const totalAssigned = stats.totalResolved- stats.errors; // Assuming you have this data in `stats.totalAssigned`
+      const totalAssigned = stats.totalResolved - stats.errors; // Assuming you have this data in `stats.totalAssigned`
       const totalResolved = stats.totalResolved;
 
       let accuracy = "0.00";

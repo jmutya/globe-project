@@ -1,5 +1,6 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import * as XLSX from "xlsx";
+import { saveAs } from 'file-saver'; // Import saveAs from file-saver
 import {
   LineChart,
   Line,
@@ -8,12 +9,12 @@ import {
   CartesianGrid,
   Tooltip,
   Legend,
-  LabelList,
 } from "recharts";
 import supabase from "../../../backend/supabase/supabase";
+import jsPDF from "jspdf";
+import html2canvas from "html2canvas";
 
 const FilterData = () => {
-  const [selectRegion, setSelectRegion] = useState("");
   const [selectTerritory, setSelectTerritory] = useState("");
   const [selectedArea, setSelectedArea] = useState("");
   const [selectedProvince, setSelectedProvince] = useState("");
@@ -25,12 +26,14 @@ const FilterData = () => {
   const [selectedMonth, setSelectedMonth] = useState("");
   const [parsingErrors, setParsingErrors] = useState([]);
 
+  const contentRef = useRef(null);
+
   const convertExcelDate = (value) => {
     const formatDate = (date) =>
       `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(
         date.getDate()
       ).padStart(2, "0")}`;
-  
+
     if (typeof value === "number") {
       const millisecondsPerDay = 86400000;
       const excelEpoch = new Date(Date.UTC(1899, 11, 30));
@@ -42,7 +45,6 @@ const FilterData = () => {
     }
     return "";
   };
-  
 
   const processExcelData = async (fileUrl) => {
     const response = await fetch(fileUrl);
@@ -60,28 +62,32 @@ const FilterData = () => {
     if (error) return console.error("Supabase error:", error);
 
     let allData = [];
+    const processedNumbers = new Set();
 
     for (const file of files) {
       const { data: fileUrl } = supabase.storage
         .from("uploads")
         .getPublicUrl(`excels/${file.name}`);
-
       const sheet = await processExcelData(fileUrl.publicUrl);
-      allData = [...allData, ...sheet];
+
+      const uniqueRowsFromFile = sheet.filter(row => {
+        const number = row["Number"];
+        if (number && !processedNumbers.has(number)) {
+          processedNumbers.add(number);
+          return true;
+        }
+        return false;
+      });
+      allData = [...allData, ...uniqueRowsFromFile];
     }
 
-     // new array to store errors
-    const errors = []; // new array to store errors
+    const errors = [];
     const parsed = allData
       .map((row, idx) => {
- 
         const desc = row["Short description"];
-      
-    
         const cleanDesc = desc?.replace(/^[\s']+/, "");
         const match = cleanDesc?.match(/\(([^)]+)\)/);
         const date = convertExcelDate(row["Opened"]);
-     
         const reason = row["Reason For Outage"] || "Empty";
         const number = row["Number"] || "";
 
@@ -89,18 +95,15 @@ const FilterData = () => {
           errors.push(`Row ${idx + 1}: Missing Short description (Ticket Number: ${number || 'N/A'})`);
           return null;
         }
-       
         if (!match) {
           errors.push(`Row ${idx + 1}: Could not match pattern in "${desc}" (Ticket Number: ${number || 'N/A'})`);
           return null;
         }
-       
         const parts = match[1].split("-");
         if (parts.length < 5) {
           errors.push(`Row ${idx + 1}: Not enough parts in "${match[1]}" (Ticket Number: ${number || 'N/A'})`);
           return null;
         }
-       
 
         return {
           region: parts[0],
@@ -114,24 +117,13 @@ const FilterData = () => {
       })
       .filter(Boolean);
 
-    // Save to state
     setParsingErrors(errors);
-
-    // Save to state
-    setParsingErrors(errors);
-
     setStructuredData(parsed);
   };
 
   useEffect(() => {
     fetchAndProcessFiles();
   }, []);
-
-  useEffect(() => {
-    setSelectTerritory("");
-    setSelectedArea("");
-    setSelectedProvince("");
-  }, [selectRegion]);
 
   useEffect(() => {
     setSelectedArea("");
@@ -142,16 +134,9 @@ const FilterData = () => {
     setSelectedProvince("");
   }, [selectedArea]);
 
-  const regionOptions = [...new Set(structuredData.map((item) => item.region))];
-  const territoryOptions = selectRegion
-    ? [
-        ...new Set(
-          structuredData
-            .filter((item) => item.region === selectRegion)
-            .map((item) => item.territory)
-        ),
-      ]
-    : [];
+  const territoryOptions = [
+    ...new Set(structuredData.map((item) => item.territory)),
+  ];
 
   const areaOptions = selectTerritory
     ? [
@@ -162,6 +147,7 @@ const FilterData = () => {
         ),
       ]
     : [];
+
   const provinceOptions = selectedArea
     ? [
         ...new Set(
@@ -175,7 +161,7 @@ const FilterData = () => {
   const monthOptions = [
     ...new Set(
       structuredData
-        .map((item) => item.date?.slice(0, 7)) // 'YYYY-MM'
+        .map((item) => item.date?.slice(0, 7))
         .filter(Boolean)
     ),
   ].sort();
@@ -183,51 +169,30 @@ const FilterData = () => {
   const handleGenerateChart = () => {
     let filtered = [...structuredData];
 
-    if (selectRegion)
-      filtered = filtered.filter((item) => item.region === selectRegion);
     if (selectTerritory)
       filtered = filtered.filter((item) => item.territory === selectTerritory);
     if (selectedArea)
       filtered = filtered.filter((item) => item.area === selectedArea);
     if (selectedProvince)
       filtered = filtered.filter((item) => item.province === selectedProvince);
-    if (selectedMonth) {
-      filtered = filtered.filter((item) =>
-        item.date?.startsWith(selectedMonth)
-      );
-    }
+    if (selectedMonth)
+      filtered = filtered.filter((item) => item.date?.startsWith(selectedMonth));
 
-    setTableData(filtered); // Save for summary table
+    setTableData(filtered); // This is the detailed table data
 
-    // ✅ Province selected: Group by Reason
     if (selectedProvince) {
       const groupedByDate = {};
       const reasonCount = {};
-      const uniqueReasons = {}; // NEW: Track unique reasons and their counts
-
-      console.log("Total parsed structuredData:", structuredData.length);
-      console.log("Filtered data before counting:", filtered.length);
-
-     
+      const uniqueReasons = {};
 
       filtered.forEach((item) => {
-        console.log("Total parsed structuredData:", structuredData.length);
-        console.log("Filtered data before counting:", filtered.length);
-
-
         const date = item.date || "Unknown";
         const reason = item.reason?.split("-")[0]?.trim() || "Unknown";
-        const fullReason = item.reason || "Empty"; // Get the full reason text
-      
+        const fullReason = item.reason || "Empty";
 
-        if (!groupedByDate[date]) {
-          groupedByDate[date] = {};
-        }
-
+        if (!groupedByDate[date]) groupedByDate[date] = {};
         groupedByDate[date][reason] = (groupedByDate[date][reason] || 0) + 1;
-        // Count total occurrences for the summary
         reasonCount[reason] = (reasonCount[reason] || 0) + 1;
-        // NEW: Track unique full reasons and their counts
         uniqueReasons[fullReason] = (uniqueReasons[fullReason] || 0) + 1;
       });
 
@@ -247,39 +212,33 @@ const FilterData = () => {
         count: reasonCount[reason],
       }));
 
-      // NEW: Create table data for unique reasons with counts
       const uniqueReasonTableData = Object.entries(uniqueReasons)
-        .map(([reason, count]) => ({
-          reason,
-          count,
-        }))
-        .sort((a, b) => b.count - a.count); // Sort by count descending
+        .map(([reason, count]) => ({ reason, count }))
+        .sort((a, b) => b.count - a.count);
 
       setChartData(chart);
       setReasonSummary(summary);
-      setUniqueReasonTableData(uniqueReasonTableData); // NEW: Set the unique reason data
-      return; // 🚨 Return early since Province logic is complete
+      setUniqueReasonTableData(uniqueReasonTableData);
+      return;
     }
 
-    // 🔁 Otherwise: Group by Territory → Area → Province depending on level
     let groupKey = "territory";
     if (selectTerritory && !selectedArea) groupKey = "area";
     else if (selectTerritory && selectedArea && !selectedProvince)
       groupKey = "province";
 
     let grouped = {};
-    let reasonCount = {}; // NEW: Track reasons for summary
+    let reasonCount = {};
 
     filtered.forEach((item) => {
       const keyGroup = item[groupKey] || "Unknown";
       const keyDate = item.date || "Unknown";
-      const reason = item.reason?.split("-")[0]?.trim() || "Empty"; // NEW
-     
+      const reason = item.reason?.split("-")[0]?.trim() || "Empty";
 
       if (!grouped[keyGroup]) grouped[keyGroup] = {};
       grouped[keyGroup][keyDate] = (grouped[keyGroup][keyDate] || 0) + 1;
 
-      reasonCount[reason] = (reasonCount[reason] || 0) + 1; // NEW: Count reasons for summar
+      reasonCount[reason] = (reasonCount[reason] || 0) + 1;
     });
 
     const dates = Array.from(
@@ -294,35 +253,86 @@ const FilterData = () => {
       return entry;
     });
 
-    // NEW: Create summary similar to province logic
     const summary = Object.entries(reasonCount).map(([reason, count]) => ({
       reason,
       count,
     }));
 
     setChartData(finalChartData);
-    setReasonSummary(summary); // Clear summary table when not showing reasons
+    setReasonSummary(summary);
   };
 
-  //   // Summarize reason counts based on the first word only
-  //   const reasonCount = {};
-  //   filtered.forEach((item) => {
-  //     const mainReason = item.reason.split("-")[0]?.trim() || "Unknown";
-  //     reasonCount[mainReason] = (reasonCount[mainReason] || 0) + 1;
-  //   });
+  const handleExportPdf = async () => {
+    if (contentRef.current) {
+      const canvas = await html2canvas(contentRef.current, {
+        scale: 2,
+        useCORS: true,
+      });
+      const imgData = canvas.toDataURL("image/png");
+      const pdf = new jsPDF("p", "mm", "a4");
+      const imgWidth = 210;
+      const pageHeight = 295;
+      const imgHeight = (canvas.height * imgWidth) / canvas.width;
+      let heightLeft = imgHeight;
+      let position = 0;
 
-  //   const summary = Object.entries(reasonCount).map(([reason, count]) => ({
-  //     reason,
-  //     count,
-  //   }));
-  //   setReasonSummary(summary);
-  // };
+      pdf.addImage(imgData, "PNG", 0, position, imgWidth, imgHeight);
+      heightLeft -= pageHeight;
+
+      while (heightLeft >= 0) {
+        position = heightLeft - imgHeight;
+        pdf.addPage();
+        pdf.addImage(imgData, "PNG", 0, position, imgWidth, imgHeight);
+        heightLeft -= pageHeight;
+      }
+      pdf.save("filtered_data.pdf");
+    }
+  };
+
+  const handleExportExcel = () => {
+    const workbook = XLSX.utils.book_new();
+
+    // 1. Add Chart Data
+    if (chartData.length > 0) {
+      const chartSheet = XLSX.utils.json_to_sheet(chartData);
+      XLSX.utils.book_append_sheet(workbook, chartSheet, "Chart Data");
+    }
+
+    // 2. Add Reason Summary Table Data
+    if (reasonSummary.length > 0) {
+      const reasonSummarySheet = XLSX.utils.json_to_sheet(reasonSummary);
+      XLSX.utils.book_append_sheet(workbook, reasonSummarySheet, "Reason Summary");
+    }
+
+    // 3. Add Unique Reasons Table Data (if applicable)
+    if (selectedProvince && uniqueReasonTableData.length > 0) {
+      const uniqueReasonSheet = XLSX.utils.json_to_sheet(uniqueReasonTableData);
+      XLSX.utils.book_append_sheet(workbook, uniqueReasonSheet, "Unique Reasons");
+    }
+
+    // 4. Add Raw Filtered Data (tableData) - This is the complete filtered dataset
+    if (tableData.length > 0) {
+        // You might want to select specific columns from tableData if it contains many fields
+        const simplifiedTableData = tableData.map(item => ({
+            Region: item.region,
+            Area: item.area,
+            Territory: item.territory,
+            Province: item.province,
+            Date: item.date,
+            Reason: item.reason,
+            Number: item.number,
+        }));
+        const rawDataSheet = XLSX.utils.json_to_sheet(simplifiedTableData);
+        XLSX.utils.book_append_sheet(workbook, rawDataSheet, "Filtered Raw Data");
+    }
+
+
+    // Generate and download the Excel file
+    XLSX.writeFile(workbook, "filtered_data.xlsx");
+  };
 
   return (
     <div>
-      {/* Dropdown Filters */}
-
-
       <div className="mb-4 flex gap-4 items-center flex-wrap">
         <div>
           <label>Month: </label>
@@ -339,39 +349,22 @@ const FilterData = () => {
             ))}
           </select>
         </div>
+
         <div>
-          <label>Region: </label>
+          <label>Territory: </label>
           <select
             className="p-2 border rounded-md ml-3"
-            value={selectRegion}
-            onChange={(e) => setSelectRegion(e.target.value)}
+            value={selectTerritory}
+            onChange={(e) => setSelectTerritory(e.target.value)}
           >
-            <option value="">Select Region</option>
-            {regionOptions.map((region, idx) => (
-              <option key={idx} value={region}>
-                {region}
+            <option value="">Select Territory</option>
+            {territoryOptions.map((territory, idx) => (
+              <option key={idx} value={territory}>
+                {territory}
               </option>
             ))}
           </select>
         </div>
-
-        {selectRegion && (
-          <div>
-            <label>Territory: </label>
-            <select
-              className="p-2 border rounded-md ml-3"
-              value={selectTerritory}
-              onChange={(e) => setSelectTerritory(e.target.value)}
-            >
-              <option value="">Select Territory</option>
-              {territoryOptions.map((territory, idx) => (
-                <option key={idx} value={territory}>
-                  {territory}
-                </option>
-              ))}
-            </select>
-          </div>
-        )}
 
         {selectTerritory && (
           <div>
@@ -409,108 +402,119 @@ const FilterData = () => {
           </div>
         )}
 
-        {selectRegion && (
-          <div className="ml-auto">
+        {selectTerritory && (
+          <div className="ml-auto flex gap-2">
             <button
               onClick={handleGenerateChart}
-              className="ml-2 px-4 py-2 bg-blue-500 text-white rounded-md shadow hover:bg-blue-600 transition"
+              className="px-4 py-2 bg-blue-500 text-white rounded-md shadow hover:bg-blue-600 transition"
             >
               Generate Graph
             </button>
+            {(chartData.length > 0 || reasonSummary.length > 0 || uniqueReasonTableData.length > 0 || tableData.length > 0) && (
+              <>
+                <button
+                  onClick={handleExportPdf}
+                  className="px-4 py-2 bg-red-500 text-white rounded-md shadow hover:bg-red-600 transition"
+                >
+                  Export to PDF
+                </button>
+                <button
+                  onClick={handleExportExcel}
+                  className="px-4 py-2 bg-green-500 text-white rounded-md shadow hover:bg-green-600 transition"
+                >
+                  Export to Excel
+                </button>
+              </>
+            )}
           </div>
         )}
       </div>
 
-     
+      <div ref={contentRef}>
+        {chartData.length > 0 && (
+          <div className="mt-8 overflow-x-auto">
+            <LineChart
+              width={1400}
+              height={500}
+              data={chartData}
+              margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
+            >
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis dataKey="date" />
+              <YAxis />
+              <Tooltip />
+              <Legend />
+              {Object.keys(chartData[0])
+                .filter((key) => key !== "date")
+                .map((key, index) => (
+                  <Line
+                    key={key}
+                    type="monotone"
+                    dataKey={key}
+                    stroke={
+                      ["#8884d8", "#82ca9d", "#ff7300", "#ff4f81", "#0088FE"][
+                        index % 5
+                      ]
+                    }
+                    strokeWidth={2}
+                    dot={{ r: 3 }}
+                  ></Line>
+                ))}
+            </LineChart>
+          </div>
+        )}
 
-      {/* Line Chart */}
-      {chartData.length > 0 && (
-        <div className="mt-8 overflow-x-auto">
-          <LineChart
-            width={1400}
-            height={500}
-            data={chartData}
-            margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
-          >
-            <CartesianGrid strokeDasharray="3 3" />
-            <XAxis dataKey="date" />
-            <YAxis />
-            <Tooltip />
-            <Legend />
-            {Object.keys(chartData[0])
-              .filter((key) => key !== "date")
-              .map((key, index) => (
-                <Line
-                  key={key}
-                  type="monotone"
-                  dataKey={key}
-                  stroke={
-                    ["#8884d8", "#82ca9d", "#ff7300", "#ff4f81", "#0088FE"][
-                      index % 5
-                    ]
-                  }
-                  strokeWidth={2}
-                  dot={{ r: 3 }}
-                ></Line>
-              ))}
-          </LineChart>
+        <div className="flex flex-wrap gap-4 mt-6">
+          {reasonSummary.length > 0 && (
+            <div className="flex-1 min-w-[300px]">
+              <h3 className="text-lg font-semibold mb-2">
+                Reason for Outage Summary
+              </h3>
+              <table className="w-full table-auto border-collapse border border-gray-300">
+                <thead>
+                  <tr className="bg-gray-100">
+                    <th className="border px-4 py-2">Reason</th>
+                    <th className="border px-4 py-2">Count</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {reasonSummary.map(({ reason, count }, idx) => (
+                    <tr key={idx}>
+                      <td className="border px-4 py-2">{reason}</td>
+                      <td className="border px-4 py-2">{count}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+
+          {selectedProvince && uniqueReasonTableData.length > 0 && (
+            <div className="flex-1 min-w-[300px]">
+              <h3 className="text-lg font-semibold mb-2">
+                Unique Reasons for Outage in {selectedProvince}
+              </h3>
+              <table className="w-full table-auto border-collapse border border-gray-300">
+                <thead>
+                  <tr className="bg-gray-100">
+                    <th className="border px-4 py-2">Reason for Outage</th>
+                    <th className="border px-4 py-2">Count</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {uniqueReasonTableData.map((item, index) => (
+                    <tr key={index}>
+                      <td className="border px-4 py-2">{item.reason}</td>
+                      <td className="border px-4 py-2">{item.count}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
-      )}
-
-      {/* Combined Tables Container */}
-      <div className="flex flex-wrap gap-4 mt-6">
-        {/* Reason Summary Table */}
-        {reasonSummary.length > 0 && (
-          <div className="flex-1 min-w-[300px]">
-            <h3 className="text-lg font-semibold mb-2">
-              Reason for Outage Summary
-            </h3>
-            <table className="w-full table-auto border-collapse border border-gray-300">
-              <thead>
-                <tr className="bg-gray-100">
-                  <th className="border px-4 py-2">Reason</th>
-                  <th className="border px-4 py-2">Count</th>
-                </tr>
-              </thead>
-              <tbody>
-                {reasonSummary.map(({ reason, count }, idx) => (
-                  <tr key={idx}>
-                    <td className="border px-4 py-2">{reason}</td>
-                    <td className="border px-4 py-2">{count}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-
-        {/* Unique Reasons Table */}
-        {selectedProvince && uniqueReasonTableData.length > 0 && (
-          <div className="flex-1 min-w-[300px]">
-            <h3 className="text-lg font-semibold mb-2">
-              Unique Reasons for Outage in {selectedProvince}
-            </h3>
-            <table className="w-full table-auto border-collapse border border-gray-300">
-              <thead>
-                <tr className="bg-gray-100">
-                  <th className="border px-4 py-2">Reason for Outage</th>
-                  <th className="border px-4 py-2">Count</th>
-                </tr>
-              </thead>
-              <tbody>
-                {uniqueReasonTableData.map((item, index) => (
-                  <tr key={index}>
-                    <td className="border px-4 py-2">{item.reason}</td>
-                    <td className="border px-4 py-2">{item.count}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
       </div>
 
-      {/* Error Messages */}
       {parsingErrors.length > 0 && (
         <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4 max-h-60 overflow-auto mt-10">
           <strong className="font-bold">Parsing Issues:</strong>
@@ -521,7 +525,6 @@ const FilterData = () => {
           </ul>
         </div>
       )}
-
     </div>
   );
 };
