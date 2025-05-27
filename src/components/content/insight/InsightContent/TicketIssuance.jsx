@@ -1,344 +1,377 @@
-import React, { useState, useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import * as XLSX from "xlsx";
-import { ArrowUp, ArrowDown } from "lucide-react";
 import AccuracyProgress from "../../InsightsContent/AccuracyProgress";
 import supabase from "../../../../backend/supabase/supabase";
 import {
-  ChevronDownIcon,
-  ChevronUpIcon,
   ExclamationCircleIcon,
+  ChevronUpIcon,
+  ChevronDownIcon,
 } from "@heroicons/react/24/solid";
+import { ArrowUp, ArrowDown } from "lucide-react";
 
-import Insights from "../../Insights"; // This import still seems unused.
-
-function TicketIssuance() {
-  const [accuracyPercentage, setAccuracyPercentage] = useState("0.00");
-  const [incompleteRows, setIncompleteRows] = useState([]);
-  const [personAccuracyMap, setPersonAccuracyMap] = useState({});
-  const [monthlyAccuracyMap, setMonthlyAccuracyMap] = useState({});
-  const [monthlyPersonAccuracyMap, setMonthlyPersonAccuracyMap] = useState({});
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const [expandedIndex, setExpandedIndex] = useState(null);
-  const [searchTerm, setSearchTerm] = useState("");
-  const [selectedMonth, setSelectedMonth] = useState(""); // For 'Opened' date filter (MM/YYYY)
-  const [sortOrder, setSortOrder] = useState("desc");
-  const [selectedUploadedMonth, setSelectedUploadedMonth] = useState(""); // For 'Added on' date filter (MM/YYYY)
-  const [uploadedMonthOptions, setUploadedMonthOptions] = useState([]); // These are MM/YYYY
-
-  const formatOpenedDate = (value) => {
-    if (!value) return "";
-    // Check if value is a number (XLSX date format)
-    if (typeof value === "number") {
-      const date = new Date((value - 25569) * 86400 * 1000); // Convert Excel serial date to JS Date
+// Format Excel serial to "YYYY/MM/DD"
+const formatOpenedDate = (value) => {
+  if (!value) return "";
+  if (typeof value === "number") {
+    // Excel dates start from Jan 1, 1900. 25569 is the number of days from 1900-01-01 to 1970-01-01.
+    const date = new Date((value - 25569) * 86400 * 1000);
+    const yyyy = date.getFullYear();
+    const mm = String(date.getMonth() + 1).padStart(2, "0");
+    const dd = String(date.getDate()).padStart(2, "0");
+    return `${yyyy}/${mm}/${dd}`;
+  }
+  // If already a string, assume it's a date string and try to format
+  try {
+    const date = new Date(value);
+    if (!isNaN(date.getTime())) {
+      // Check if the date is valid
       const yyyy = date.getFullYear();
       const mm = String(date.getMonth() + 1).padStart(2, "0");
       const dd = String(date.getDate()).padStart(2, "0");
       return `${yyyy}/${mm}/${dd}`;
     }
-    // If already a string, assume it's a date string and try to format
-    try {
-      const date = new Date(value);
-      if (!isNaN(date.getTime())) {
-        // Check if the date is valid
-        const yyyy = date.getFullYear();
-        const mm = String(date.getMonth() + 1).padStart(2, "0");
-        const dd = String(date.getDate()).padStart(2, "0");
-        return `${yyyy}/${mm}/${dd}`;
-      }
-    } catch (e) {
-      // Fallback for invalid date strings
-      return value;
-    }
+  } catch (e) {
+    // Fallback for invalid date strings
     return value;
-  };
+  }
+  return value;
+};
 
-  // Turn "YYYY/MM/DD" into "MM/YYYY" for consistent monthly grouping (for ticket opened dates)
-  const getMonthFromDate = (dateStr) => {
-    // Ensure dateStr is a valid date string before parsing
-    if (!dateStr || dateStr === "Invalid Date") return "Invalid Date";
-    const date = new Date(dateStr);
-    if (isNaN(date.getTime())) return "Invalid Date"; // Check for invalid date object
-    const month = date.getMonth() + 1;
+// Turn "YYYY/MM/DD" into "MM/YYYY" for consistent monthly grouping (for ticket opened dates)
+const getMonthFromDate = (dateStr) => {
+  // Ensure dateStr is a valid date string before parsing
+  if (!dateStr || dateStr === "Invalid Date") return "Invalid Date";
+  const date = new Date(dateStr);
+  if (isNaN(date.getTime())) return "Invalid Date"; // Check for invalid date object
+  const month = date.getMonth() + 1;
+  const year = date.getFullYear();
+  return `${month < 10 ? "0" : ""}${month}/${year}`;
+};
+
+const getMonthYearFromISO = (isoDateString) => {
+  if (!isoDateString) return "Invalid Date";
+  try {
+    const date = new Date(isoDateString);
+    if (isNaN(date.getTime())) {
+      // Check for invalid date
+      return "Invalid Date";
+    }
+    const month = String(date.getMonth() + 1).padStart(2, "0");
     const year = date.getFullYear();
-    return `${month < 10 ? "0" : ""}${month}/${year}`;
-  };
 
-  const getMonthYearFromISO = (isoDateString) => {
-    if (!isoDateString) return "Invalid Date";
-    try {
-      const date = new Date(isoDateString);
-      if (isNaN(date.getTime())) {
-        // Check for invalid date
-        return "Invalid Date";
-      }
-      const month = String(date.getMonth() + 1).padStart(2, "0");
-      const year = date.getFullYear();
+    let hours = date.getHours();
+    const minutes = String(date.getMinutes()).padStart(2, "0");
+    const ampm = hours >= 12 ? "PM" : "AM"; // Determine AM/PM
 
-      let hours = date.getHours();
-      const minutes = String(date.getMinutes()).padStart(2, "0");
-      const ampm = hours >= 12 ? "PM" : "AM"; // Determine AM/PM
+    // Convert hours to 12-hour format
+    hours = hours % 12;
+    hours = hours === 0 ? 12 : hours; // The hour '0' should be '12'
+    const hours12 = String(hours).padStart(2, "0");
 
-      // Convert hours to 12-hour format
-      hours = hours % 12;
-      hours = hours === 0 ? 12 : hours; // The hour '0' should be '12'
-      const hours12 = String(hours).padStart(2, "0");
+    return `${month}/${year} ${hours12}:${minutes} ${ampm}`; // Return MM/YYYY HH:MM AM/PM format
+  } catch (error) {
+    console.error(
+      "Error parsing ISO date string for month/year:",
+      isoDateString,
+      error
+    );
+    return "Invalid Date";
+  }
+};
 
-      return `${month}/${year} ${hours12}:${minutes} ${ampm}`; // Return MM/YYYY HH:MM AM/PM format
-    } catch (error) {
-      console.error(
-        "Error parsing ISO date string for month/year:",
-        isoDateString,
-        error
-      );
+// New function to format ISO date string (from Supabase) to MM/DD/YYYY HH:MM AM/PM for display
+const formatDateTimeFromISO = (isoDateString) => {
+  if (!isoDateString) return "N/A";
+  try {
+    const date = new Date(isoDateString);
+    if (isNaN(date.getTime())) {
       return "Invalid Date";
     }
-  };
+    const mm = String(date.getMonth() + 1).padStart(2, "0");
+    const dd = String(date.getDate()).padStart(2, "0");
+    const yyyy = date.getFullYear();
 
-  // New function to format ISO date string (from Supabase) to MM/DD/YYYY HH:MM AM/PM for display
-  const formatDateTimeFromISO = (isoDateString) => {
-    if (!isoDateString) return "N/A";
-    try {
-      const date = new Date(isoDateString);
-      if (isNaN(date.getTime())) {
-        return "Invalid Date";
+    let hours = date.getHours();
+    const minutes = String(date.getMinutes()).padStart(2, "0");
+    const ampm = hours >= 12 ? "PM" : "AM"; // Determine AM/PM
+
+    // Convert hours to 12-hour format
+    hours = hours % 12;
+    hours = hours === 0 ? 12 : hours; // The hour '0' should be '12'
+    const hours12 = String(hours).padStart(2, "0");
+
+    return `${mm}/${dd}/${yyyy} ${hours12}:${minutes} ${ampm}`; // Return MM/DD/YYYY HH:MM AM/PM format
+  } catch (error) {
+    console.error(
+      "Error formatting ISO date string for display:",
+      isoDateString,
+      error
+    );
+    return "Invalid Date";
+  }
+};
+
+// Placeholder for accuracy calculation
+const calculateAccuracy = (total, incomplete) => {
+  if (total === 0) return "0.00";
+  return (((total - incomplete) / total) * 100).toFixed(2);
+};
+
+function TicketIssuance() {
+  const [unmatchedRows, setUnmatchedRows] = useState([]);
+  const [allProcessedRows, setAllProcessedRows] = useState([]);
+  const [ticketOpenedMonthOptions, setTicketOpenedMonthOptions] = useState([]);
+  const [uploadedMonthOptions, setUploadedMonthOptions] = useState([]);
+  const [selectedMonth, setSelectedMonth] = useState(""); // For 'Opened' date filter (MM/YYYY)
+  const [selectedUploadedMonth, setSelectedUploadedMonth] = useState(""); // For 'Added on' date filter (MM/YYYY)
+  const [error, setError] = useState(null);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [expandedIndex, setExpandedIndex] = useState(null);
+  const [sortOrder, setSortOrder] = useState("desc");
+  const [isLoading, setIsLoading] = useState(true);
+
+  // Supabase connection test
+  useEffect(() => {
+    const testSupabaseConnection = async () => {
+      const { error } = await supabase.storage.from("uploads").list("excels");
+
+      if (error) {
+        console.error("Supabase connection test error:", error);
+        setError("Failed to connect to Supabase Storage.");
       }
-      const mm = String(date.getMonth() + 1).padStart(2, "0");
-      const dd = String(date.getDate()).padStart(2, "0");
-      const yyyy = date.getFullYear();
+    };
+    testSupabaseConnection();
+  }, []);
 
-      let hours = date.getHours();
-      const minutes = String(date.getMinutes()).padStart(2, "0");
-      const ampm = hours >= 12 ? "PM" : "AM"; // Determine AM/PM
+  const fetchAndProcessExcel = async () => {
+    setError(null);
+    setIsLoading(true);
+    let tempAllUnmatched = [];
+    let tempAllProcessed = [];
+    const ticketMonthsSet = new Set(); // For months from 'Opened' column
+    const uploadMonthsSet = new Set(); // For months from Supabase 'created_at' for dropdown
 
-      // Convert hours to 12-hour format
-      hours = hours % 12;
-      hours = hours === 0 ? 12 : hours; // The hour '0' should be '12'
-      const hours12 = String(hours).padStart(2, "0");
+    try {
+      const { data: files, error: listError } = await supabase.storage
+        .from("uploads")
+        .list("excels", { sortBy: { column: "name", order: "asc" } });
 
-      return `${mm}/${dd}/${yyyy} ${hours12}:${minutes} ${ampm}`; // Return MM/DD/YYYY HH:MM AM/PM format
-    } catch (error) {
-      console.error(
-        "Error formatting ISO date string for display:",
-        isoDateString,
-        error
-      );
-      return "Invalid Date";
-    }
-  };
+      if (listError) {
+        throw listError;
+      }
 
-  const getIncompleteRows = (
-    rows,
-    headers,
-    uploadedMonth,
-    fileUploadedDate
-  ) => {
-    // Added fileUploadedDate parameter
-    const required = [
-      "Failure Category",
-      "Cause",
-      "AOR001",
-      "AOR002",
-      "Number",
-      "Opened",
-    ];
-    const requiredIndexes = required.map((col) => headers.indexOf(col));
-    const assignedToIndex = headers.indexOf("Assigned to");
+      if (!files || files.length === 0) {
+        console.log("No Excel files found in the 'excels' folder.");
+        setUnmatchedRows([]);
+        setAllProcessedRows([]);
+        setTicketOpenedMonthOptions([]);
+        setUploadedMonthOptions([]);
+        setIsLoading(false);
+        return;
+      }
 
-    return rows.slice(1).reduce((acc, row) => {
-      const missing = required
-        .map((col, i) =>
-          !row[requiredIndexes[i]] ||
-          row[requiredIndexes[i]].toString().trim() === ""
-            ? col
-            : null
-        )
-        .filter(Boolean);
+      for (const file of files) {
+        const fileUploadFullDateTime = file.created_at; // Raw ISO string for display
+        const fileUploadMonth = getMonthYearFromISO(file.created_at); // MM/YYYY for dropdown filtering
 
-      if (missing.length > 0) {
-        acc.push({
-          number: row[headers.indexOf("Number")] || "Not Provided",
-          assignedTo:
-            assignedToIndex !== -1 ? row[assignedToIndex] : "Not Assigned",
-          opened: formatOpenedDate(row[headers.indexOf("Opened")]),
-          missingColumns: missing,
-          rowData: row,
-          uploadedMonth: uploadedMonth, // Month for filtering
-          fileUploadedDate: fileUploadedDate, // Full timestamp for display
+        if (fileUploadMonth !== "Invalid Date") {
+          uploadMonthsSet.add(fileUploadMonth); // Add to set for "Added on" dropdown (MM/YYYY)
+        }
+
+        const filePath = `excels/${file.name}`;
+        const { data: urlData } = supabase.storage
+          .from("uploads")
+          .getPublicUrl(filePath);
+
+        if (!urlData || !urlData.publicUrl) {
+          console.warn(`Could not get public URL for ${file.name}. Skipping.`);
+          continue;
+        }
+
+        const response = await fetch(urlData.publicUrl);
+        if (!response.ok) {
+          throw new Error(
+            `HTTP error! status: ${response.status} for ${file.name}`
+          );
+        }
+
+        const arrayBuffer = await response.arrayBuffer();
+        const workbook = XLSX.read(arrayBuffer, { type: "array" });
+        const sheet = XLSX.utils.sheet_to_json(
+          workbook.Sheets[workbook.SheetNames[0]],
+          {
+            defval: "", // Ensure empty cells are empty strings
+          }
+        );
+
+        const requiredTicketIssuanceFields = [
+          "Failure Category",
+          "Cause",
+          "AOR001",
+          "AOR002",
+        ];
+
+        sheet.forEach((row) => {
+          const number = row["Number"];
+          const assignedTo = row["Assigned to"];
+          const openedRaw = row["Opened"];
+          const openedFormatted = formatOpenedDate(openedRaw);
+
+          const missingColumns = [];
+          let hasError = false;
+
+          requiredTicketIssuanceFields.forEach((field) => {
+            if (!row[field] || String(row[field]).trim() === "") {
+              missingColumns.push(field);
+              hasError = true;
+            }
+          });
+
+          const ticketOpenedMonth = getMonthFromDate(openedFormatted);
+          if (ticketOpenedMonth !== "Invalid Date") {
+            ticketMonthsSet.add(ticketOpenedMonth); // Add to set for "Opened" dropdown
+          }
+
+          const processedRow = {
+            number,
+            assignedTo,
+            opened: openedFormatted,
+            ticketOpenedMonth: ticketOpenedMonth, // Month from the Excel's 'Opened' date (MM/YYYY)
+            fileUploadMonth: fileUploadMonth, // Month from Supabase 'created_at' for filtering (MM/YYYY)
+            fileUploadFullDateTime: fileUploadFullDateTime, // Raw ISO string for detailed display
+            hasError,
+            missingColumns,
+            // Include other relevant fields from the row if needed for display/debug
+            failureCategory: row["Failure Category"],
+            cause: row["Cause"],
+            aor001: row["AOR001"],
+            aor002: row["AOR002"],
+          };
+          tempAllProcessed.push(processedRow);
+
+          if (hasError) {
+            tempAllUnmatched.push(processedRow);
+          }
         });
       }
 
-      return acc;
-    }, []);
-  };
+      // Sort ticket opened months (most recent first)
+      const sortedTicketMonths = Array.from(ticketMonthsSet).sort((a, b) => {
+        const [ma, ya] = a.split("/").map(Number);
+        const [mb, yb] = b.split("/").map(Number);
+        return yb !== ya ? yb - ya : mb - ma;
+      });
 
-  const calculateAccuracy = (totalRows, incompleteCount) => {
-    return totalRows > 0
-      ? (((totalRows - incompleteCount) / totalRows) * 100).toFixed(2)
-      : "0.00";
+      // Sort uploaded months (most recent first)
+      const sortedUploadedMonths = Array.from(uploadMonthsSet).sort((a, b) => {
+        const [ma, ya] = a.split("/").map(Number);
+        const [mb, yb] = b.split("/").map(Number);
+        return yb !== ya ? yb - ya : mb - ma;
+      });
+
+      setTicketOpenedMonthOptions(sortedTicketMonths);
+      setUploadedMonthOptions(sortedUploadedMonths);
+      setUnmatchedRows(tempAllUnmatched);
+      setAllProcessedRows(tempAllProcessed);
+    } catch (err) {
+      console.error("Error fetching or processing Excel files:", err);
+      setError(`Failed to load data: ${err.message}`);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   useEffect(() => {
-    const fetchData = async () => {
-      try {
-        setIsLoading(true);
-        const { data: files, error: fetchError } = await supabase.storage
-          .from("uploads")
-          .list("excels");
-
-        if (fetchError) throw fetchError;
-
-        let totalRows = 0;
-        let totalIncomplete = 0;
-        let allIncomplete = [];
-        let personStats = {};
-        let monthlyStats = {};
-        let monthPersonStats = {};
-        let uniqueUploadedMonths = new Set();
-
-        for (const file of files) {
-          const {
-            data: { publicUrl },
-          } = supabase.storage
-            .from("uploads")
-            .getPublicUrl(`excels/${file.name}`);
-
-          const fileUploadedDateISO = file.created_at; // Store the ISO string directly
-          const fileUploadedMonth = getMonthYearFromISO(fileUploadedDateISO); // For dropdown grouping
-          uniqueUploadedMonths.add(fileUploadedMonth);
-
-          const res = await fetch(publicUrl);
-          const buf = await res.arrayBuffer();
-          const workbook = XLSX.read(buf, { type: "array" });
-          const sheetName = workbook.SheetNames[0];
-          const sheet = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName], {
-            header: 1,
-          });
-
-          if (sheet.length <= 1) continue;
-
-          const headers = sheet[0];
-          const dataRows = sheet.slice(1);
-          const incomplete = getIncompleteRows(
-            sheet,
-            headers,
-            fileUploadedMonth,
-            fileUploadedDateISO // Pass the full ISO date string
-          );
-          const openedIdx = headers.indexOf("Opened");
-          const assignedToIdx = headers.indexOf("Assigned to");
-
-          dataRows.forEach((row) => {
-            const assignedTo = row[assignedToIdx] || "Not Assigned";
-            const openedDate = formatOpenedDate(row[openedIdx]);
-            const month = getMonthFromDate(openedDate);
-
-            personStats[assignedTo] = personStats[assignedTo] || {
-              total: 0,
-              incomplete: 0,
-            };
-            monthlyStats[month] = monthlyStats[month] || {
-              total: 0,
-              incomplete: 0,
-            };
-            monthPersonStats[month] = monthPersonStats[month] || {};
-            monthPersonStats[month][assignedTo] = monthPersonStats[month][
-              assignedTo
-            ] || { total: 0, incomplete: 0 };
-
-            personStats[assignedTo].total++;
-            monthlyStats[month].total++;
-            monthPersonStats[month][assignedTo].total++;
-          });
-
-          incomplete.forEach((inc) => {
-            const month = getMonthFromDate(inc.opened);
-            const assignedTo = inc.assignedTo || "Not Assigned";
-
-            personStats[assignedTo].incomplete++;
-            monthlyStats[month].incomplete++;
-            monthPersonStats[month][assignedTo].incomplete++;
-          });
-
-          totalRows += dataRows.length;
-          totalIncomplete += incomplete.length;
-          allIncomplete.push(...incomplete);
-        }
-
-        setIncompleteRows(allIncomplete);
-        setPersonAccuracyMap(personStats);
-        setMonthlyAccuracyMap(monthlyStats);
-        setMonthlyPersonAccuracyMap(monthPersonStats);
-        setAccuracyPercentage(calculateAccuracy(totalRows, totalIncomplete));
-        setUploadedMonthOptions(Array.from(uniqueUploadedMonths).sort()); // Sort for consistent display
-      } catch (err) {
-        console.error(err);
-        setError(err);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    fetchData();
+    fetchAndProcessExcel();
   }, []);
 
-  if (isLoading) return <p>Loading ticket issuance data...</p>;
-  if (error) return <p className="text-red-600">Error: {error.message}</p>;
-
-  const filteredRows = incompleteRows.filter((row) => {
-    const nameMatch = (row.assignedTo || "Not Assigned")
-      .toLowerCase()
-      .includes(searchTerm.toLowerCase());
-
-    const ticketNumberMatch =
-      row.number &&
-      String(row.number).toLowerCase().includes(searchTerm.toLowerCase());
-
-    const openedMonthMatch =
-      !selectedMonth || getMonthFromDate(row.opened) === selectedMonth;
-
-    const uploadedMonthMatch =
-      !selectedUploadedMonth || row.uploadedMonth === selectedUploadedMonth;
-
-    return (
-      (nameMatch || ticketNumberMatch) && openedMonthMatch && uploadedMonthMatch
-    );
+  // Filter unmatched rows based on selected 'Opened' month AND 'Uploaded' month, and search term
+  const filteredUnmatchedRows = unmatchedRows.filter((row) => {
+    const matchesOpenedMonth =
+      selectedMonth === "" || row.ticketOpenedMonth === selectedMonth;
+    const matchesUploadedMonth =
+      selectedUploadedMonth === "" ||
+      row.fileUploadMonth === selectedUploadedMonth;
+    const matchesSearch =
+      searchTerm === "" ||
+      (row.assignedTo &&
+        row.assignedTo.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (row.number &&
+        String(row.number).toLowerCase().includes(searchTerm.toLowerCase()));
+    return matchesOpenedMonth && matchesUploadedMonth && matchesSearch;
   });
 
-  const uniqueOpenedMonths = Array.from(
-    new Set(incompleteRows.map((r) => getMonthFromDate(r.opened)))
+  // --- Calculate Overall Accuracy for the Selected Filters ---
+  let currentMonthTotalTickets = 0;
+  let currentMonthIncompleteTickets = 0;
+
+  // Filter all processed rows based on both selected filters
+  const filteredProcessedRows = allProcessedRows.filter((row) => {
+    const matchesOpenedMonth =
+      selectedMonth === "" || row.ticketOpenedMonth === selectedMonth;
+    const matchesUploadedMonth =
+      selectedUploadedMonth === "" ||
+      row.fileUploadMonth === selectedUploadedMonth;
+    return matchesOpenedMonth && matchesUploadedMonth;
+  });
+
+  currentMonthTotalTickets = filteredProcessedRows.length;
+  // Count incomplete from the *filtered processed rows*
+  currentMonthIncompleteTickets = filteredProcessedRows.filter(
+    (row) => row.hasError
+  ).length;
+
+  const displayAccuracyForProgressBar = calculateAccuracy(
+    currentMonthTotalTickets,
+    currentMonthIncompleteTickets
   );
 
-  const getPersonAccuracy = (name) => {
-    if (selectedMonth && monthlyPersonAccuracyMap[selectedMonth]) {
-      const person = monthlyPersonAccuracyMap[selectedMonth][name] || {
-        total: 0,
-        incomplete: 0,
-      };
-      return calculateAccuracy(person.total, person.incomplete);
+  // --- Per-Person Accuracy Logic for the Table (based on selected filters) ---
+  const personStatsFiltered = {}; // Structure: { "Person Name": { total: N, incomplete: M } }
+
+  // Populate personStatsFiltered with data from the currently filtered processed rows
+  filteredProcessedRows.forEach((row) => {
+    const name = row.assignedTo || "Unassigned";
+
+    if (name) {
+      if (!personStatsFiltered[name]) {
+        personStatsFiltered[name] = { total: 0, incomplete: 0 };
+      }
+      personStatsFiltered[name].total++;
+      if (row.hasError) {
+        personStatsFiltered[name].incomplete++;
+      }
     }
-    const person = personAccuracyMap[name] || { total: 0, incomplete: 0 };
-    return calculateAccuracy(person.total, person.incomplete);
-  };
-
-  const getMonthAccuracy = (month) => {
-    const stats = monthlyAccuracyMap[month] || { total: 0, incomplete: 0 };
-    return calculateAccuracy(stats.total, stats.incomplete);
-  };
-
-  const displayAccuracy = selectedMonth
-    ? getMonthAccuracy(selectedMonth)
-    : accuracyPercentage;
-
-  const tableMap = selectedMonth
-    ? monthlyPersonAccuracyMap[selectedMonth] || {}
-    : personAccuracyMap;
-
-  const sortedEntries = Object.entries(tableMap).sort((a, b) => {
-    const accA = parseFloat(calculateAccuracy(a[1].total, a[1].incomplete));
-    const accB = parseFloat(calculateAccuracy(b[1].total, b[1].incomplete));
-    return sortOrder === "asc" ? accA - accB : accB - accA;
   });
+
+  // Function to get individual person accuracy for expanded card (now aware of both selected months)
+  const getPersonAccuracy = (assignedTo) => {
+    const name = assignedTo || "Unassigned";
+    const stats = personStatsFiltered[name]; // Use the already filtered stats
+
+    if (stats) {
+      return calculateAccuracy(stats.total, stats.incomplete);
+    }
+    return "N/A";
+  };
+
+  // Sort table entries based on personStatsFiltered
+  const sortedEntries = Object.entries(personStatsFiltered).sort(
+    ([nameA, statsA], [nameB, statsB]) => {
+      const accuracyA = parseFloat(
+        calculateAccuracy(statsA.total, statsA.incomplete)
+      );
+      const accuracyB = parseFloat(
+        calculateAccuracy(statsB.total, statsB.incomplete)
+      );
+
+      if (sortOrder === "asc") {
+        return accuracyA - accuracyB;
+      } else {
+        return accuracyB - accuracyA;
+      }
+    }
+  );
 
   return (
     <div className="mb-10 mt-10">
@@ -346,14 +379,17 @@ function TicketIssuance() {
         {/* Left: Accuracy Overview */}
         <div className="lg:basis-1/4">
           <h3 className="font-semibold mb-2">Ticket Issuance Accuracy</h3>
-          <AccuracyProgress percentage={parseFloat(displayAccuracy)} />
+          <AccuracyProgress
+            percentage={parseFloat(displayAccuracyForProgressBar)}
+          />
         </div>
 
         {/* Right: Incomplete Rows */}
         <div className="lg:basis-3/4">
           <h4 className="flex items-center gap-2 font-semibold text-yellow-600">
             <ExclamationCircleIcon className="h-5 w-5" />
-            Incomplete Data – Requires Attention
+            Incomplete Data – Requires Attention ({filteredUnmatchedRows.length}
+            )
           </h4>
 
           {/* Search & Month Filters */}
@@ -368,6 +404,7 @@ function TicketIssuance() {
                 setExpandedIndex(null);
               }}
             />
+            {/* Dropdown for Ticket Opened Month */}
             <select
               className="flex-1 p-2 border rounded-lg"
               value={selectedMonth}
@@ -377,12 +414,13 @@ function TicketIssuance() {
               }}
             >
               <option value="">All Opened Months</option>
-              {uniqueOpenedMonths.map((month) => (
-                <option key={month} value={month}>
+              {ticketOpenedMonthOptions.map((month) => (
+                <option key={`opened-${month}`} value={month}>
                   {month}
                 </option>
               ))}
             </select>
+
             {/* Dropdown for File Uploaded Month */}
             <select
               className="flex-1 p-2 border rounded-lg"
@@ -401,61 +439,112 @@ function TicketIssuance() {
             </select>
           </div>
 
-          {/* Incomplete Row Cards */}
-          <div className="space-y-4 max-h-96 overflow-y-auto mb-5">
-            {filteredRows.length > 0 ? (
-              filteredRows.map((row, idx) => (
-                <div
-                  key={idx}
-                  className="p-3 border rounded-lg cursor-pointer"
-                  onClick={() =>
-                    setExpandedIndex(expandedIndex === idx ? null : idx)
-                  }
-                >
-                  <div className="flex justify-between items-center">
-                    <div>
-                      <p className="font-bold">#{row.number}</p>
-                      <p className=" text-m text-black-600">
-                        Assigned To: {row.assignedTo}
-                      </p>
-                      <p className="text-sm text-gray-600">
-                        Opened: {row.opened}
-                      </p>
-                      <p className="text-sm text-gray-600">
-                        Added on: {formatDateTimeFromISO(row.fileUploadedDate)}
-                      </p>
-                    </div>
-                    {expandedIndex === idx ? (
-                      <ChevronUpIcon className="w-5 h-5" />
-                    ) : (
-                      <ChevronDownIcon className="w-5 h-5" />
-                    )}
-                  </div>
-                  {expandedIndex === idx && (
-                    <div>
-                      <p className="text-sm text-gray-600">
-                        Accuracy Percentage: {getPersonAccuracy(row.assignedTo)}
-                        %
-                      </p>
-                      <p className=" text-sm text-red-600">
-                        Missing: {row.missingColumns.join(", ")}
-                      </p>
-                    </div>
-                  )}
-                </div>
-              ))
-            ) : (
-              <p className="text-gray-500">
-                No incomplete rows found matching the filters.
+          {/* Loading, Error and No Data Messages */}
+          {isLoading && <p>Loading ticket issuance data...</p>}
+          {!isLoading && error && (
+            <p className="text-red-500 my-2">Error: {error.message}</p>
+          )}
+          {!isLoading && allProcessedRows.length === 0 && (
+            <p className="text-gray-600 my-2">
+              No Excel files found or no data to process.
+            </p>
+          )}
+          {!isLoading &&
+            allProcessedRows.length > 0 &&
+            filteredUnmatchedRows.length === 0 && (
+              <p className="text-gray-500 my-2">
+                No incomplete rows found for the selected filters.
               </p>
             )}
+
+          {/* Incomplete Row Cards */}
+          <div className="space-y-4 max-h-96 overflow-y-auto mb-5">
+            {!isLoading && filteredUnmatchedRows.length > 0
+              ? filteredUnmatchedRows.map((row, idx) => (
+                  <div
+                    key={idx}
+                    className="p-3 border rounded-lg cursor-pointer bg-white hover:bg-gray-50 transition-colors"
+                    onClick={() =>
+                      setExpandedIndex(expandedIndex === idx ? null : idx)
+                    }
+                  >
+                    <div className="flex justify-between items-center">
+                      <div>
+                        <p className="font-bold">#{row.number || "N/A"}</p>
+                        <p className="text-m text-black-600">
+                          Assigned To: {row.assignedTo || "N/A"}
+                        </p>
+                        <p className="text-sm text-gray-600">
+                          Opened: {row.opened || "N/A"}
+                        </p>
+                        {/* Display the full upload date and time */}
+                        <p className="text-sm text-gray-600">
+                          Uploaded:{" "}
+                          {formatDateTimeFromISO(row.fileUploadFullDateTime)}
+                        </p>
+                      </div>
+                      {expandedIndex === idx ? (
+                        <ChevronUpIcon className="w-5 h-5 text-gray-500" />
+                      ) : (
+                        <ChevronDownIcon className="w-5 h-5 text-gray-500" />
+                      )}
+                    </div>
+                    {expandedIndex === idx && (
+                      <div className="mt-2 pt-2 border-t border-gray-200">
+                        <p className="text-sm text-gray-700 mb-1">
+                          **Failure Category:**{" "}
+                          <span className="text-red-600 font-semibold">
+                            {row.failureCategory || "Empty"}
+                          </span>
+                        </p>
+                        <p className="text-sm text-gray-700 mb-1">
+                          **Cause:**{" "}
+                          <span className="text-red-600 font-semibold">
+                            {row.cause || "Empty"}
+                          </span>
+                        </p>
+                        <p className="text-sm text-gray-700 mb-1">
+                          **AOR001:**{" "}
+                          <span className="text-red-600 font-semibold">
+                            {row.aor001 || "Empty"}
+                          </span>
+                        </p>
+                        <p className="text-sm text-gray-700 mb-1">
+                          **AOR002:**{" "}
+                          <span className="text-red-600 font-semibold">
+                            {row.aor002 || "Empty"}
+                          </span>
+                        </p>
+                        {row.missingColumns &&
+                          row.missingColumns.length > 0 && (
+                            <p className="text-sm text-red-600">
+                              Missing: {row.missingColumns.join(", ")}
+                            </p>
+                          )}
+                        <p className="text-sm text-gray-600 mt-2">
+                          Accuracy for **{row.assignedTo || "N/A"}**:{" "}
+                          {getPersonAccuracy(row.assignedTo)}%
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                ))
+              : null}
           </div>
         </div>
       </div>
+
       {/* Accuracy Table */}
-      <div className="mt-10">
+      <div className="mt-10 bg-white p-4 rounded-lg shadow">
         <h3 className="font-semibold mb-4">
-          Completion Accuracy per Assigned Person
+          Completion Accuracy per Assigned Person{" "}
+          {selectedMonth && selectedUploadedMonth
+            ? `for tickets opened in ${selectedMonth} from files uploaded in ${selectedUploadedMonth}`
+            : selectedMonth
+            ? `for tickets opened in ${selectedMonth}`
+            : selectedUploadedMonth
+            ? `for files uploaded in ${selectedUploadedMonth}`
+            : "Overall"}
         </h3>
         <table className="w-full table-auto border border-gray-300">
           <thead>
@@ -476,41 +565,51 @@ function TicketIssuance() {
                   )}
                 </div>
               </th>
-
-              <th className="border px-4 py-2 text-left">Accuracy Percentage</th>
+              <th className="border px-4 py-2 text-left">Accuracy (%)</th>
             </tr>
           </thead>
           <tbody>
-            {sortedEntries.map(([name, stats]) => {
-              const accuracy = parseFloat(
-                calculateAccuracy(stats.total, stats.incomplete)
-              );
-              const color =
-                accuracy >= 90
-                  ? "bg-green-500"
-                  : accuracy >= 85
-                  ? "bg-yellow-400"
-                  : "bg-red-500";
+            {sortedEntries.length > 0 ? (
+              sortedEntries.map(([name, stats]) => {
+                const accuracy = parseFloat(
+                  calculateAccuracy(stats.total, stats.incomplete)
+                );
+                const color =
+                  accuracy >= 90
+                    ? "bg-green-500"
+                    : accuracy >= 85
+                    ? "bg-yellow-400"
+                    : "bg-red-500";
 
-              return (
-                <tr key={name}>
-                  <td className="border px-4 py-2">{name}</td>
-                  <td className="border px-4 py-2">
-                    {stats.total - stats.incomplete} / {stats.total}
-                  </td>
-                  <td className="border px-4 py-2">
-                    <div className="w-full bg-gray-200 rounded-full h-4">
-                      <div
-                        className={`${color} h-4 rounded-full text-xs text-white text-center`}
-                        style={{ width: `${accuracy}%` }}
-                      >
-                        {accuracy}%
+                return (
+                  <tr key={name}>
+                    <td className="border px-4 py-2">{name}</td>
+                    <td className="border px-4 py-2">
+                      {stats.total - stats.incomplete} / {stats.total}
+                    </td>
+                    <td className="border px-4 py-2">
+                      <div className="w-full bg-gray-200 rounded-full h-4">
+                        <div
+                          className={`${color} h-4 rounded-full text-xs text-white text-center flex items-center justify-center`}
+                          style={{ width: `${accuracy}%` }}
+                        >
+                          {accuracy}%
+                        </div>
                       </div>
-                    </div>
-                  </td>
-                </tr>
-              );
-            })}
+                    </td>
+                  </tr>
+                );
+              })
+            ) : (
+              <tr>
+                <td
+                  colSpan="3"
+                  className="border px-4 py-2 text-center text-gray-500"
+                >
+                  No assigned person data available for the selected filters.
+                </td>
+              </tr>
+            )}
           </tbody>
         </table>
       </div>
