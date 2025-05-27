@@ -83,17 +83,17 @@ const Sidebar = ({ user }) => {
   return (
     <div className="flex h-screen bg-gray-100 font-sans">
       {/* Sidebar */}
-      <div className="flex flex-col w-64 bg-gradient-to-b from-indigo-800 to-indigo-900 p-5 text-white shadow-xl h-screen overflow-y-auto">
+      <div className="flex flex-col w-64 bg-gradient-to-b from-blue-800 to-blue-950 p-5 text-white shadow-xl h-screen overflow-y-auto">
         <Logo />
 
         {/* User Info Section */}
-        <div className="mt-4 mb-6 p-3 bg-indigo-700 bg-opacity-50 rounded-lg flex items-center space-x-3 shadow-inner">
-          <FaUserCircle className="w-8 h-8 text-indigo-300" />
+        <div className="mt-4 mb-6 p-3 bg-blue-700 bg-opacity-50 rounded-lg flex items-center space-x-3 shadow-inner">
+          <FaUserCircle className="w-8 h-8 text-blue-300" />
           <div className="flex flex-col">
-            <span className="text-base font-medium text-indigo-100 font-poppins">
+            <span className="text-base font-medium text-blue-100 font-poppins">
               {user?.email?.split("@")[0]}
             </span>
-            <span className="text-xs text-indigo-200 opacity-80">Logged In</span>
+            <span className="text-xs text-blue-200 opacity-80">Logged In</span>
           </div>
         </div>
 
@@ -116,8 +116,8 @@ const Sidebar = ({ user }) => {
                     selected === item.name ||
                     (item.subItems &&
                       item.subItems.some((sub) => sub.name === selected))
-                      ? "bg-indigo-700 bg-opacity-70 font-semibold border-l-4 border-indigo-300 text-indigo-100 shadow-md"
-                      : "hover:bg-indigo-700 hover:bg-opacity-50 text-indigo-200"
+                      ? "bg-blue-700 bg-opacity-70 font-semibold border-l-4 border-blue-300 text-blue-100 shadow-md"
+                      : "hover:bg-blue-700 hover:bg-opacity-50 text-blue-200"
                   }`}
               >
                 <div className="flex items-center space-x-3">
@@ -126,14 +126,14 @@ const Sidebar = ({ user }) => {
                 </div>
                 {item.subItems &&
                   (dropdowns[item.name] ? (
-                    <FaChevronUp className="w-3 h-3 text-indigo-300" />
+                    <FaChevronUp className="w-3 h-3 text-blue-300" />
                   ) : (
-                    <FaChevronDown className="w-3 h-3 text-indigo-300" />
+                    <FaChevronDown className="w-3 h-3 text-blue-300" />
                   ))}
               </button>
 
               {item.subItems && dropdowns[item.name] && (
-                <div className="ml-7 mt-1.5 space-y-1 border-l border-indigo-700 pl-3">
+                <div className="ml-7 mt-1.5 space-y-1 border-l border-blue-700 pl-3">
                   {item.subItems.map((subItem) => (
                     <button
                       key={subItem.name}
@@ -141,8 +141,8 @@ const Sidebar = ({ user }) => {
                       className={`block text-left w-full text-sm py-1.5 px-3 rounded-md transition-colors duration-200 ease-in-out
                         ${
                           selected === subItem.name
-                            ? "bg-indigo-600 font-medium text-white shadow-sm"
-                            : "text-indigo-200 hover:bg-indigo-700 hover:bg-opacity-40"
+                            ? "bg-blue-600 font-medium text-white shadow-sm"
+                            : "text-blue-200 hover:bg-blue-700 hover:bg-opacity-40"
                         }`}
                     >
                       {subItem.name}
@@ -154,11 +154,11 @@ const Sidebar = ({ user }) => {
           ))}
         </nav>
 
-        {/* Logout Button Section - Option 1: Darker Indigo with Red Hint */}
-        <div className="mt-auto pt-7 border-t border-indigo-700">
+        {/* Logout Button Section - Option 1: Darker blue with Red Hint */}
+        <div className="mt-auto pt-7 border-t border-blue-700">
           <button
             onClick={() => setShowLogoutModal(true)}
-            className="flex items-center justify-center w-full py-3 px-4 space-x-3 rounded-lg bg-red-800 text-red-100 font-semibold transition-all duration-300 ease-in-out hover:bg-red-700 hover:scale-105 focus:outline-none focus:ring-2 focus:ring-red-600 focus:ring-offset-2 focus:ring-offset-indigo-800 shadow-lg"
+            className="flex items-center justify-center w-full py-3 px-4 space-x-3 rounded-lg bg-blue-800 text-red-100 font-semibold transition-all duration-300 ease-in-out hover:bg-red-700 hover:scale-105 focus:outline-none focus:ring-2 focus:ring-red-600 focus:ring-offset-2 focus:ring-offset-blue-800 shadow-lg"
           >
             <FaSignOutAlt className="w-5 h-5" />
             <span>Logout</span>
@@ -175,7 +175,7 @@ const Sidebar = ({ user }) => {
 
           {/* RSC - OMPI title with subtle gradient and tracking */}
           <div className="flex items-center space-x-4">
-            <h2 className="text-2xl font-extrabold font-poppins bg-gradient-to-r from-indigo-600 to-indigo-800 text-transparent bg-clip-text tracking-wide drop-shadow-sm">
+            <h2 className="text-2xl font-extrabold font-poppins bg-gradient-to-r from-blue-600 to-blue-800 text-transparent bg-clip-text tracking-wide drop-shadow-sm">
               RSC - OMPI
             </h2>
           </div>
@@ -199,7 +199,7 @@ const Sidebar = ({ user }) => {
             <div className="flex justify-center space-x-4 w-full">
               <button
                 onClick={() => setShowLogoutModal(false)}
-                className="flex-1 px-6 py-3 text-gray-700 border border-gray-300 rounded-lg transition duration-200 hover:bg-gray-100 hover:border-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 flex items-center justify-center font-medium text-base"
+                className="flex-1 px-6 py-3 text-gray-700 border border-gray-300 rounded-lg transition duration-200 hover:bg-gray-100 hover:border-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 flex items-center justify-center font-medium text-base"
               >
                 <FaTimes className="inline-block mr-2 text-lg" /> Cancel
               </button>

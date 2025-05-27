@@ -477,7 +477,7 @@ function TicketIssuance() {
                 </div>
               </th>
 
-              <th className="border px-4 py-2 text-left">Accuracy (%)</th>
+              <th className="border px-4 py-2 text-left">Accuracy Percentage</th>
             </tr>
           </thead>
           <tbody>
