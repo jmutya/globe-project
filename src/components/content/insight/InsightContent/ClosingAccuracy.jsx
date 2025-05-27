@@ -360,6 +360,32 @@ function ClosingAccuracy() {
     }
   );
 
+   // --- New Function for Exporting to Excel ---
+  const handleExportToExcel = () => {
+    const dataToExport = filteredUnmatchedRows.map((row) => ({
+      "Ticket Number": row.number || "N/A",
+      "Assigned To": row.assignedTo || "N/A",
+      "Opened Date": row.opened || "N/A",
+      "Uploaded On": formatDateTimeFromISO(row.fileUploadFullDateTime),
+      "Cause (Original)": row.cause || "Empty",
+      "Reason For Outage (Original)": row.reason || "Empty",
+      "Missing/Incorrect Fields":
+        row.missingColumns && row.missingColumns.length > 0
+          ? row.missingColumns.join(", ")
+          : "N/A",
+    }));
+
+    if (dataToExport.length === 0) {
+      alert("No data to export for the current filters.");
+      return;
+    }
+
+    const ws = XLSX.utils.json_to_sheet(dataToExport);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Incomplete Tickets");
+    XLSX.writeFile(wb, "Incomplete_Tickets_Report.xlsx");
+  };
+
   return (
     <div className="mb-10 mt-10">
       <div className="flex flex-col lg:flex-row gap-6 bg-white p-4 rounded-lg shadow">
@@ -424,6 +450,14 @@ function ClosingAccuracy() {
                 </option>
               ))}
             </select>
+            {/* Export to Excel Button */}
+            <button
+              onClick={handleExportToExcel}
+              className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+            >
+              Export Incomplete to Excel
+            </button>
+
           </div>
 
           {/* Error and No Data Messages */}

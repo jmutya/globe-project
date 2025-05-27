@@ -58,8 +58,6 @@ const AlarmCategory = () => {
         </div>
       ) : chartData.length > 0 ? (
         <>
-
-
           <ResponsiveContainer width="100%" height={350}>
             <PieChart>
               <Pie
@@ -122,5 +120,4 @@ const AlarmCategory = () => {
     </div>
   );
 };
-
 export default AlarmCategory;
