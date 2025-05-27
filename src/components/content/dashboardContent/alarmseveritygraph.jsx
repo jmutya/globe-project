@@ -65,8 +65,8 @@ const AlarmsSeverity = () => {
 
         {isLoading ? (
           <div className="flex justify-center items-center py-8">
-            <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-500"></div>
-            <p className="ml-3 text-gray-600">Loading Graph...</p>
+           <div className="w-6 h-6 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin" />
+            <p className="ml-3 text-gray-600">Loading Please Wait...</p>
           </div>
         ) : chartData.length > 0 ? (
           <ResponsiveContainer width="100%" height={250}>
