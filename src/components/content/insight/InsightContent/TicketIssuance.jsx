@@ -216,7 +216,7 @@ function TicketIssuance() {
 
         sheet.forEach((row) => {
           const number = row["Number"];
-          const assignedTo = row["Assigned to"];
+          const assignedTo = row["Caller"];
           const openedRaw = row["Opened"];
           const openedFormatted = formatOpenedDate(openedRaw);
 
