@@ -16,7 +16,6 @@ const ExcelUploader = () => {
   const [selectedFiles, setSelectedFiles] = useState([]);
   const [fileToDelete, setFileToDelete] = useState(null);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
-  const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [selectedFilesToDelete, setSelectedFilesToDelete] = useState([]);
   const [showMultiDeleteModal, setShowMultiDeleteModal] = useState(false);
 
@@ -70,13 +69,7 @@ const ExcelUploader = () => {
         const fileUrl = supabase.storage
           .from("uploads")
           .getPublicUrl(fullPath).data.publicUrl;
-      const fileList = validFiles.map((file) => {
-        const fullPath = `excels/${file.name}`;
-        const fileUrl = supabase.storage
-          .from("uploads")
-          .getPublicUrl(fullPath).data.publicUrl;
 
-        const month = "N/A"; // Month information is not parsed on upload now
         const month = "N/A"; // Month information is not parsed on upload now
 
         const uploadedDate = new Date(file.created_at).toLocaleString(
@@ -91,26 +84,7 @@ const ExcelUploader = () => {
             hour12: true,
           }
         );
-        const uploadedDate = new Date(file.created_at).toLocaleString(
-          "en-PH",
-          {
-            year: "numeric",
-            month: "numeric",
-            day: "numeric",
-            hour: "2-digit",
-            minute: "2-digit",
-            second: "2-digit",
-            hour12: true,
-          }
-        );
 
-        return {
-          name: file.name,
-          date: uploadedDate,
-          month,
-          url: fileUrl,
-        };
-      });
         return {
           name: file.name,
           date: uploadedDate,
@@ -164,7 +138,6 @@ const ExcelUploader = () => {
     const existingFileNames = new Set(files.map((f) => f.name));
 
     for (let i = 0; i < totalFilesToUpload; i++) {
-    for (let i = 0; i < totalFilesToUpload; i++) {
       const file = selectedFiles[i];
       let currentFileStatusToast = toast.loading(`Uploading ${file.name}...`);
 
@@ -191,12 +164,6 @@ const ExcelUploader = () => {
         }
 
         successfullyUploadedCount++;
-        if (error) {
-          console.error(`Supabase upload error for ${file.name}:`, error);
-          throw error;
-        }
-
-        successfullyUploadedCount++;
         toast.dismiss(currentFileStatusToast);
         toast.success(`Successfully uploaded ${file.name}.`);
 
@@ -206,14 +173,9 @@ const ExcelUploader = () => {
         toast.dismiss(currentFileStatusToast);
         console.error("Upload failed for file:", file.name, error);
         toast.error(`Failed to upload ${file.name}: ${error.message}`);
-        toast.error(`Failed to upload ${file.name}: ${error.message}`);
       }
     }
 
-    if (successfullyUploadedCount > 0) {
-      toast.success("All new files have been uploaded!");
-    } else if (totalFilesToUpload > 0) {
-      toast.error("No new files were uploaded (some might have been duplicates).");
     if (successfullyUploadedCount > 0) {
       toast.success("All new files have been uploaded!");
     } else if (totalFilesToUpload > 0) {
@@ -222,14 +184,12 @@ const ExcelUploader = () => {
       toast.error("No files were selected for upload.");
     }
 
-
     setUploading(false);
     setShowUploadModal(false);
     fetchUploadedFiles(true); // Force refresh after upload to get the latest list from Supabase
   };
 
   const confirmDelete = (fileName) => {
-    setFileToDelete(fileName);
     setFileToDelete(fileName);
     setShowDeleteModal(true);
   };
@@ -374,7 +334,6 @@ const ExcelUploader = () => {
                   <div className="col-span-2 text-sm">{file.date}</div>
                   <div className="col-span-2 text-right">
                     <button
-                      onClick={() => confirmDelete(file.name)}
                       onClick={() => confirmDelete(file.name)}
                       className="text-red-600 hover:text-red-800"
                       title="Delete"
