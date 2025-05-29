@@ -123,11 +123,10 @@ const calculateAccuracy = (total, incomplete) => {
 function TicketIssuance() {
   const [unmatchedRows, setUnmatchedRows] = useState([]);
   const [allProcessedRows, setAllProcessedRows] = useState([]);
-  const [filePrefixOptions, setFilePrefixOptions] = useState([]);
   const [ticketOpenedMonthOptions, setTicketOpenedMonthOptions] = useState([]);
-
-  const [selectedFilePrefix, setSelectedFilePrefix] = useState("");
-  const [selectedOpenedMonth, setSelectedOpenedMonth] = useState("");
+  const [uploadedMonthOptions, setUploadedMonthOptions] = useState([]);
+  const [selectedMonth, setSelectedMonth] = useState(""); // For 'Opened' date filter (MM/YYYY)
+  const [selectedUploadedMonth, setSelectedUploadedMonth] = useState(""); // For 'Added on' date filter (MM/YYYY)
   const [error, setError] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [expandedIndex, setExpandedIndex] = useState(null);
@@ -152,11 +151,8 @@ function TicketIssuance() {
     setIsLoading(true);
     let tempAllUnmatched = [];
     let tempAllProcessed = [];
-    const filePrefixSet = new Set();
-    // Map to store months per file prefix for dynamic dropdown
-    // This will now store all months for all prefixes initially
-    // and then be filtered by the useEffect
-    const allMonthsByPrefixMap = new Map();
+    const ticketMonthsSet = new Set(); // For months from 'Opened' column
+    const uploadMonthsSet = new Set(); // For months from Supabase 'created_at' for dropdown
 
     try {
       const { data: files, error: listError } = await supabase.storage
@@ -171,17 +167,19 @@ function TicketIssuance() {
         console.log("No Excel files found in the 'excels' folder.");
         setUnmatchedRows([]);
         setAllProcessedRows([]);
-        setFilePrefixOptions([]);
         setTicketOpenedMonthOptions([]);
+        setUploadedMonthOptions([]);
         setIsLoading(false);
         return;
       }
 
       for (const file of files) {
-        // Extract prefix before the first underscore
-        const prefixMatch = file.name.match(/^([^_]+)/);
-        const filePrefix = prefixMatch ? prefixMatch[1] : "No Prefix";
-        filePrefixSet.add(filePrefix);
+        const fileUploadFullDateTime = file.created_at; // Raw ISO string for display
+        const fileUploadMonth = getMonthYearFromISO(file.created_at); // MM/YYYY for dropdown filtering
+
+        if (fileUploadMonth !== "Invalid Date") {
+          uploadMonthsSet.add(fileUploadMonth); // Add to set for "Added on" dropdown (MM/YYYY)
+        }
 
         const filePath = `excels/${file.name}`;
         const { data: urlData } = supabase.storage
@@ -210,10 +208,10 @@ function TicketIssuance() {
         );
 
         const requiredTicketIssuanceFields = [
-          "u_failure_category",
-          "u_root_cause",
-          "u_aor001",
-          "u_aor002",
+          "Failure Category",
+          "Cause",
+          "AOR001",
+          "AOR002",
         ];
 
         sheet.forEach((row) => {
@@ -223,18 +221,15 @@ function TicketIssuance() {
             return; // Skip this row
           }
 
-          const number = row["number"];
-          let assignedTo = row["caller_id"];
-          const callervalue = row["assigned_to"];
-          const firstupdateby = String(row["u_ntg_first_updated_by"]);
-          console.log(firstupdateby);
-          const openedRaw = row["opened_at"];
+          const number = row["Number"];
+          let assignedTo = row["Caller"];
+          const callervalue = row["Assigned to"];
+          const openedRaw = row["Opened"];
           const openedFormatted = formatOpenedDate(openedRaw);
 
-          // --- NEW CONDITION: Exclude if assignedTo is "mycom" and callervalue is blank ---
+           // --- NEW CONDITION: Exclude if assignedTo is "mycom" and callervalue is blank ---
           if (
-            String(assignedTo).trim().toLowerCase() ===
-              "MYCOM Integration User" &&
+            String(assignedTo).trim().toLowerCase() === "mycom" &&
             String(callervalue).trim() === ""
           ) {
             return; // Skip this row entirely from processing and unmatched lists
@@ -242,11 +237,10 @@ function TicketIssuance() {
 
           // Condition 2: If assignedTo is "mycom" and callervalue is NOT blank, use callervalue as assignedTo
           if (
-            String(assignedTo).trim().toLowerCase() ===
-              "MYCOM Integration User" &&
+            String(assignedTo).trim().toLowerCase() === "mycom" &&
             String(callervalue).trim() !== ""
           ) {
-            assignedTo = firstupdateby; // Reassign assignedTo to callervalue
+            assignedTo = callervalue; // Reassign assignedTo to callervalue
           }
 
           const missingColumns = [];
@@ -260,15 +254,17 @@ function TicketIssuance() {
           });
 
           const ticketOpenedMonth = getMonthFromDate(openedFormatted);
+          if (ticketOpenedMonth !== "Invalid Date") {
+            ticketMonthsSet.add(ticketOpenedMonth); // Add to set for "Opened" dropdown
+          }
 
           const processedRow = {
             number,
             assignedTo,
             opened: openedFormatted,
-            ticketOpenedMonth: ticketOpenedMonth,
-            fileName: file.name,
-            filePrefix: filePrefix,
-            fileUploadFullDateTime: file.created_at,
+            ticketOpenedMonth: ticketOpenedMonth, // Month from the Excel's 'Opened' date (MM/YYYY)
+            fileUploadMonth: fileUploadMonth, // Month from Supabase 'created_at' for filtering (MM/YYYY)
+            fileUploadFullDateTime: fileUploadFullDateTime, // Raw ISO string for detailed display
             hasError,
             missingColumns,
             // Include other relevant fields from the row if needed for display/debug
@@ -282,25 +278,27 @@ function TicketIssuance() {
           if (hasError) {
             tempAllUnmatched.push(processedRow);
           }
-
-          // Store months associated with each prefix in the main map
-          if (ticketOpenedMonth !== "Invalid Date") {
-            if (!allMonthsByPrefixMap.has(filePrefix)) {
-              allMonthsByPrefixMap.set(filePrefix, new Set());
-            }
-            allMonthsByPrefixMap.get(filePrefix).add(ticketOpenedMonth);
-          }
         });
       }
 
-      setFilePrefixOptions(Array.from(filePrefixSet).sort());
-      setAllProcessedRows(tempAllProcessed);
-      setUnmatchedRows(tempAllUnmatched);
+      // Sort ticket opened months (most recent first)
+      const sortedTicketMonths = Array.from(ticketMonthsSet).sort((a, b) => {
+        const [ma, ya] = a.split("/").map(Number);
+        const [mb, yb] = b.split("/").map(Number);
+        return yb !== ya ? yb - ya : mb - ma;
+      });
 
-      // Store the map of all months by prefix for dynamic updates
-      // We don't set ticketOpenedMonthOptions here directly, it's handled by the useEffect below
-      // Using a ref or a new state variable might be more appropriate if this map is large,
-      // but for now, we'll rely on allProcessedRows for filtering.
+      // Sort uploaded months (most recent first)
+      const sortedUploadedMonths = Array.from(uploadMonthsSet).sort((a, b) => {
+        const [ma, ya] = a.split("/").map(Number);
+        const [mb, yb] = b.split("/").map(Number);
+        return yb !== ya ? yb - ya : mb - ma;
+      });
+
+      setTicketOpenedMonthOptions(sortedTicketMonths);
+      setUploadedMonthOptions(sortedUploadedMonths);
+      setUnmatchedRows(tempAllUnmatched);
+      setAllProcessedRows(tempAllProcessed);
     } catch (err) {
       console.error("Error fetching or processing Excel files:", err);
       setError(`Failed to load data: ${err.message}`);
@@ -313,44 +311,20 @@ function TicketIssuance() {
     fetchAndProcessExcel();
   }, []);
 
-  // Effect to update ticketOpenedMonthOptions when selectedFilePrefix changes
-  useEffect(() => {
-    // Clear the selected month whenever the prefix changes
-    setSelectedOpenedMonth("");
-
-    if (selectedFilePrefix) {
-      const monthsForSelectedPrefix = new Set();
-      allProcessedRows.forEach(row => {
-        if (row.filePrefix === selectedFilePrefix && row.ticketOpenedMonth !== "Invalid Date") {
-          monthsForSelectedPrefix.add(row.ticketOpenedMonth);
-        }
-      });
-      // Sort months (most recent first)
-      const sortedMonths = Array.from(monthsForSelectedPrefix).sort((a, b) => {
-        const [ma, ya] = a.split("/").map(Number);
-        const [mb, yb] = b.split("/").map(Number);
-        return yb !== ya ? yb - ya : mb - ma;
-      });
-      setTicketOpenedMonthOptions(sortedMonths);
-    } else {
-      // If no prefix is selected, clear the months options
-      setTicketOpenedMonthOptions([]);
-    }
-  }, [selectedFilePrefix, allProcessedRows]); // Depend on allProcessedRows to re-run if data changes
-
-  // Filter unmatched rows based on selected file prefix, opened month, and search term
+  // Filter unmatched rows based on selected 'Opened' month AND 'Uploaded' month, and search term
   const filteredUnmatchedRows = unmatchedRows.filter((row) => {
-    const matchesPrefix =
-      selectedFilePrefix === "" || row.filePrefix === selectedFilePrefix;
     const matchesOpenedMonth =
-      selectedOpenedMonth === "" || row.ticketOpenedMonth === selectedOpenedMonth;
+      selectedMonth === "" || row.ticketOpenedMonth === selectedMonth;
+    const matchesUploadedMonth =
+      selectedUploadedMonth === "" ||
+      row.fileUploadMonth === selectedUploadedMonth;
     const matchesSearch =
       searchTerm === "" ||
       (row.assignedTo &&
         row.assignedTo.toLowerCase().includes(searchTerm.toLowerCase())) ||
       (row.number &&
         String(row.number).toLowerCase().includes(searchTerm.toLowerCase()));
-    return matchesPrefix && matchesOpenedMonth && matchesSearch;
+    return matchesOpenedMonth && matchesUploadedMonth && matchesSearch;
   });
 
   // --- Calculate Overall Accuracy for the Selected Filters ---
@@ -359,11 +333,12 @@ function TicketIssuance() {
 
   // Filter all processed rows based on both selected filters
   const filteredProcessedRows = allProcessedRows.filter((row) => {
-    const matchesPrefix =
-      selectedFilePrefix === "" || row.filePrefix === selectedFilePrefix;
     const matchesOpenedMonth =
-      selectedOpenedMonth === "" || row.ticketOpenedMonth === selectedOpenedMonth;
-    return matchesPrefix && matchesOpenedMonth;
+      selectedMonth === "" || row.ticketOpenedMonth === selectedMonth;
+    const matchesUploadedMonth =
+      selectedUploadedMonth === "" ||
+      row.fileUploadMonth === selectedUploadedMonth;
+    return matchesOpenedMonth && matchesUploadedMonth;
   });
 
   currentMonthTotalTickets = filteredProcessedRows.length;
@@ -425,10 +400,19 @@ function TicketIssuance() {
   );
 
   const exportToPdf = () => {
+    // We no longer need to toggle row expansion here, as we're targeting only the accuracy table.
+    // const initialExpandedIndices = new Set(expandedIndices);
+    // const allFilteredUnmatchedIndices = new Set(filteredUnmatchedRows.map((_, idx) => idx));
+    // setExpandedIndices(allFilteredUnmatchedIndices);
+
+    // Give React a moment to render (though not strictly necessary if no state changes for this section)
     setTimeout(() => {
+      // CHANGE THIS ID!
       const input = document.getElementById("accuracy-table-report");
       if (!input) {
         console.error("Element with ID 'accuracy-table-report' not found.");
+        // If you had any previous temporary state changes, revert them here
+        // setExpandedIndices(initialExpandedIndices);
         return;
       }
 
@@ -455,12 +439,17 @@ function TicketIssuance() {
             pdf.addImage(imgData, "PNG", 0, position, imgWidth, imgHeight);
             heightLeft -= pageHeight;
           }
-          pdf.save("accuracy_table_report.pdf");
+          pdf.save("accuracy_table_report.pdf"); // Give it a more specific file name
+
+          // 3. Revert to initial expanded state after PDF is generated (if you had any)
+          // setExpandedIndices(initialExpandedIndices);
         })
         .catch((err) => {
           console.error("Error generating PDF:", err);
+          // Revert expansion even if PDF generation fails (if you had any)
+          // setExpandedIndices(initialExpandedIndices);
         });
-    }, 100);
+    }, 100); // Small delay to allow re-render
   };
 
   // --- New Function for Exporting to Excel ---
@@ -471,8 +460,6 @@ function TicketIssuance() {
       "Opened Date": row.opened || "N/A",
       "Uploaded Date":
         formatDateTimeFromISO(row.fileUploadFullDateTime) || "N/A",
-      "Source File": row.fileName || "N/A",
-      "File Prefix": row.filePrefix || "N/A",
       "Failure Category": row.failureCategory || "N/A",
       Cause: row.cause || "N/A",
       AOR001: row.aor001 || "N/A",
@@ -512,7 +499,7 @@ function TicketIssuance() {
             )
           </h4>
 
-          {/* Search & Filters */}
+          {/* Search & Month Filters */}
           <div className="flex flex-col md:flex-row gap-2 my-4">
             <input
               type="text"
@@ -524,42 +511,39 @@ function TicketIssuance() {
                 setExpandedIndex(null);
               }}
             />
-            {/* Dropdown for File Prefix */}
+            {/* Dropdown for Ticket Opened Month */}
             <select
               className="flex-1 p-2 border rounded-lg"
-              value={selectedFilePrefix}
+              value={selectedMonth}
               onChange={(e) => {
-                setSelectedFilePrefix(e.target.value);
+                setSelectedMonth(e.target.value);
                 setExpandedIndex(null);
               }}
             >
-              <option value="">All File Prefixes</option>
-              {filePrefixOptions.map((prefix) => (
-                <option key={`prefix-${prefix}`} value={prefix}>
-                  {prefix}
+              <option value="">All Opened Months</option>
+              {ticketOpenedMonthOptions.map((month) => (
+                <option key={`opened-${month}`} value={month}>
+                  {month}
                 </option>
               ))}
             </select>
 
-            {/* Conditional Rendering for Ticket Opened Month Dropdown */}
-            {selectedFilePrefix && ( // This is the key change!
-              <select
-                className="flex-1 p-2 border rounded-lg"
-                value={selectedOpenedMonth}
-                onChange={(e) => {
-                  setSelectedOpenedMonth(e.target.value);
-                  setExpandedIndex(null);
-                }}
-                disabled={ticketOpenedMonthOptions.length === 0} // Still disable if no months are available for the selected prefix
-              >
-                <option value="">All Opened Months</option>
-                {ticketOpenedMonthOptions.map((month) => (
-                  <option key={`opened-${month}`} value={month}>
-                    {month}
-                  </option>
-                ))}
-              </select>
-            )}
+            {/* Dropdown for File Uploaded Month */}
+            <select
+              className="flex-1 p-2 border rounded-lg"
+              value={selectedUploadedMonth}
+              onChange={(e) => {
+                setSelectedUploadedMonth(e.target.value);
+                setExpandedIndex(null);
+              }}
+            >
+              <option value="">All Uploaded Months</option>
+              {uploadedMonthOptions.map((month) => (
+                <option key={`uploaded-${month}`} value={month}>
+                  {month}
+                </option>
+              ))}
+            </select>
 
             {/* Export to Excel Button */}
             <button
@@ -603,14 +587,12 @@ function TicketIssuance() {
                       <div>
                         <p className="font-bold">#{row.number || "N/A"}</p>
                         <p className="text-m text-black-600">
-                          Assigned To: {row.assignedTo || "Unassigned"}
+                          Assigned To: {row.assignedTo || "N/A"}
                         </p>
                         <p className="text-sm text-gray-600">
                           Opened: {row.opened || "N/A"}
                         </p>
-                        <p className="text-sm text-gray-600">
-                          Source File: {row.fileName || "N/A"}
-                        </p>
+                        {/* Display the full upload date and time */}
                         <p className="text-sm text-gray-600">
                           Uploaded:{" "}
                           {formatDateTimeFromISO(row.fileUploadFullDateTime)}
@@ -655,7 +637,7 @@ function TicketIssuance() {
                             </p>
                           )}
                         <p className="text-sm text-gray-600 mt-2">
-                          Accuracy for **{row.assignedTo || "Unassigned"}**:{" "}
+                          Accuracy for **{row.assignedTo || "N/A"}**:{" "}
                           {getPersonAccuracy(row.assignedTo)}%
                         </p>
                       </div>
@@ -674,7 +656,7 @@ function TicketIssuance() {
       >
         <div className="flex items-center justify-between mb-4">
           <h3 className="font-semibold mb-4">
-            Completion Accuracy per Assigned Person - Ticket Issuance - {" "}
+            Completion Accuracy per Assigned Person - Ticket Issuance -{" "}
             {selectedMonth && selectedUploadedMonth
               ? `for tickets opened in ${selectedMonth} from files uploaded in ${selectedUploadedMonth}`
               : selectedMonth
@@ -690,7 +672,7 @@ function TicketIssuance() {
             <FileText
               className="h-7 w-7 text-red-600 cursor-pointer hover:text-red-800 transition-colors"
               onClick={exportToPdf}
-              title="Export to PDF"
+              title="Export to PDF" // Add a title for accessibility and hover tooltip
             />
           </div>
         </div>

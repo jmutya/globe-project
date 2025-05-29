@@ -51,7 +51,7 @@ export const fetchFailureCategoryData = async (colors) => {
 
     if (sheet.length > 1) {
       const headers = sheet[0];
-      const failureCategoryIndex = headers.indexOf("Failure Category");
+      const failureCategoryIndex = headers.indexOf("u_failure_category");
 
       if (failureCategoryIndex === -1) return [];
 

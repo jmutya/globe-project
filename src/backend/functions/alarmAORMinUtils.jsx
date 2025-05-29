@@ -44,8 +44,8 @@ export const fetchAlarmTypeLineData = async () => {
 
     if (sheet.length > 1) {
       const headers = sheet[0];
-      const timestampIndex = headers.indexOf("Opened");
-      const alarmTypeIndex = headers.indexOf("AOR001");
+      const timestampIndex = headers.indexOf("opened_at");
+      const alarmTypeIndex = headers.indexOf("u_aor001");
 
       if (timestampIndex === -1 || alarmTypeIndex === -1) return { chartData: [], alarmTypes: [] };
 

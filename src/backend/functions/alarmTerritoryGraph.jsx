@@ -50,7 +50,7 @@ export const fetchTerritoryGraphData = async () => {
 
     if (sheet.length > 1) {
       const headers = sheet[0];
-      const territoryIndex = headers.indexOf("Territory");
+      const territoryIndex = headers.indexOf("u_ntg_territory");
 
       if (territoryIndex === -1) return [];
 
