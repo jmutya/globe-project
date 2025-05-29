@@ -39,8 +39,8 @@ export const fetchSeverityCounts = async () => {
 
       if (sheet.length > 1) {
         const headers = sheet[0];
-        const openedIndex = headers.indexOf("opened_at");
-        const severityIndex = headers.indexOf("severity");
+        const openedIndex = headers.indexOf("Opened");
+        const severityIndex = headers.indexOf("Severity");
 
         if (openedIndex === -1 || severityIndex === -1) continue;
 
@@ -86,5 +86,73 @@ export const fetchSeverityCounts = async () => {
   } catch (error) {
     console.error("Error fetching severity counts:", error);
     return { counts: {}, mostRecentMonth: null };
+  }
+};
+
+export const fetchStateDistribution = async () => {
+  try {
+    const { data: files, error } = await supabase.storage.from("uploads").list("excels");
+    if (error) throw error;
+
+    let allRows = [];
+
+    for (const file of files) {
+      const { data: fileUrl } = supabase.storage.from("uploads").getPublicUrl(`excels/${file.name}`);
+      const response = await fetch(fileUrl.publicUrl);
+      const blob = await response.arrayBuffer();
+      const workbook = XLSX.read(blob, { type: "array" });
+      const sheetName = workbook.SheetNames[0];
+      const sheet = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName], { header: 1 });
+
+      if (sheet.length > 1) {
+        const headers = sheet[0];
+        const openedIndex = headers.indexOf("Opened");
+        const severityIndex = headers.indexOf("Severity");
+        const stateIndex = headers.indexOf("State");
+
+        if (openedIndex === -1 || severityIndex === -1 || stateIndex === -1) continue;
+
+        sheet.slice(1).forEach((row) => {
+          const openedDate = parseExcelDate(row[openedIndex]);
+          const severity = String(row[severityIndex] || "").trim();
+          const state = String(row[stateIndex] || "").trim();
+
+          if (openedDate && severity) {
+            allRows.push({
+              openedDate,
+              severity,
+              state,
+              yearMonth: `${openedDate.getFullYear()}-${String(openedDate.getMonth() + 1).padStart(2, "0")}`,
+            });
+          }
+        });
+      }
+    }
+
+    if (allRows.length === 0) return { stateDistribution: {}, mostRecentMonth: null };
+
+    const mostRecentMonth = allRows.map(r => r.yearMonth).sort().reverse()[0];
+    const recentMonthRows = allRows.filter(r => r.yearMonth === mostRecentMonth);
+
+    const seenDates = new Set();
+    const uniqueRows = recentMonthRows.filter(r => {
+      const time = r.openedDate.getTime();
+      if (seenDates.has(time)) return false;
+      seenDates.add(time);
+      return true;
+    });
+
+    const stateDistribution = {};
+
+    uniqueRows.forEach(({ state }) => {
+      if (state) {
+        stateDistribution[state] = (stateDistribution[state] || 0) + 1;
+      }
+    });
+
+    return { stateDistribution, mostRecentMonth };
+  } catch (error) {
+    console.error("Error fetching state distribution:", error);
+    return { stateDistribution: {}, mostRecentMonth: null };
   }
 };
