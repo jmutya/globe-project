@@ -46,7 +46,7 @@ const AlarmsSeverity = () => {
     <div className="bg-white rounded-md shadow overflow-hidden">
       <div className="p-6">
         <div className="flex items-center mb-4">
-          <div className="rounded-lg bg-red-500 h-10 w-10 flex items-center justify-center">
+          <div className="rounded-lg bg-red-500 h-12 w-12 flex items-center justify-center">
             <svg
               xmlns="http://www.w3.org/2000/svg"
               fill="none"
