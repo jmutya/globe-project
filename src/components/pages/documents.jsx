@@ -1,8 +1,11 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { FaUpload, FaFileExcel, FaTrash, FaSpinner } from "react-icons/fa";
 import toast, { Toaster } from "react-hot-toast";
-import supabase from "../../backend/supabase/supabase"; 
-import * as XLSX from "xlsx";
+import supabase from "../../backend/supabase/supabase"; // Assuming this path is correct
+
+// Define a cache key and expiration time (e.g., 30 minutes)
+const CACHE_KEY = "uploadedExcelFiles";
+const CACHE_EXPIRATION_MS = 30 * 60 * 1000; // 30 minutes in milliseconds <--- UPDATED HERE
 
 const ExcelUploader = () => {
   const [uploading, setUploading] = useState(false);
@@ -12,64 +15,47 @@ const ExcelUploader = () => {
   const [showUploadModal, setShowUploadModal] = useState(false);
   const [selectedFiles, setSelectedFiles] = useState([]);
   const [fileToDelete, setFileToDelete] = useState(null);
-  const [showDeleteModal, setShowDeleteModal] = useState(false); // Renamed to avoid conflict
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [selectedFilesToDelete, setSelectedFilesToDelete] = useState([]);
   const [showMultiDeleteModal, setShowMultiDeleteModal] = useState(false);
+
+  // In-memory cache for the current session
+  const inMemoryCache = useRef(null);
 
   useEffect(() => {
     fetchUploadedFiles();
   }, []);
 
-  const parseExcelMonths = (json) => {
-    const seen = new Set();
-    const months = [];
-
-    json.forEach((row) => {
-      const value = row["opened_at"] || row["sys_created_on"];
-      let parsedDate;
-
-      if (typeof value === "number") {
-        parsedDate = new Date(Math.round((value - 25569) * 86400 * 1000));
-      } else if (typeof value === "string") {
-        try {
-          parsedDate = new Date(value);
-          if (
-            isNaN(parsedDate.getTime()) &&
-            value.match(/^\d{1,2}\/\d{1,2}\/\d{4} \d{1,2}:\d{2}(:\d{2})?$/)
-          ) {
-            const parts = value.split(/[\/\s:]/);
-            parsedDate = new Date(
-              parts[2],
-              parts[0] - 1,
-              parts[1],
-              parts[3],
-              parts[4],
-              parts[5] || 0
-            );
-          }
-        } catch (e) {
-          console.warn("Failed to parse date string:", value, e);
-          parsedDate = null;
-        }
-      }
-
-      if (parsedDate && !isNaN(parsedDate.getTime())) {
-        const monthYear = `${parsedDate.toLocaleString("default", {
-          month: "long",
-        })} (${parsedDate.getFullYear()})`;
-
-        if (!seen.has(monthYear)) {
-          seen.add(monthYear);
-          months.push(monthYear);
-        }
-      }
-    });
-
-    return months.length > 0 ? months.join(", ") : "—";
-  };
-
-  const fetchUploadedFiles = async () => {
+  const fetchUploadedFiles = async (forceRefresh = false) => {
     setLoadingFiles(true);
+
+    // 1. Check In-Memory Cache
+    if (!forceRefresh && inMemoryCache.current) {
+      console.log("Using in-memory cache for files.");
+      setFiles(inMemoryCache.current);
+      setLoadingFiles(false);
+      return;
+    }
+
+    // 2. Check Local Storage Cache
+    if (!forceRefresh) {
+      const cachedData = localStorage.getItem(CACHE_KEY);
+      if (cachedData) {
+        const { timestamp, data } = JSON.parse(cachedData);
+        if (Date.now() - timestamp < CACHE_EXPIRATION_MS) {
+          console.log("Using local storage cache for files.");
+          setFiles(data);
+          inMemoryCache.current = data; // Populate in-memory cache
+          setLoadingFiles(false);
+          return;
+        } else {
+          console.log("Local storage cache expired. Fetching fresh data.");
+          localStorage.removeItem(CACHE_KEY); // Clear expired cache
+        }
+      }
+    }
+
+    // 3. Fetch from Supabase if no valid cache
     try {
       const { data, error } = await supabase.storage
         .from("uploads")
@@ -78,59 +64,46 @@ const ExcelUploader = () => {
 
       const validFiles = data.filter((file) => !file.name.startsWith("."));
 
-      const fileList = await Promise.all(
-        validFiles.map(async (file) => {
-          const fullPath = `excels/${file.name}`;
-          const fileUrl = supabase.storage
-            .from("uploads")
-            .getPublicUrl(fullPath).data.publicUrl;
+      const fileList = validFiles.map((file) => {
+        const fullPath = `excels/${file.name}`;
+        const fileUrl = supabase.storage
+          .from("uploads")
+          .getPublicUrl(fullPath).data.publicUrl;
 
-          let month = "—";
-          if (file.name.endsWith(".xlsx") || file.name.endsWith(".xls")) {
-            try {
-              const res = await fetch(fileUrl);
-              const arrayBuffer = await res.arrayBuffer();
-              const workbook = XLSX.read(arrayBuffer, { type: "array" });
-              const sheet = workbook.Sheets[workbook.SheetNames[0]];
-              const json = XLSX.utils.sheet_to_json(sheet, { defval: "" });
+        const month = "N/A"; // Month information is not parsed on upload now
 
-              if (json.length > 0) {
-                month = parseExcelMonths(json);
-              }
-            } catch (err) {
-              console.warn(
-                `Could not parse ${file.name} for month info:`,
-                err.message
-              );
-              month = "Error parsing file";
-            }
-          } else {
-            month = "N/A";
+        const uploadedDate = new Date(file.created_at).toLocaleString(
+          "en-PH",
+          {
+            year: "numeric",
+            month: "numeric",
+            day: "numeric",
+            hour: "2-digit",
+            minute: "2-digit",
+            second: "2-digit",
+            hour12: true,
           }
+        );
 
-          const uploadedDate = new Date(file.created_at).toLocaleString(
-            "en-PH",
-            {
-              year: "numeric",
-              month: "numeric",
-              day: "numeric",
-              hour: "2-digit",
-              minute: "2-digit",
-              second: "2-digit",
-              hour12: true,
-            }
-          );
+        return {
+          name: file.name,
+          date: uploadedDate,
+          month,
+          url: fileUrl,
+        };
+      });
 
-          return {
-            name: file.name,
-            date: uploadedDate,
-            month,
-            url: fileUrl,
-          };
-        })
+      const sortedFiles = fileList.sort(
+        (a, b) => new Date(b.date) - new Date(a.date)
       );
+      setFiles(sortedFiles);
+      inMemoryCache.current = sortedFiles; // Update in-memory cache
 
-      setFiles(fileList.sort((a, b) => new Date(b.date) - new Date(a.date)));
+      // Store in local storage with timestamp
+      localStorage.setItem(
+        CACHE_KEY,
+        JSON.stringify({ timestamp: Date.now(), data: sortedFiles })
+      );
     } catch (err) {
       console.error("Error loading files:", err.message);
       toast.error("Failed to load uploaded files.");
@@ -158,232 +131,77 @@ const ExcelUploader = () => {
     setUploading(true);
     setUploadProgress(0);
 
-    let successfullyProcessedOriginalFiles = 0;
-    const totalSelectedFiles = selectedFiles.length;
+    let successfullyUploadedCount = 0;
+    const totalFilesToUpload = selectedFiles.length;
 
-    for (let i = 0; i < totalSelectedFiles; i++) {
+    // Get current file names already in storage for quick lookup (from the current state, which should be up-to-date)
+    const existingFileNames = new Set(files.map((f) => f.name));
+
+    for (let i = 0; i < totalFilesToUpload; i++) {
       const file = selectedFiles[i];
-      let currentFileStatusToast = toast.loading(`Processing ${file.name}...`);
+      let currentFileStatusToast = toast.loading(`Uploading ${file.name}...`);
+
+      // Check if file with the same name already exists
+      if (existingFileNames.has(file.name)) {
+        toast.dismiss(currentFileStatusToast);
+        toast.error(`File with name '${file.name}' already exists. Skipping.`);
+        // Update progress for the skipped file
+        setUploadProgress(Math.round(((i + 1) / totalFilesToUpload) * 100));
+        continue; // Skip to the next file
+      }
 
       try {
-        const data = await file.arrayBuffer();
-        const workbook = XLSX.read(data, { type: "array" });
-        const sheet = workbook.Sheets[workbook.SheetNames[0]];
-        const rows = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: "" });
-
-        if (rows.length === 0) {
-          toast.dismiss(currentFileStatusToast);
-          toast(`Skipping empty file: ${file.name}`, { icon: "ℹ️" });
-          continue;
-        }
-
-        const headers = rows[0];
-        const openedIndex = headers.indexOf("opened_at");
-        const createdIndex = headers.indexOf("sys_created_on"); // Get Created index as well
-
-        const dateColumnToUse =
-          openedIndex !== -1
-            ? "opened_at"
-            : createdIndex !== -1
-            ? "sys_created_on"
-            : null;
-        const dateColumnIndex = dateColumnToUse
-          ? headers.indexOf(dateColumnToUse)
-          : -1;
-
-        if (dateColumnIndex === -1) {
-          toast.dismiss(currentFileStatusToast);
-          toast.error(
-            `Neither 'Opened' nor 'Created' column found in ${file.name}. Skipping file.`
-          );
-          continue;
-        }
-
-        const monthGroups = {};
-
-        for (let j = 1; j < rows.length; j++) {
-          const row = rows[j];
-          const rawDateValue = row[dateColumnIndex];
-          let parsedDate;
-
-          if (typeof rawDateValue === "number") {
-            const parsed = XLSX.SSF.parse_date_code(rawDateValue);
-            if (parsed) {
-              parsedDate = new Date(
-                parsed.y,
-                parsed.m - 1,
-                parsed.d,
-                parsed.H,
-                parsed.M,
-                parsed.S
-              );
-            }
-          } else if (typeof rawDateValue === "string") {
-            try {
-              parsedDate = new Date(rawDateValue);
-              if (
-                isNaN(parsedDate.getTime()) &&
-                rawDateValue.match(
-                  /^\d{1,2}\/\d{1,2}\/\d{4} \d{1,2}:\d{2}(:\d{2})?$/
-                )
-              ) {
-                const parts = rawDateValue.split(/[\/\s:]/);
-                parsedDate = new Date(
-                  parts[2],
-                  parts[0] - 1,
-                  parts[1],
-                  parts[3],
-                  parts[4],
-                  parts[5] || 0
-                );
-              }
-            } catch (e) {
-              console.warn(
-                `Failed to parse date string in row ${j + 1}:`,
-                rawDateValue,
-                e
-              );
-              parsedDate = null;
-            }
-          }
-
-          if (parsedDate && !isNaN(parsedDate.getTime())) {
-            const datePH = new Date(
-              parsedDate.toLocaleString("en-US", { timeZone: "Asia/Manila" })
-            );
-            const year = datePH.getFullYear();
-            const month = String(datePH.getMonth() + 1).padStart(2, "0");
-            const groupKey = `${year}-${month}`;
-
-            row[dateColumnIndex] = formatDatePH(datePH);
-
-            if (!monthGroups[groupKey]) {
-              monthGroups[groupKey] = [];
-            }
-            monthGroups[groupKey].push(row);
-          } else {
-            console.warn(
-              `Skipping row ${
-                j + 1
-              } in ${file.name} due to invalid or unparseable date in '${dateColumnToUse}' column:`,
-              rawDateValue
-            );
-          }
-        }
-
-        const monthlyGroupKeys = Object.keys(monthGroups);
-        const totalPartsForFile = monthlyGroupKeys.length;
-
-        if (totalPartsForFile === 0) {
-          toast.dismiss(currentFileStatusToast);
-          toast.error(
-            `No valid date entries found in ${file.name} for splitting. Skipping.`
-          );
-          continue;
-        }
-
-        let partsUploadedForThisFile = 0;
-        let filesUploadedFromThisOriginal = [];
-
-        // Generate a unique timestamp for this upload batch
-        const uniqueTimestamp = Date.now();
-
-        for (const monthKey of monthlyGroupKeys) {
-          const monthRows = monthGroups[monthKey];
-
-          const newWorkbook = XLSX.utils.book_new();
-          const newSheet = XLSX.utils.aoa_to_sheet([headers, ...monthRows]);
-          XLSX.utils.book_append_sheet(newWorkbook, newSheet, "Sheet1");
-
-          const excelBuffer = XLSX.write(newWorkbook, {
-            type: "array",
-            bookType: "xlsx",
+        const { error } = await supabase.storage
+          .from("uploads")
+          .upload(`excels/${file.name}`, file, {
+            cacheControl: "3600",
+            upsert: false, // Set upsert to false to prevent overwriting
           });
 
-          const blob = new Blob([excelBuffer], { type: file.type });
-
-          const fileNameWithoutExt = file.name.replace(/\.[^/.]+$/, "");
-          // IMPORTANT CHANGE: Append unique timestamp to the filename
-          const newFileName = `${fileNameWithoutExt}_${monthKey}_${uniqueTimestamp}.xlsx`;
-
-          const { error } = await supabase.storage
-            .from("uploads")
-            .upload(`excels/${newFileName}`, blob, {
-              cacheControl: "3600",
-              upsert: false, // Set upsert to false, as we're generating unique names
-            });
-
-          if (error) {
-            console.error(`Supabase upload error for ${newFileName}:`, error);
-            throw error; // Re-throw to be caught by the outer try/catch
-          }
-          filesUploadedFromThisOriginal.push(newFileName);
-          partsUploadedForThisFile++;
-          setUploadProgress(
-            Math.round(
-              ((i + partsUploadedForThisFile / totalPartsForFile) /
-                totalSelectedFiles) *
-                100
-            )
-          );
+        if (error) {
+          console.error(`Supabase upload error for ${file.name}:`, error);
+          throw error;
         }
-        successfullyProcessedOriginalFiles++;
+
+        successfullyUploadedCount++;
         toast.dismiss(currentFileStatusToast);
-        toast.success(
-          `Successfully processed ${file.name}. Uploaded ${filesUploadedFromThisOriginal.length} unique monthly files.`
-        );
-        console.log(
-          `Uploaded unique files from ${file.name}:`,
-          filesUploadedFromThisOriginal
-        );
+        toast.success(`Successfully uploaded ${file.name}.`);
+
+        // Update progress after each file upload
+        setUploadProgress(Math.round(((i + 1) / totalFilesToUpload) * 100));
       } catch (error) {
         toast.dismiss(currentFileStatusToast);
         console.error("Upload failed for file:", file.name, error);
-        toast.error(`Failed to process or upload ${file.name}: ${error.message}`);
+        toast.error(`Failed to upload ${file.name}: ${error.message}`);
       }
     }
 
-    if (successfullyProcessedOriginalFiles > 0) {
-      toast.success("All selected files have been processed and uploaded uniquely!");
+    if (successfullyUploadedCount > 0) {
+      toast.success("All new files have been uploaded!");
+    } else if (totalFilesToUpload > 0) {
+      toast.error("No new files were uploaded (some might have been duplicates).");
     } else {
-      toast.error("No files were successfully processed or uploaded.");
+      toast.error("No files were selected for upload.");
     }
 
     setUploading(false);
     setShowUploadModal(false);
-    fetchUploadedFiles();
+    fetchUploadedFiles(true); // Force refresh after upload to get the latest list from Supabase
   };
 
-  function formatDatePH(date) {
-    return new Intl.DateTimeFormat("en-US", {
-      timeZone: "Asia/Manila",
-      year: "numeric",
-      month: "2-digit",
-      day: "2-digit",
-      hour: "2-digit",
-      minute: "2-digit",
-      second: "2-digit",
-      hour12: false,
-    })
-      .format(date)
-      .replace(",", "");
-  }
-
-  // --- FIX START ---
   const confirmDelete = (fileName) => {
-    setFileToDelete(fileName); // Store ONLY the filename
+    setFileToDelete(fileName);
     setShowDeleteModal(true);
   };
 
   const handleDeleteFile = async () => {
     if (!fileToDelete) return;
     try {
-      // Construct the full path here
       const filePath = `excels/${fileToDelete}`;
       const { error } = await supabase.storage.from("uploads").remove([filePath]);
       if (error) throw error;
       toast.success("File deleted");
-      fetchUploadedFiles();
+      fetchUploadedFiles(true); // Force refresh after delete
     } catch (error) {
       console.error("Delete failed:", error);
       toast.error("Failed to delete file");
@@ -392,7 +210,6 @@ const ExcelUploader = () => {
       setFileToDelete(null);
     }
   };
-  // --- FIX END ---
 
   const toggleSelectFile = (fileName) => {
     setSelectedFilesToDelete((prevSelected) =>
@@ -420,7 +237,6 @@ const ExcelUploader = () => {
   const handleDeleteSelectedFiles = async () => {
     if (selectedFilesToDelete.length === 0) return;
 
-    // This part correctly maps to full paths already, so it's fine.
     const filePaths = selectedFilesToDelete.map(
       (fileName) => `excels/${fileName}`
     );
@@ -432,7 +248,7 @@ const ExcelUploader = () => {
       if (error) throw error;
 
       toast.success("Selected files deleted");
-      fetchUploadedFiles();
+      fetchUploadedFiles(true); // Force refresh after multi-delete
       setSelectedFilesToDelete([]);
     } catch (error) {
       console.error("Delete failed:", error);
@@ -512,11 +328,13 @@ const ExcelUploader = () => {
                     <FaFileExcel className="text-green-600 w-5 h-5" />
                     <span className="truncate">{file.name}</span>
                   </div>
-                  <div className="col-span-4 text-sm">{file.month || "—"}</div>
+                  <div className="col-span-4 text-sm">
+                    {file.month || "—"}
+                  </div>
                   <div className="col-span-2 text-sm">{file.date}</div>
                   <div className="col-span-2 text-right">
                     <button
-                      onClick={() => confirmDelete(file.name)} // Pass only the filename here
+                      onClick={() => confirmDelete(file.name)}
                       className="text-red-600 hover:text-red-800"
                       title="Delete"
                     >
@@ -610,7 +428,6 @@ const ExcelUploader = () => {
             <p className="text-sm text-gray-600 mb-6">
               Are you sure you want to delete{" "}
               <strong>{fileToDelete}</strong>?{" "}
-              {/* Display just the filename */}
             </p>
             <div className="flex justify-end gap-3">
               <button
