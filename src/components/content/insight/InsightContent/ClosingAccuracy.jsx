@@ -194,6 +194,11 @@ function ClosingAccuracy() {
         );
 
         sheet.forEach((row) => {
+           const state = row["State"];
+          if (state && String(state).trim().toLowerCase() === "cancelled") {
+            // console.log(`Skipping cancelled ticket: ${row["Number"]}`); // Optional: for debugging
+            return; // Skip this row
+          }
           const cause = row["Cause"];
           const reason = row["Reason For Outage"];
           const assignedTo = row["Assigned to"];

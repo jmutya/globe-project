@@ -62,8 +62,9 @@ const fetchReportedAndCreated = async () => {
   return allData.map((row) => {
     const reportedRaw = row["Reported"];
     const createdRaw = row["Created"];
-    const caller = row["Caller"];
-    const number = row["Number"];
+    const caller = String(row["Caller"] || "Unknown Caller").trim();
+    const number = String(row["Number"] || "N/A").trim();
+
 
     const reportedISO = convertExcelDate(reportedRaw);
     const createdISO = convertExcelDate(createdRaw);

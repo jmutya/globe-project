@@ -208,17 +208,44 @@ function TicketIssuance() {
         );
 
         const requiredTicketIssuanceFields = [
-          "Failure Category",
-          "Cause",
-          "AOR001",
-          "AOR002",
+          "u_failure_category",
+          "u_root_cause",
+          "u_aor001",
+          "u_aor002",
         ];
 
         sheet.forEach((row) => {
-          const number = row["Number"];
-          const assignedTo = row["Caller"];
-          const openedRaw = row["Opened"];
+          // --- EXISTING: Check for "State" column and skip if "Cancelled" ---
+          const state = row["State"];
+          if (state && String(state).trim().toLowerCase() === "cancelled") {
+            return; // Skip this row
+          }
+
+          const number = row["number"];
+          let assignedTo = row["caller_id"];
+          const callervalue = row["assigned_to"];
+          const firstupdateby = String(row["u_ntg_first_updated_by"]);
+          console.log(firstupdateby);
+          const openedRaw = row["opened_at"];
           const openedFormatted = formatOpenedDate(openedRaw);
+
+          // --- NEW CONDITION: Exclude if assignedTo is "mycom" and callervalue is blank ---
+          if (
+            String(assignedTo).trim().toLowerCase() ===
+              "MYCOM Integration User" &&
+            String(callervalue).trim() === ""
+          ) {
+            return; // Skip this row entirely from processing and unmatched lists
+          }
+
+          // Condition 2: If assignedTo is "mycom" and callervalue is NOT blank, use callervalue as assignedTo
+          if (
+            String(assignedTo).trim().toLowerCase() ===
+              "MYCOM Integration User" &&
+            String(callervalue).trim() !== ""
+          ) {
+            assignedTo = firstupdateby; // Reassign assignedTo to callervalue
+          }
 
           const missingColumns = [];
           let hasError = false;
@@ -245,10 +272,10 @@ function TicketIssuance() {
             hasError,
             missingColumns,
             // Include other relevant fields from the row if needed for display/debug
-            failureCategory: row["Failure Category"],
-            cause: row["Cause"],
-            aor001: row["AOR001"],
-            aor002: row["AOR002"],
+            failureCategory: row["u_failure_category"],
+            cause: row["u_root_cause"],
+            aor001: row["u_aor001"],
+            aor002: row["u_aor002"],
           };
           tempAllProcessed.push(processedRow);
 
@@ -460,11 +487,11 @@ function TicketIssuance() {
     <div className="mb-10 mt-10">
       <div className="flex flex-col lg:flex-row gap-6 bg-white p-4 rounded-lg shadow">
         {/* Left: Accuracy Overview */}
-        <div className="lg:basis-1/4" >
+        <div className="lg:basis-1/4">
           <h3 className="font-semibold mb-2">Ticket Issuance Accuracy</h3>
           <AccuracyProgress
             percentage={parseFloat(displayAccuracyForProgressBar)}
-          id="accuracy-table-report"
+            id="accuracy-table-report"
           />
         </div>
 
@@ -633,7 +660,7 @@ function TicketIssuance() {
       >
         <div className="flex items-center justify-between mb-4">
           <h3 className="font-semibold mb-4">
-            Completion Accuracy per Assigned Person - Ticket Issuance - {" "}
+            Completion Accuracy per Assigned Person - Ticket Issuance -{" "}
             {selectedMonth && selectedUploadedMonth
               ? `for tickets opened in ${selectedMonth} from files uploaded in ${selectedUploadedMonth}`
               : selectedMonth
