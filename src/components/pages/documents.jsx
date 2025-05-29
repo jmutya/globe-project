@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { FaUpload, FaFileExcel, FaTrash, FaSpinner } from "react-icons/fa";
 import toast, { Toaster } from "react-hot-toast";
-import supabase from "../../backend/supabase/supabase";
+import supabase from "../../backend/supabase/supabase"; 
 import * as XLSX from "xlsx";
 
 const ExcelUploader = () => {
@@ -25,7 +25,7 @@ const ExcelUploader = () => {
     const months = [];
 
     json.forEach((row) => {
-      const value = row["Opened"] || row["Created"];
+      const value = row["opened_at"] || row["sys_created_on"];
       let parsedDate;
 
       if (typeof value === "number") {
@@ -178,14 +178,14 @@ const ExcelUploader = () => {
         }
 
         const headers = rows[0];
-        const openedIndex = headers.indexOf("Opened");
-        const createdIndex = headers.indexOf("Created"); // Get Created index as well
+        const openedIndex = headers.indexOf("opened_at");
+        const createdIndex = headers.indexOf("sys_created_on"); // Get Created index as well
 
         const dateColumnToUse =
           openedIndex !== -1
-            ? "Opened"
+            ? "opened_at"
             : createdIndex !== -1
-            ? "Created"
+            ? "sys_created_on"
             : null;
         const dateColumnIndex = dateColumnToUse
           ? headers.indexOf(dateColumnToUse)
