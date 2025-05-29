@@ -26,9 +26,9 @@ export const fetchCallerCountsThisMonth = async () => {
 
       if (sheet.length > 1) {
         const headers = sheet[0];
-        const callerIndex = headers.indexOf("Caller");
+        const callerIndex = headers.indexOf("caller_id");
         const dateIndex = headers.findIndex((header) =>
-          ["Opened"].some((label) =>
+          ["opened_at"].some((label) =>
             String(header).toLowerCase().includes(label.toLowerCase())
           )
         );

@@ -84,6 +84,11 @@ const FilterData = () => {
     const errors = [];
     const parsed = allData
       .map((row, idx) => {
+        const state = row["State"];
+          if (state && String(state).trim().toLowerCase() === "cancelled") {
+            // console.log(`Skipping cancelled ticket: ${row["Number"]}`); // Optional: for debugging
+            return; // Skip this row
+          }
         const desc = row["Short description"];
         const cleanDesc = desc?.replace(/^[\s']+/, "");
         const match = cleanDesc?.match(/\(([^)]+)\)/);

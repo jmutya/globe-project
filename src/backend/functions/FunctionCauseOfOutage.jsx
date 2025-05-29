@@ -27,7 +27,7 @@ export const fetchAlarmCategoryChartData = async () => {
       if (sheet.length <= 1) continue;
 
       const headers = sheet[0];
-      const openedIndex = headers.indexOf("Opened");
+      const openedIndex = headers.indexOf("opened_at");
 
       if (openedIndex === -1) continue;
 
@@ -56,8 +56,8 @@ export const fetchAlarmCategoryChartData = async () => {
     const sheet = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName], { header: 1 });
 
     const headers = sheet[0];
-    const openedIndex = headers.indexOf("Opened");
-    const causeIndex = headers.indexOf("Cause");
+    const openedIndex = headers.indexOf("opened_at");
+    const causeIndex = headers.indexOf("u_cause");
 
     if (openedIndex === -1 || causeIndex === -1) {
       return { formattedData: [], totalCount: 0 };

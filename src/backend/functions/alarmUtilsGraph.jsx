@@ -22,7 +22,7 @@ export const fetchAlarmSeverityData = async () => {
 
       if (sheet.length > 1) {
         const headers = sheet[0];
-        const dateIndex = headers.indexOf("Opened");
+        const dateIndex = headers.indexOf("opened_at");
 
         if (dateIndex === -1) continue;
 
@@ -50,8 +50,8 @@ export const fetchAlarmSeverityData = async () => {
 
       // Step 5: Process data from the most recent file
       const headers = sheet[0];
-      const severityIndex = headers.indexOf("Severity");
-      const dateIndex = headers.indexOf("Opened");
+      const severityIndex = headers.indexOf("severity");
+      const dateIndex = headers.indexOf("opened_at");
 
       if (severityIndex === -1 || dateIndex === -1) return { severityCounts: {}, latestMonth: "" };
 

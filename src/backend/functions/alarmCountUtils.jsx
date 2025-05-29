@@ -39,8 +39,8 @@ export const fetchSeverityCounts = async () => {
 
       if (sheet.length > 1) {
         const headers = sheet[0];
-        const openedIndex = headers.indexOf("Opened");
-        const severityIndex = headers.indexOf("Severity");
+        const openedIndex = headers.indexOf("opened_at");
+        const severityIndex = headers.indexOf("severity");
 
         if (openedIndex === -1 || severityIndex === -1) continue;
 
