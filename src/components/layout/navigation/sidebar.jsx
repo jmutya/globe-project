@@ -16,15 +16,18 @@ import {
 
 import MainContent from "../../../main/mainContent";
 import Logo from "./logo";
+import Dashboard from "../../pages/dashboard";
 
 const componentMap = {
-  Dashboard: lazy(() => import("../../pages/dashboard")),
-  "Insights": lazy(() => import("../../content/insight/InsightLayout")),
+  // Dashboard: lazy(() => import("../../pages/dashboard")),
+  // "Insights": lazy(() => import("../../content/insight/InsightLayout")),
   "Upload Files": lazy(() => import("../../pages/documents")),
   "Authorized Users": lazy(() => import("../../pages/addemail")),
-  "Mean Time To Ticket": lazy(() => import("../../content/mttt")),
-  "Mean Time To Investigate": lazy(() => import("../../content/mtti")),
-  "First Touch Resolution": lazy(() => import("../../content/ftr")),
+  // "Mean Time To Ticket": lazy(() => import("../../content/mttt")),
+  // "Mean Time To Investigate": lazy(() => import("../../content/mtti")),
+  // "First Touch Resolution": lazy(() => import("../../content/ftr")),
+  Dashboard: lazy(() => import("../../pages/Dashboard_file")),
+  
 };
 
 const navigationItems = [
@@ -33,10 +36,10 @@ const navigationItems = [
     icon: ChartBarSquareIcon,
     subItems: [
       { name: "Dashboard" },
-      { name: "Insights" },
-      { name: "Mean Time To Ticket" },
-      { name: "Mean Time To Investigate" },
-      { name: "First Touch Resolution" },
+      // { name: "Insights" },
+      // { name: "Mean Time To Ticket" },
+      // { name: "Mean Time To Investigate" },
+      // { name: "First Touch Resolution" },
     ],
   },
   { name: "Upload Files", icon: ArrowUpTrayIcon },

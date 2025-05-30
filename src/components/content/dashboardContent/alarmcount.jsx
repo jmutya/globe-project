@@ -1,187 +1,160 @@
 import React, { useEffect, useState } from "react";
-import {
-  PieChart,
-  Pie,
-  Cell,
-  Tooltip,
-  ResponsiveContainer,
-} from "recharts";
 import CountUp from "react-countup";
-import {
-  fetchSeverityCounts,
-  fetchStateDistribution,
-} from "../../../backend/functions/alarmCountUtils";
+import * as XLSX from "xlsx";
+import { FiRefreshCw } from "react-icons/fi"; // Import refresh icon
+import supabase from "../../../backend/supabase/supabase";
 
-const COLORS = [
-  "#60a5fa",
-  "#facc15",
-  "#22c55e",
-  "#ef4444",
-  "#a855f7",
-  "#f97316",
-  "#e11d48",
-  "#0ea5e9",
-];
+const MOST_RECENT_FILE_COUNT_CACHE_KEY = 'mostRecentFileNumberCount';
+const CACHE_TTL_MS = 30 * 60 * 1000;
+
+
+const SkeletonBlock = ({ className }) => (
+  <div className={`bg-gray-200 animate-pulse rounded ${className}`}></div>
+);
 
 const AlarmCount = () => {
-  const [totalCount, setTotalCount] = useState(0);
-  const [monthName, setMonthName] = useState("");
-  const [stateData, setStateData] = useState([]);
+  const [displayCount, setDisplayCount] = useState(0);
+  const [fileName, setFileName] = useState("");
+  const [lastProcessed, setLastProcessed] = useState("");
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  const loadAndCacheData = async (forceRefresh = false) => {
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      if (!forceRefresh) {
+        const cached = localStorage.getItem(MOST_RECENT_FILE_COUNT_CACHE_KEY);
+        if (cached) {
+          const parsed = JSON.parse(cached);
+          const isValid = Date.now() - parsed.processedTimestamp < CACHE_TTL_MS;
+          if (isValid) {
+            setDisplayCount(parsed.count);
+            setFileName(parsed.fileName);
+            setLastProcessed(new Date(parsed.processedTimestamp).toLocaleTimeString([], {
+              hour: '2-digit', minute: '2-digit', second: '2-digit'
+            }));
+            setIsLoading(false);
+            return;
+          }
+        }
+      }
+
+      const { data: files, error: listError } = await supabase.storage
+        .from("uploads")
+        .list("excels", { sortBy: { column: "created_at", order: "desc" }, limit: 1 });
+
+
+
+      if (listError) throw listError;
+      if (!files || files.length === 0) throw new Error("No files found.");
+   
+      const recentFile = files[0];
+      const { data: fileUrl, error: urlError } = await supabase.storage
+        .from("uploads")
+        .createSignedUrl(`excels/${recentFile.name}`, 300);
+
+      if (urlError) throw urlError;
+
+      const res = await fetch(fileUrl.signedUrl);
+      const blob = await res.blob();
+      const arrayBuffer = await blob.arrayBuffer();
+      const workbook = XLSX.read(arrayBuffer, { type: "array" });
+      const sheet = workbook.Sheets[workbook.SheetNames[0]];
+      const jsonData = XLSX.utils.sheet_to_json(sheet);
+
+      const count = jsonData.filter(row => row.number !== undefined && row.number !== null && row.number !== '').length;
+
+      const timestamp = Date.now();
+      localStorage.setItem(
+        MOST_RECENT_FILE_COUNT_CACHE_KEY,
+        JSON.stringify({
+          count,
+          fileName: recentFile.name,
+          processedTimestamp: timestamp,
+        })
+      );
+
+      setDisplayCount(count);
+      setFileName(recentFile.name);
+      setLastProcessed(new Date(timestamp).toLocaleTimeString([], {
+        hour: '2-digit', minute: '2-digit', second: '2-digit'
+      }));
+    } catch (err) {
+      console.error(err);
+      setError("Failed to load count: " + err.message);
+      setDisplayCount(0);
+      setFileName("Error");
+      setLastProcessed("N/A");
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   useEffect(() => {
-    const loadData = async () => {
-      try {
-        setIsLoading(true);
-
-        const { counts, mostRecentMonth: monthFromSeverity } =
-          await fetchSeverityCounts();
-        const { stateDistribution, mostRecentMonth: monthFromState } =
-          await fetchStateDistribution();
-
-        // Calculate total count from severity
-        const total = Object.values(counts).reduce(
-          (acc, count) => acc + count,
-          0
-        );
-        setTotalCount(total);
-
-        // Pick consistent month name
-        const monthToUse = monthFromState || monthFromSeverity;
-        if (monthToUse) {
-          const [year, month] = monthToUse.split("-");
-          const date = new Date(`${year}-${month}-01`);
-          const name = date.toLocaleString("default", { month: "long" });
-          setMonthName(`${name} ${year}`);
-        }
-
-        // Convert state distribution to chart format
-        const formattedStateData = Object.entries(stateDistribution).map(
-          ([name, value], index) => ({
-            name,
-            value,
-            fill: COLORS[index % COLORS.length],
-          })
-        );
-
-        setStateData(formattedStateData);
-      } catch (error) {
-        console.error("Error loading alarm count data:", error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    loadData();
+    loadAndCacheData();
   }, []);
 
+  if (isLoading) {
+    return (
+      <div className="bg-white rounded-md shadow p-6 w-full h-[362px] flex flex-col justify-center items-center">
+        <SkeletonBlock className="h-8 w-3/4 mb-4" />
+        <SkeletonBlock className="h-16 w-1/2 mb-2" />
+        <SkeletonBlock className="h-4 w-2/3" />
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="bg-white rounded-md shadow p-6 w-full h-[362px] flex flex-col justify-center items-center text-red-500">
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
+          strokeWidth={1.5} stroke="currentColor" className="w-12 h-12 mb-4">
+          <path strokeLinecap="round" strokeLinejoin="round"
+            d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 
+            3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 
+            3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 
+            15.75h.007v.008H12v-.008Z" />
+        </svg>
+        <p className="text-center font-semibold">Data Loading Error</p>
+        <p className="text-sm text-center">{error}</p>
+      </div>
+    );
+  }
+
   return (
-    <div className="bg-white rounded-md shadow p-6 w-full h-[362px] flex flex-col justify-between">
-      {/* Header */}
-      <div className="flex items-center mb-4">
-        <div className="rounded-lg bg-green-500 h-12 w-12 flex items-center justify-center">
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            fill="none"
-            viewBox="0 0 24 24"
-            strokeWidth={1.5}
-            stroke="white"
-            className="w-6 h-6"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              d="M9 7h6m-9 3v-6a2 2 0 012-2h10a2 2 0 012 2v6m-9 3h6m-3-3h.008v.008H12V10.008m-3-3h.008v.008H9V7.008m6 6h.008v.008H15V16.008"
-            />
-          </svg>
-        </div>
-        <h2 className="text-sm font-semibold text-gray-700 ml-3 uppercase tracking-wider">
-          Ticket Count {monthName && `(${monthName})`}
-        </h2>
-      </div>
+    <div className="bg-white rounded-md shadow p-6 w-full h-[362px] flex flex-col justify-center items-center text-center relative">
+      <button
+        onClick={() => loadAndCacheData(true)}
+        disabled={isLoading}
+        className={`absolute top-4 right-4 p-2 rounded-full 
+        ${isLoading ? "text-gray-300 cursor-not-allowed" : "text-gray-500 hover:text-blue-600"}`}
+        title="Refresh"
+      >
+        <FiRefreshCw className={`w-5 h-5 ${isLoading ? "animate-spin" : ""}`} />
+      </button>
 
-      {/* Body */}
-      <div className="flex flex-1 h-full">
-        {/* Left - Pie Chart */}
-        <div className="w-1/2 flex items-center justify-center border-r pr-4">
-          {isLoading ? (
-            <div className="flex justify-center items-center">
-              <div className="w-6 h-6 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin" />
-              <p className="text-gray-500 ml-2 text-sm">
-                Loading Please Wait...
-              </p>
-            </div>
-          ) : stateData.length > 0 ? (
-            <ResponsiveContainer width="100%" height={220}>
-              <PieChart>
-                <Pie
-                  data={stateData}
-                  cx="50%"
-                  cy="50%"
-                  innerRadius={60}
-                  outerRadius={80}
-                  dataKey="value"
-                  paddingAngle={2}
-                  cornerRadius={6}
-                >
-                  {stateData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={entry.fill} />
-                  ))}
-                </Pie>
-                <Tooltip
-                  formatter={(value, name) => {
-                    const total = stateData.reduce(
-                      (sum, cur) => sum + cur.value,
-                      0
-                    );
-                    const percentage = ((value / total) * 100).toFixed(1);
-                    return [`${value} (${percentage}%)`, name];
-                  }}
-                  itemStyle={{ color: "gray" }}
-                  labelStyle={{ color: "black", fontWeight: "bold" }}
-                />
-              </PieChart>
-            </ResponsiveContainer>
-          ) : (
-            <p className="text-gray-500 text-sm text-center">
-              No data available
-            </p>
-          )}
-        </div>
-
-        {/* Right - Total Tickets */}
-        <div className="w-1/2 flex flex-col justify-center items-center pl-6">
-          {isLoading ? (
-            <div className="flex justify-center items-center">
-              <div className="w-6 h-6 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin" />
-              <p className="text-gray-500 ml-2 text-sm">
-                Loading Please Wait...
-              </p>
-            </div>
-          ) : totalCount > 0 ? (
-            <>
-              <p className="text-sm font-medium text-gray-600 mb-2">
-                Total Tickets
-              </p>
-              <CountUp
-                end={totalCount}
-                duration={1.5}
-                separator=","
-                className="text-4xl font-bold text-gray-800"
-              />
-            </>
-          ) : (
-            <p className="text-gray-500 text-sm">No active tickets</p>
-          )}
-        </div>
+      <div className="rounded-lg bg-blue-500 h-16 w-16 flex items-center justify-center mb-4">
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none"
+          viewBox="0 0 24 24" strokeWidth={1.5} stroke="white"
+          className="w-8 h-8">
+          <path strokeLinecap="round" strokeLinejoin="round"
+            d="M16.5 6.75L9 15.75L6 12.75M21 12a9 9 0 
+            11-18 0 9 9 0 0118 0z" />
+        </svg>
       </div>
-
-      {/* Footer */}
-      <div className="mt-4 text-right">
-        <p className="text-xs text-gray-500">
-          See ticket details which require immediate attention.
-        </p>
-      </div>
+      {/* <h2 className="text-lg font-semibold text-gray-700 mb-1 uppercase tracking-wider">
+        Entries in "Number" Column
+      </h2> */}
+      <p className="text-xs text-gray-500 mb-3">(Most Recent File: {fileName || "N/A"})</p>
+      <CountUp
+        end={displayCount}
+        duration={1.5}
+        separator=","
+        className="text-5xl font-bold text-gray-800"
+      />
+      <p className="text-xs text-gray-400 mt-2">Last processed: {lastProcessed}</p>
     </div>
   );
 };

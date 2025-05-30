@@ -40,14 +40,14 @@ const ComingSoon = () => {
         ></path>
       </svg>
 
-      <h1 className="text-4xl font-extrabold text-gray-900 mb-2">Coming Soon</h1>
+      <h1 className="text-4xl font-extrabold text-gray-900 mb-2">Under Maintenance</h1>
       <p className="text-lg text-gray-700 max-w-md text-center mb-4">
         This page is currently under Maintenance. Please check back later.
       </p>
 
-      <p className="text-indigo-600 font-semibold">
+      {/* <p className="text-indigo-600 font-semibold">
         Estimated time remaining: {daysLeft} {daysLeft === 1 ? "day" : "days"}
-      </p>
+      </p> */}
     </div>
   );
 };
