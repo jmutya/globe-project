@@ -3,6 +3,10 @@ import React from 'react';
 import AlarmCount from '../content/dashboardContent/alarmcount';
 import AlarmTypeLineGraph from '../content/dashboardContent/linegraph';
 import AlarmTypeBarGraph from '../content/dashboardContent/bargraph';
+import AlarmsSeverity from '../content/dashboardContent/alarmseveritygraph';
+import TerritoryGraph from '../content/dashboardContent/territorygraph';
+import AreaLineGraph from '../content/dashboardContent/arealinegraph';
+import AlarmCategory from '../content/dashboardContent/AlarmCauseOfOutage';
 
 // Card Component Definition
 const Card = ({ title, children }) => {
@@ -109,11 +113,11 @@ const Dashboard_file = () => {
         <Card title="Ticket Count">
          <AlarmCount />
         </Card>
-        <Card title="Failure">
-          <AlarmTypeBarGraph />
+        <Card title="State">
+          <AlarmCategory/>
         </Card>
-        <Card title="Sales Overview">
-          <ChartWidget />
+        <Card title="Failure">
+           <AlarmTypeBarGraph />
         </Card>
         <Card title="Quick Actions">
           <div>

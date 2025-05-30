@@ -47,7 +47,7 @@ const AlarmCategory = () => {
           </svg>
         </div>
         <h2 className="text-sm font-semibold text-gray-700 ml-3 uppercase tracking-wider">
-         Outage Distribution 
+         Categories of State 
         </h2>
       </div>
 
