@@ -1,6 +1,8 @@
 // src/Dashboard_file.js (or wherever your file is located)
 import React from 'react';
 import AlarmCount from '../content/dashboardContent/alarmcount';
+import AlarmTypeLineGraph from '../content/dashboardContent/linegraph';
+import AlarmTypeBarGraph from '../content/dashboardContent/bargraph';
 
 // Card Component Definition
 const Card = ({ title, children }) => {
@@ -104,11 +106,11 @@ const Dashboard_file = () => {
   return (
     <div style={dashboardStyle}>
       <div style={cardContainerStyle}>
-        <Card title="Alarm Count">
+        <Card title="Ticket Count">
          <AlarmCount />
         </Card>
-        <Card title="Key Statistics">
-          <StatsWidget />
+        <Card title="Failure">
+          <AlarmTypeBarGraph />
         </Card>
         <Card title="Sales Overview">
           <ChartWidget />
@@ -118,9 +120,10 @@ const Dashboard_file = () => {
             <button style={{ marginRight: '8px', padding: '8px 12px', cursor: 'pointer' }}>New Report</button>
             <button style={{ padding: '8px 12px', cursor: 'pointer' }}>Settings</button>
           </div>
+
         </Card>
         <Card> {/* Card without a title */}
-          <p>This is a card without a specific title, but still useful for displaying content.</p>
+          {/* <AlarmTypeLineGraph /> */} 
         </Card>
       </div>
     </div>
