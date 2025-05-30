@@ -297,9 +297,8 @@ const ExcelUploader = () => {
         </div>
 
         <div className="flex-1 border border-gray-200 rounded-xl bg-white p-6 shadow-sm overflow-auto">
-          <div className="grid grid-cols-12 gap-4 pb-3 border-b border-gray-300 text-gray-700 font-bold text-sm px-4 sticky top-0 bg-white z-10">
+          <div className="grid grid-cols-8 gap-4 pb-3 border-b border-gray-300 text-gray-700 font-bold text-sm px-4 sticky top-0 bg-white z-10">
             <div className="col-span-4">File</div>
-            <div className="col-span-4">Month</div>
             <div className="col-span-2">Added On</div>
             <div className="col-span-2 text-right">Action</div>
           </div>
@@ -316,7 +315,7 @@ const ExcelUploader = () => {
               files.map((file, index) => (
                 <div
                   key={index}
-                  className="grid grid-cols-12 gap-4 py-3 items-center hover:bg-indigo-50 transition rounded-lg px-4"
+                  className="grid grid-cols-8 gap-4 py-3 items-center hover:bg-indigo-50 transition rounded-lg px-4"
                 >
                   <div className="col-span-4 flex items-center gap-2 truncate">
                     <input
@@ -327,9 +326,6 @@ const ExcelUploader = () => {
                     />
                     <FaFileExcel className="text-green-600 w-5 h-5" />
                     <span className="truncate">{file.name}</span>
-                  </div>
-                  <div className="col-span-4 text-sm">
-                    {file.month || "—"}
                   </div>
                   <div className="col-span-2 text-sm">{file.date}</div>
                   <div className="col-span-2 text-right">
