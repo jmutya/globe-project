@@ -109,7 +109,7 @@ const Dashboard_file = () => {
         <Card title="Ticket Count">
          <AlarmCount />
         </Card>
-        <Card title="Failure">
+        <Card title="Failure Graph Distribution">
           <AlarmTypeBarGraph />
         </Card>
         <Card title="Sales Overview">
