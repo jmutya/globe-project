@@ -116,7 +116,7 @@ const Dashboard_file = () => {
         <Card title="State">
           <AlarmCategory/>
         </Card>
-        <Card title="Failure">
+        <Card title="Failure ">
            <AlarmTypeBarGraph />
         </Card>
         <Card title="Quick Actions">
