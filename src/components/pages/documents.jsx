@@ -1,11 +1,11 @@
 import React, { useState, useEffect, useRef } from "react";
-import { FaUpload, FaFileExcel, FaTrash, FaSpinner } from "react-icons/fa";
+import { FaUpload, FaFileExcel, FaTrash, FaSpinner, FaSync } from "react-icons/fa"; // 1. Added FaSync
 import toast, { Toaster } from "react-hot-toast";
 import supabase from "../../backend/supabase/supabase"; // Assuming this path is correct
 
 // Define a cache key and expiration time (e.g., 30 minutes)
 const CACHE_KEY = "uploadedExcelFiles";
-const CACHE_EXPIRATION_MS = 30 * 60 * 1000; // 30 minutes in milliseconds <--- UPDATED HERE
+const CACHE_EXPIRATION_MS = 30 * 60 * 1000; // 30 minutes in milliseconds
 
 const ExcelUploader = () => {
   const [uploading, setUploading] = useState(false);
@@ -104,6 +104,9 @@ const ExcelUploader = () => {
         CACHE_KEY,
         JSON.stringify({ timestamp: Date.now(), data: sortedFiles })
       );
+      if (forceRefresh) { // Only show success toast on manual refresh, not initial load
+        toast.success("File list refreshed!");
+      }
     } catch (err) {
       console.error("Error loading files:", err.message);
       toast.error("Failed to load uploaded files.");
@@ -134,20 +137,17 @@ const ExcelUploader = () => {
     let successfullyUploadedCount = 0;
     const totalFilesToUpload = selectedFiles.length;
 
-    // Get current file names already in storage for quick lookup (from the current state, which should be up-to-date)
     const existingFileNames = new Set(files.map((f) => f.name));
 
     for (let i = 0; i < totalFilesToUpload; i++) {
       const file = selectedFiles[i];
       let currentFileStatusToast = toast.loading(`Uploading ${file.name}...`);
 
-      // Check if file with the same name already exists
       if (existingFileNames.has(file.name)) {
         toast.dismiss(currentFileStatusToast);
         toast.error(`File with name '${file.name}' already exists. Skipping.`);
-        // Update progress for the skipped file
         setUploadProgress(Math.round(((i + 1) / totalFilesToUpload) * 100));
-        continue; // Skip to the next file
+        continue;
       }
 
       try {
@@ -155,7 +155,7 @@ const ExcelUploader = () => {
           .from("uploads")
           .upload(`excels/${file.name}`, file, {
             cacheControl: "3600",
-            upsert: false, // Set upsert to false to prevent overwriting
+            upsert: false,
           });
 
         if (error) {
@@ -166,8 +166,6 @@ const ExcelUploader = () => {
         successfullyUploadedCount++;
         toast.dismiss(currentFileStatusToast);
         toast.success(`Successfully uploaded ${file.name}.`);
-
-        // Update progress after each file upload
         setUploadProgress(Math.round(((i + 1) / totalFilesToUpload) * 100));
       } catch (error) {
         toast.dismiss(currentFileStatusToast);
@@ -186,7 +184,7 @@ const ExcelUploader = () => {
 
     setUploading(false);
     setShowUploadModal(false);
-    fetchUploadedFiles(true); // Force refresh after upload to get the latest list from Supabase
+    fetchUploadedFiles(true);
   };
 
   const confirmDelete = (fileName) => {
@@ -201,7 +199,7 @@ const ExcelUploader = () => {
       const { error } = await supabase.storage.from("uploads").remove([filePath]);
       if (error) throw error;
       toast.success("File deleted");
-      fetchUploadedFiles(true); // Force refresh after delete
+      fetchUploadedFiles(true);
     } catch (error) {
       console.error("Delete failed:", error);
       toast.error("Failed to delete file");
@@ -248,7 +246,7 @@ const ExcelUploader = () => {
       if (error) throw error;
 
       toast.success("Selected files deleted");
-      fetchUploadedFiles(true); // Force refresh after multi-delete
+      fetchUploadedFiles(true);
       setSelectedFilesToDelete([]);
     } catch (error) {
       console.error("Delete failed:", error);
@@ -256,6 +254,19 @@ const ExcelUploader = () => {
     } finally {
       setShowMultiDeleteModal(false);
     }
+  };
+
+  // 2. Added handleRefresh function
+  const handleRefresh = () => {
+    // The fetchUploadedFiles function will show its own loading state and toasts.
+    // A specific "refreshing..." toast can be added here if desired,
+    // but the existing spinner via loadingFiles should be sufficient.
+    // Example: const toastId = toast.loading("Refreshing files...");
+    fetchUploadedFiles(true);
+    // Example: .then(() => toast.success("Files refreshed!", { id: toastId }))
+    //          .catch(() => toast.error("Refresh failed.", { id: toastId }));
+    // Note: fetchUploadedFiles already toasts on success (if forceRefresh is true and successful)
+    // and on failure of the Supabase call.
   };
 
   return (
@@ -286,9 +297,21 @@ const ExcelUploader = () => {
               </button>
             )}
 
+            {/* 3. Added Refresh Button */}
+            <button
+              onClick={handleRefresh}
+              className="flex items-center gap-2 bg-sky-500 text-white px-4 py-2 rounded-xl hover:bg-sky-600 transition"
+              title="Refresh file list"
+              disabled={loadingFiles} // Disable button while loading
+            >
+              {loadingFiles && files.length === 0 ? <FaSpinner className="animate-spin w-4 h-4" /> : <FaSync className="w-4 h-4" />}
+              {loadingFiles && files.length === 0 ? "Refreshing..." : "Refresh"}
+            </button>
+
             <button
               onClick={handleUploadClick}
               className="flex items-center gap-2 bg-indigo-600 text-white px-4 py-2 rounded-xl hover:bg-indigo-700 transition"
+              disabled={loadingFiles} // Optionally disable while loading
             >
               <FaUpload className="w-4 h-4" />
               Upload File
@@ -465,7 +488,7 @@ const ExcelUploader = () => {
               <button
                 onClick={() => {
                   handleDeleteSelectedFiles();
-                  setShowMultiDeleteModal(false);
+                  // setShowMultiDeleteModal(false); // This is already handled in handleDeleteSelectedFiles's finally block
                 }}
                 className="px-4 py-2 rounded bg-red-600 text-white hover:bg-red-700"
               >
