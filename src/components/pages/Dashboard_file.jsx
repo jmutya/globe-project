@@ -104,7 +104,7 @@ const Dashboard_file = () => {
   const rowContainerStyle = {
     display: 'flex',
     flexWrap: 'wrap', // Allows cards to wrap within this row if needed (though we're limiting for 3)
-    justifyContent: 'center', // Centers cards if there aren't enough to fill the row
+    justifyContent: 'left', // Centers cards if there aren't enough to fill the row
     gap: '16px', // Space between cards in this row
     marginBottom: '16px', // Space between this row and the next row
   };
@@ -119,23 +119,33 @@ const Dashboard_file = () => {
         <Card title="State">
           <AlarmCategory />
         </Card>
-        <Card title="Failure ">
-          <AlarmTypeBarGraph />
-        </Card>
+        
+        <Card title="Mycom"></Card>
       </div>
 
       {/* Second Row - for the remaining cards and the PDF button */}
       <div style={rowContainerStyle}>
+        <Card title="Failure ">
+          <AlarmTypeBarGraph />
+        </Card>
         <Card title="Overall Alarm Distribution by territory">
           <TerritoryGraph />
         </Card>
-        <Card title="Overall Area Line Graph">
-          <AreaLineGraph />
+        <Card title="Manual">
+          
         </Card>
-        <Card title ="Overall Trends in Mindanao">
+        
+      </div>
+
+      {/* Third Row - for the remaining cards */}
+      <div style={rowContainerStyle}>
+          <Card title ="Overall Trends in Mindanao">
           <AlarmTypeLineGraph />
         </Card>
-      </div>
+         <Card title="Overall Area Line Graph">
+          <AreaLineGraph />
+        </Card>
+        </div>
 
       {/* Standalone button row, or you can place it within one of the existing rows */}
       {/* For a more prominent button, it's often good to have it in its own container or at the top/bottom */}
