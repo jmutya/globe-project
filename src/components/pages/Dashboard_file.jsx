@@ -10,11 +10,15 @@ import AlarmCategory from "../content/dashboardContent/AlarmCauseOfOutage";
 import TitleforCount from "../card/cardtitleticketcount";
 import TitleforState from "../card/cardtitlestate";
 import TitleforFailure from "../card/cardtitlefailure";
+import TitleforTerritory from "../card/cardtitleterritory";
+import TitleforMindanao from "../card/cardtitlemindanao";
+import TitleforArea from "../card/cardtitlearea";
 import Mycom from "../content/dashboardContent/mycom";
 import Manualvsauto from "../content/dashboardContent/manualvsauto";
 
 // Card Component Definition
-const Card = ({ title, children, isWide = false }) => { // Added isWide prop
+const Card = ({ title, children, isWide = false }) => {
+  // Added isWide prop
   const cardStyle = {
     border: "1px solid #ddd",
     borderRadius: "8px",
@@ -84,7 +88,8 @@ const Dashboard_file = () => {
           <TitleforFailure />
           <AlarmTypeBarGraph />
         </Card>
-        <Card title="Overall Alarm Distribution by territory">
+        <Card>
+          <TitleforTerritory />
           <TerritoryGraph />
         </Card>
       </div>
@@ -102,11 +107,15 @@ const Dashboard_file = () => {
       </div>
 
       {/* Third Row - for the remaining cards, with AreaLineGraph being wide */}
-      <div style={rowContainerStyle}> {/* Using rowContainerStyle directly */}
-        <Card title="Overall Trends in Mindanao">
+      <div style={rowContainerStyle}>
+        {" "}
+        {/* Using rowContainerStyle directly */}
+        <Card>
+          <TitleforMindanao />
           <AlarmTypeLineGraph />
         </Card>
-        <Card title="Overall Area Line Graph" isWide={true}> {/* <--- Added isWide prop here */}
+        <Card>
+          <TitleforArea />
           <AreaLineGraph />
         </Card>
       </div>
