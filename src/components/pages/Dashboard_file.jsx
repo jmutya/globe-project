@@ -100,8 +100,10 @@ const Dashboard_file = () => {
           <TitleforState />
           <AlarmCategory />
         </Card>
-        <Card title="Mycom">{/* <Mycom /> */}</Card>
-        <Card title="Manual">
+        <Card>
+          <Mycom />
+        </Card>
+        <Card>
           <Manualvsauto />
         </Card>
       </div>
