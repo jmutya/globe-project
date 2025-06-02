@@ -7,6 +7,7 @@ import AlarmsSeverity from "../content/dashboardContent/alarmseveritygraph";
 import TerritoryGraph from "../content/dashboardContent/territorygraph";
 import AreaLineGraph from "../content/dashboardContent/arealinegraph";
 import AlarmCategory from "../content/dashboardContent/AlarmCauseOfOutage";
+import Mycom from "../content/dashboardContent/mycom";
 
 // Card Component Definition
 const Card = ({ title, children }) => {
@@ -133,7 +134,10 @@ const Dashboard_file = () => {
         <Card title="State">
           <AlarmCategory />
         </Card>
-      <Card title="Mycom"></Card>
+      <Card title="Mycom">
+        {/* <Mycom /> */}
+        
+      </Card>
         <Card title="Manual"></Card>
       </div>
 
