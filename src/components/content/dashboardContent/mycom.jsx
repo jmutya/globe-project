@@ -7,7 +7,7 @@ import {
   Cell,
   ResponsiveContainer,
 } from "recharts";
-import { fetchAlarmCategoryChartData } from "../../../backend/functions/FunctionCauseOfOutage";
+import { fetchmycomChartData } from "../../../backend/functions/mycomFunction";
 
 const Mycom= () => {
   const [chartData, setChartData] = useState([]);
@@ -18,7 +18,7 @@ const Mycom= () => {
   useEffect(() => {
     const loadChartData = async () => {
       setIsLoading(true);
-      const { formattedData, totalCount } = await fetchAlarmCategoryChartData();
+      const { formattedData, totalCount } = await fetchmycomChartData();
       setChartData(formattedData);
       setTotalCount(totalCount);
       setIsLoading(false);
@@ -47,7 +47,7 @@ const Mycom= () => {
           </svg>
         </div>
         <h2 className="text-sm font-semibold text-gray-700 ml-3 uppercase tracking-wider">
-         Categories of State 
+         MYCOM - Categories of State 
         </h2>
       </div>
 

@@ -50,7 +50,7 @@ const Manualvsauto = () => {
               </svg>
             </div>
             <h2 className="text-sm font-semibold text-gray-700 ml-3 uppercase tracking-wider">
-             Categories of State 
+             Manual - Categories of State 
             </h2>
           </div>
     

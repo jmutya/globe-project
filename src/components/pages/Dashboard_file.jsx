@@ -11,6 +11,7 @@ import TitleforCount from "../card/cardtitleticketcount";
 import TitleforState from "../card/cardtitlestate";
 import TitleforFailure from "../card/cardtitlefailure";
 import Mycom from "../content/dashboardContent/mycom";
+import Manualvsauto from "../content/dashboardContent/manualvsauto";
 
 // Card Component Definition
 const Card = ({ title, children }) => {
@@ -140,8 +141,8 @@ const Dashboard_file = () => {
           <TitleforState />
           <AlarmCategory />
         </Card>
-        <Card title="Mycom">{/* <Mycom /> */}</Card>
-        <Card title="Manual"></Card>
+        <Card><Mycom/></Card>
+        <Card><Manualvsauto/></Card>
       </div>
 
       {/* Third Row - for the remaining cards */}
