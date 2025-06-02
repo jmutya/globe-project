@@ -10,7 +10,7 @@ const chartColors = [
 const CACHE_KEY = "alarmCategoryChartDataCache";
 const CACHE_TIMESTAMP_KEY = "alarmCategoryChartDataTimestamp";
 const CACHE_TOTAL_COUNT_KEY = "alarmCategoryChartTotalCountCache"; // New key for total count
-const CACHE_DURATION = 30 * 60 * 1000; // 30 minutes in milliseconds
+const CACHE_DURATION = 59 * 60 * 1000; // 30 minutes in milliseconds
 
 /**
  * Helper function to get the latest monthly file based on a date pattern in its name.

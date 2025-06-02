@@ -4,7 +4,7 @@ import supabase from "../supabase/supabase";
 // Define cache constants outside the function to avoid re-declaration on each call
 const CACHE_KEY = "failureCategoryDataCache";
 const CACHE_TIMESTAMP_KEY = "failureCategoryDataTimestamp";
-const CACHE_DURATION = 30 * 60 * 1000; // 30 minutes in milliseconds
+const CACHE_DURATION = 59 * 60 * 1000; // 30 minutes in milliseconds
 
 const getLatestMonthlyFile = (files) => {
   let latestFile = null;
