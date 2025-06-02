@@ -109,9 +109,10 @@ const Dashboard_file = () => {
           <TitleforState />
           <AlarmCategory />
         </Card>
-        <Card title="Mycom">{/* <Mycom /> */}</Card>
         <Card>
-          <TitleforManual />
+          <Mycom />
+        </Card>
+        <Card>
           <Manualvsauto />
         </Card>
       </div>
