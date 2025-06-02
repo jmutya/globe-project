@@ -14,12 +14,14 @@ const Card = ({ title, children }) => {
     border: '1px solid #ddd',
     borderRadius: '8px',
     padding: '16px',
-    margin: '16px', // This margin is on each card.
-                  // The 'gap' in cardContainerStyle will handle spacing between cards.
-                  // You might want to adjust or remove this margin depending on the desired effect with 'gap'.
+    // Removed margin here, as the gap on the container will handle spacing.
     boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
     backgroundColor: '#fff',
     minWidth: '250px', // Minimum width for a card
+    flexShrink: 0, // Prevents cards from shrinking too much if space is tight
+    flexGrow: 1, // Allows cards to grow and fill available space
+    maxWidth: 'calc((100% / 3) - 16px)', // Max width for 3 cards per row with 16px gap
+    flexBasis: 'calc(33.33% - 16px)', // Roughly 1/3rd width minus gap. Adjust 16px based on desired gap.
   };
 
   const cardTitleStyle = {
@@ -36,7 +38,7 @@ const Card = ({ title, children }) => {
   );
 };
 
-// WelcomeWidget Component Definition
+// WelcomeWidget Component Definition (Unchanged, not used in Dashboard_file)
 const WelcomeWidget = () => {
   const widgetStyle = {
     textAlign: 'center',
@@ -49,7 +51,7 @@ const WelcomeWidget = () => {
   );
 };
 
-// StatsWidget Component Definition
+// StatsWidget Component Definition (Unchanged, not used in Dashboard_file)
 const StatsWidget = () => {
   const statItemStyle = {
     marginBottom: '8px',
@@ -63,7 +65,7 @@ const StatsWidget = () => {
   );
 };
 
-// ChartWidget Component Definition
+// ChartWidget Component Definition (Unchanged, not used in Dashboard_file)
 const ChartWidget = () => {
   const placeholderStyle = {
     height: '150px',
@@ -99,39 +101,56 @@ const Dashboard_file = () => {
     textAlign: 'center',
   };
 
-  const cardContainerStyle = {
+  const rowContainerStyle = {
     display: 'flex',
-    flexWrap: 'wrap', // Allows cards to wrap to the next line
-    justifyContent: 'center', // Centers cards in the container if the line is not full
-    // alignItems: 'flex-start', // Aligns cards to the top of the container if they have different heights
-    gap: '16px', // Preferred way to add space between flex items
+    flexWrap: 'wrap', // Allows cards to wrap within this row if needed (though we're limiting for 3)
+    justifyContent: 'center', // Centers cards if there aren't enough to fill the row
+    gap: '16px', // Space between cards in this row
+    marginBottom: '16px', // Space between this row and the next row
   };
 
   return (
     <div style={dashboardStyle}>
-      <div style={cardContainerStyle}>
+      {/* First Row - explicitly limited to 3 cards */}
+      <div style={rowContainerStyle}>
         <Card title="Ticket Count">
-         <AlarmCount />
+          <AlarmCount />
         </Card>
         <Card title="State">
-          <AlarmCategory/>
+          <AlarmCategory />
         </Card>
         <Card title="Failure ">
-           <AlarmTypeBarGraph />
+          <AlarmTypeBarGraph />
         </Card>
-        <Card title="Quick Actions">
-          <div>
-            <button style={{ marginRight: '8px', padding: '8px 12px', cursor: 'pointer' }}>New Report</button>
-            <button style={{ padding: '8px 12px', cursor: 'pointer' }}>Settings</button>
-          </div>
+      </div>
 
+      {/* Second Row - for the remaining cards and the PDF button */}
+      <div style={rowContainerStyle}>
+        <Card title="Overall Alarm Distribution by territory">
+          <TerritoryGraph />
         </Card>
-        <Card> {/* Card without a title */}
-          {/* <AlarmTypeLineGraph /> */} 
+        <Card title="Overall Area Line Graph">
+          <AreaLineGraph />
         </Card>
+        <Card title ="Overall Trends in Mindanao">
+          <AlarmTypeLineGraph />
+        </Card>
+      </div>
+
+      {/* Standalone button row, or you can place it within one of the existing rows */}
+      {/* For a more prominent button, it's often good to have it in its own container or at the top/bottom */}
+      <div className="flex justify-center mt-4"> {/* Centering the button */}
+        <button
+          className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg shadow-md transition-colors duration-300 flex items-center gap-2"
+          onClick={() => alert('Generate PDF functionality would go here!')} // Replace with actual PDF generation logic
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-5 h-5">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" />
+          </svg>
+          Generate PDF
+        </button>
       </div>
     </div>
   );
 };
-
 export default Dashboard_file;
