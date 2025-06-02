@@ -7,6 +7,9 @@ import AlarmsSeverity from "../content/dashboardContent/alarmseveritygraph";
 import TerritoryGraph from "../content/dashboardContent/territorygraph";
 import AreaLineGraph from "../content/dashboardContent/arealinegraph";
 import AlarmCategory from "../content/dashboardContent/AlarmCauseOfOutage";
+import TitleforCount from "../card/cardtitleticketcount";
+import TitleforState from "../card/cardtitlestate";
+import TitleforFailure from "../card/cardtitlefailure";
 import Mycom from "../content/dashboardContent/mycom";
 
 // Card Component Definition
@@ -118,26 +121,26 @@ const Dashboard_file = () => {
     <div style={dashboardStyle}>
       {/* First Row - explicitly limited to 3 cards */}
       <div style={rowContainerStyle}>
-        <Card title="Ticket Count">
+        <Card>
+          <TitleforCount />
           <AlarmCount />
         </Card>
-        <Card title="Failure ">
+        <Card>
+          <TitleforFailure />
           <AlarmTypeBarGraph />
         </Card>
-       <Card title="Overall Alarm Distribution by territory">
+        <Card title="Overall Alarm Distribution by territory">
           <TerritoryGraph />
         </Card>
       </div>
 
       {/* Second Row - for the remaining cards and the PDF button */}
       <div style={rowContainerStyle}>
-        <Card title="State">
+        <Card>
+          <TitleforState />
           <AlarmCategory />
         </Card>
-      <Card title="Mycom">
-        {/* <Mycom /> */}
-        
-      </Card>
+        <Card title="Mycom">{/* <Mycom /> */}</Card>
         <Card title="Manual"></Card>
       </div>
 
