@@ -208,10 +208,10 @@ function TicketIssuance() {
         );
 
         const requiredTicketIssuanceFields = [
-          "Failure Category",
-          "Cause",
-          "AOR001",
-          "AOR002",
+          "u_failure_category",
+          "u_cause",
+          "u_aor001",
+          "u_aor002",
         ];
 
         sheet.forEach((row) => {
@@ -221,15 +221,15 @@ function TicketIssuance() {
             return; // Skip this row
           }
 
-          const number = row["Number"];
-          let assignedTo = row["Caller"];
-          const callervalue = row["Assigned to"];
-          const openedRaw = row["Opened"];
+          const number = row["number"];
+          let assignedTo = row["caller_id"];
+          const callervalue = row["assigned_to"];
+          const openedRaw = row["opened_at"];
           const openedFormatted = formatOpenedDate(openedRaw);
 
            // --- NEW CONDITION: Exclude if assignedTo is "mycom" and callervalue is blank ---
           if (
-            String(assignedTo).trim().toLowerCase() === "mycom" &&
+            String(assignedTo).trim().toLowerCase() === "MYCOM Integration User" &&
             String(callervalue).trim() === ""
           ) {
             return; // Skip this row entirely from processing and unmatched lists
@@ -237,7 +237,7 @@ function TicketIssuance() {
 
           // Condition 2: If assignedTo is "mycom" and callervalue is NOT blank, use callervalue as assignedTo
           if (
-            String(assignedTo).trim().toLowerCase() === "mycom" &&
+            String(assignedTo).trim().toLowerCase() === "MYCOM Integration User" &&
             String(callervalue).trim() !== ""
           ) {
             assignedTo = callervalue; // Reassign assignedTo to callervalue
@@ -268,10 +268,10 @@ function TicketIssuance() {
             hasError,
             missingColumns,
             // Include other relevant fields from the row if needed for display/debug
-            failureCategory: row["Failure Category"],
-            cause: row["Cause"],
-            aor001: row["AOR001"],
-            aor002: row["AOR002"],
+            failureCategory: row["u_failure_category"],
+            cause: row["u_cause"],
+            aor001: row["u_aor001"],
+            aor002: row["u_aor002"],
           };
           tempAllProcessed.push(processedRow);
 
