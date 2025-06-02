@@ -1,4 +1,4 @@
-// src/Dashboard_file.js (or wherever your file is located)
+// src/Dashboard_file.js
 import React from "react";
 import AlarmCount from "../content/dashboardContent/alarmcount";
 import AlarmTypeLineGraph from "../content/dashboardContent/linegraph";
@@ -10,24 +10,34 @@ import AlarmCategory from "../content/dashboardContent/AlarmCauseOfOutage";
 import TitleforCount from "../card/cardtitleticketcount";
 import TitleforState from "../card/cardtitlestate";
 import TitleforFailure from "../card/cardtitlefailure";
+import TitleforTerritory from "../card/cardtitleterritory";
+import TitleforMindanao from "../card/cardtitlemindanao";
+import TitleforArea from "../card/cardtitlearea";
 import Mycom from "../content/dashboardContent/mycom";
 import Manualvsauto from "../content/dashboardContent/manualvsauto";
 
 // Card Component Definition
-const Card = ({ title, children }) => {
+const Card = ({ title, children, isWide = false }) => {
+  // Added isWide prop
   const cardStyle = {
     border: "1px solid #ddd",
     borderRadius: "8px",
     padding: "16px",
-    // Removed margin here, as the gap on the container will handle spacing.
     boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
     backgroundColor: "#fff",
-    minWidth: "250px", // Minimum width for a card
-    flexShrink: 0, // Prevents cards from shrinking too much if space is tight
-    flexGrow: 1, // Allows cards to grow and fill available space
-    maxWidth: "calc((100% / 3) - 16px)", // Max width for 3 cards per row with 16px gap
-    flexBasis: "calc(33.33% - 16px)", // Roughly 1/3rd width minus gap. Adjust 16px based on desired gap.
+    minWidth: "250px",
+    flexShrink: 0,
+    flexGrow: 1,
+    // Default width for a single card
+    flexBasis: "calc(33.33% - 16px)",
+    maxWidth: "calc((100% / 3) - 16px)",
   };
+
+  // Adjust style if isWide prop is true
+  if (isWide) {
+    cardStyle.flexBasis = "calc(66.66% - 16px)"; // Takes up two slots minus gap
+    cardStyle.maxWidth = "calc((100% / 1.5) - 16px)"; // Approx 2/3 of the row
+  }
 
   const cardTitleStyle = {
     fontSize: "1.25em",
@@ -43,64 +53,12 @@ const Card = ({ title, children }) => {
   );
 };
 
-// WelcomeWidget Component Definition (Unchanged, not used in Dashboard_file)
-const WelcomeWidget = () => {
-  const widgetStyle = {
-    textAlign: "center",
-  };
-  return (
-    <div style={widgetStyle}>
-      <h4>Hello, User!</h4>
-      <p>Welcome to your dashboard.</p>
-    </div>
-  );
-};
-
-// StatsWidget Component Definition (Unchanged, not used in Dashboard_file)
-const StatsWidget = () => {
-  const statItemStyle = {
-    marginBottom: "8px",
-  };
-  return (
-    <div>
-      <div style={statItemStyle}>
-        <strong>Active Users:</strong> 1,234
-      </div>
-      <div style={statItemStyle}>
-        <strong>Sales Today:</strong> $5,678
-      </div>
-      <div style={statItemStyle}>
-        <strong>Pending Tasks:</strong> 12
-      </div>
-    </div>
-  );
-};
-
-// ChartWidget Component Definition (Unchanged, not used in Dashboard_file)
-const ChartWidget = () => {
-  const placeholderStyle = {
-    height: "150px",
-    backgroundColor: "#f0f0f0",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    color: "#aaa",
-    borderRadius: "4px",
-  };
-  return (
-    <div>
-      <p>Monthly Sales Data</p>
-      <div style={placeholderStyle}>[Chart Placeholder]</div>
-    </div>
-  );
-};
-
 // Main Dashboard Component
 const Dashboard_file = () => {
   const dashboardStyle = {
     padding: "20px",
     backgroundColor: "#f4f7f6",
-    minHeight: "100vh", // Ensure it takes at least full viewport height
+    minHeight: "100vh",
   };
 
   const dashboardHeaderStyle = {
@@ -112,10 +70,10 @@ const Dashboard_file = () => {
 
   const rowContainerStyle = {
     display: "flex",
-    flexWrap: "wrap", // Allows cards to wrap within this row if needed (though we're limiting for 3)
-    justifyContent: "left", // Centers cards if there aren't enough to fill the row
-    gap: "16px", // Space between cards in this row
-    marginBottom: "16px", // Space between this row and the next row
+    flexWrap: "wrap",
+    justifyContent: "flex-start", // Changed to flex-start for consistent alignment
+    gap: "16px",
+    marginBottom: "16px",
   };
 
   return (
@@ -130,7 +88,8 @@ const Dashboard_file = () => {
           <TitleforFailure />
           <AlarmTypeBarGraph />
         </Card>
-        <Card title="Overall Alarm Distribution by territory">
+        <Card>
+          <TitleforTerritory />
           <TerritoryGraph />
         </Card>
       </div>
@@ -141,25 +100,28 @@ const Dashboard_file = () => {
           <TitleforState />
           <AlarmCategory />
         </Card>
-        <Card><Mycom/></Card>
-        <Card><Manualvsauto/></Card>
+        <Card title="Mycom">{/* <Mycom /> */}</Card>
+        <Card title="Manual">
+          <Manualvsauto />
+        </Card>
       </div>
 
-      {/* Third Row - for the remaining cards */}
+      {/* Third Row - for the remaining cards, with AreaLineGraph being wide */}
       <div style={rowContainerStyle}>
-        <Card title="Overall Trends in Mindanao">
+        {" "}
+        {/* Using rowContainerStyle directly */}
+        <Card>
+          <TitleforMindanao />
           <AlarmTypeLineGraph />
         </Card>
-        <Card title="Overall Area Line Graph">
+        <Card>
+          <TitleforArea />
           <AreaLineGraph />
         </Card>
       </div>
 
-      {/* Standalone button row, or you can place it within one of the existing rows */}
-      {/* For a more prominent button, it's often good to have it in its own container or at the top/bottom */}
+      {/* Standalone button row */}
       <div className="flex justify-center mt-4">
-        {" "}
-        {/* Centering the button */}
         <button
           className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg shadow-md transition-colors duration-300 flex items-center gap-2"
           onClick={() => alert("Generate PDF functionality would go here!")} // Replace with actual PDF generation logic
@@ -184,4 +146,5 @@ const Dashboard_file = () => {
     </div>
   );
 };
+
 export default Dashboard_file;

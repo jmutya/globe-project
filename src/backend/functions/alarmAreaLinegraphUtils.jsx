@@ -109,7 +109,7 @@ export const fetchAreaAlarmData = async (forceRefresh = false) => {
 
     const headers = sheet[0];
     const timestampIndex = headers.indexOf("opened_at");
-    const alarmTypeIndex = headers.indexOf("u_aor001");
+    const alarmTypeIndex = headers.indexOf("u_aor002");
 
     if (timestampIndex === -1 || alarmTypeIndex === -1) {
       console.warn("Required columns 'opened_at' or 'u_aor001' not found in the Excel sheet headers.");
