@@ -14,6 +14,7 @@ import TitleforTerritory from "../card/cardtitleterritory";
 import TitleforMindanao from "../card/cardtitlemindanao";
 import TitleforArea from "../card/cardtitlearea";
 import TitleforManual from "../card/cardtitlemanual";
+import TitleforMycom from "../card/cardtitlemycom";
 import Mycom from "../content/dashboardContent/mycom";
 import Manualvsauto from "../content/dashboardContent/manualvsauto";
 
@@ -110,9 +111,11 @@ const Dashboard_file = () => {
           <AlarmCategory />
         </Card>
         <Card>
+          <TitleforMycom />
           <Mycom />
         </Card>
         <Card>
+          <TitleforManual />
           <Manualvsauto />
         </Card>
       </div>
