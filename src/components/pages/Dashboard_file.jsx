@@ -7,6 +7,7 @@ import AlarmsSeverity from '../content/dashboardContent/alarmseveritygraph';
 import TerritoryGraph from '../content/dashboardContent/territorygraph';
 import AreaLineGraph from '../content/dashboardContent/arealinegraph';
 import AlarmCategory from '../content/dashboardContent/AlarmCauseOfOutage';
+import Manualvsauto from '../content/dashboardContent/manualvsauto';
 
 // Card Component Definition
 const Card = ({ title, children }) => {
@@ -119,15 +120,11 @@ const Dashboard_file = () => {
         <Card title="Failure ">
            <AlarmTypeBarGraph />
         </Card>
-        <Card title="Quick Actions">
-          <div>
-            <button style={{ marginRight: '8px', padding: '8px 12px', cursor: 'pointer' }}>New Report</button>
-            <button style={{ padding: '8px 12px', cursor: 'pointer' }}>Settings</button>
-          </div>
-
+        <Card title="Manual">
+          <Manualvsauto />
         </Card>
-        <Card> {/* Card without a title */}
-          {/* <AlarmTypeLineGraph /> */} 
+        <Card title="MYCOM Integration User"> {/* Card without a title */}
+          <Manualvsauto />
         </Card>
       </div>
     </div>
