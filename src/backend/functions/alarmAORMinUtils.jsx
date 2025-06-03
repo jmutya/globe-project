@@ -82,13 +82,22 @@ export const fetchAlarmTypeLineData = async (forceRefresh = false) => {
       return { chartData: [], alarmTypes: [] };
     }
 
+    // Extract the header row.
     const headers = sheet[0];
     const timestampIndex = headers.indexOf("opened_at");
     const alarmTypeIndex = headers.indexOf("u_aor001");
+    const servicePriorityIndex = headers.indexOf("u_service_priority");
 
-    if (timestampIndex === -1 || alarmTypeIndex === -1) {
-      console.warn("Required columns not found.");
-      localStorage.removeItem(CACHE_KEY);
+    // Check if the required columns ("opened_at", "u_aor001", and "u_service_priority") are present.
+    if (timestampIndex === -1 || alarmTypeIndex === -1 || servicePriorityIndex === -1) {
+      console.warn(
+        "Required columns ('opened_at', 'u_aor001', or 'u_service_priority') not found in the Excel sheet headers."
+      );
+      if (timestampIndex === -1) console.warn("Column 'opened_at' is missing.");
+      if (alarmTypeIndex === -1) console.warn("Column 'u_aor001' is missing.");
+      if (servicePriorityIndex === -1) console.warn("Column 'u_service_priority' is missing.");
+
+      localStorage.removeItem(CACHE_KEY); // Clear cache if columns are missing.
       localStorage.removeItem(CACHE_TIMESTAMP_KEY);
       return { chartData: [], alarmTypes: [] };
     }
@@ -97,13 +106,23 @@ export const fetchAlarmTypeLineData = async (forceRefresh = false) => {
     const dataRows = sheet.slice(1).filter((row) => {
       const timestamp = row[timestampIndex];
       const alarmType = row[alarmTypeIndex];
+      const servicePriority = row[servicePriorityIndex];
+
+      // Include row if all conditions are met:
+      // 1. Timestamp cell is not empty.
+      // 2. AlarmType cell contains a string.
+      // 3. The alarmType string, when trimmed and uppercased, ends with "MIN".
+      // 4. ✨ ServicePriority cell contains a string, when trimmed and starts with "3".
       return (
         timestamp &&
         typeof alarmType === "string" &&
-        alarmType.trim().toUpperCase().endsWith("MIN")
+        alarmType.trim().toUpperCase().endsWith("MIN") &&
+        typeof servicePriority === "string" && // Ensure it's a string before calling startsWith
+        servicePriority.trim().startsWith("3")
       );
     });
 
+    // Initialize an object to store aggregated alarm data, keyed by date.
     let alarmData = {};
 
     dataRows.forEach((row) => {
