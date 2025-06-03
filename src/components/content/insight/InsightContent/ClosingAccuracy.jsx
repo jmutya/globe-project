@@ -1,278 +1,51 @@
 import React, { useEffect, useState } from "react";
-import * as XLSX from "xlsx";
-import AccuracyProgress from "../../InsightsContent/AccuracyProgress";
-import supabase from "../../../../backend/supabase/supabase";
-import {
-  ExclamationCircleIcon,
-  ChevronUpIcon,
-  ChevronDownIcon,
-} from "@heroicons/react/24/solid";
+// Import only what's needed for the frontend display and local calculations
+import { ExclamationCircleIcon, ChevronUpIcon, ChevronDownIcon } from "@heroicons/react/24/solid";
 import { ArrowUp, ArrowDown, FileText } from "lucide-react";
 import html2canvas from "html2canvas";
 import jsPDF from "jspdf";
 
-// Format Excel serial to "YYYY/MM/DD"
-const formatOpenedDate = (value) => {
-  if (!value) return "";
-  if (typeof value === "number") {
-    // Excel dates start from Jan 1, 1900. 25569 is the number of days from 1900-01-01 to 1970-01-01.
-    const date = new Date((value - 25569) * 86400 * 1000);
-    const yyyy = date.getFullYear();
-    const mm = String(date.getMonth() + 1).padStart(2, "0");
-    const dd = String(date.getDate()).padStart(2, "0");
-    return `${yyyy}/${mm}/${dd}`;
-  }
-  return value;
-};
-
-// Turn "YYYY/MM/DD" into "MM/YYYY" for consistent monthly grouping (for ticket opened dates)
-const getMonthFromDate = (dateStr) => {
-  // Ensure dateStr is a valid date string before parsing
-  if (!dateStr || dateStr === "Invalid Date") return "Invalid Date";
-  const date = new Date(dateStr);
-  if (isNaN(date.getTime())) return "Invalid Date"; // Check for invalid date object
-  const month = date.getMonth() + 1;
-  const year = date.getFullYear();
-  return `${month < 10 ? "0" : ""}${month}/${year}`;
-};
-
-const getMonthYearFromISO = (isoDateString) => {
-  if (!isoDateString) return "Invalid Date";
-  try {
-    const date = new Date(isoDateString);
-    if (isNaN(date.getTime())) {
-      // Check for invalid date
-      return "Invalid Date";
-    }
-    const month = String(date.getMonth() + 1).padStart(2, "0");
-    const year = date.getFullYear();
-    const day = String(date.getDate()).padStart(2, "0");
-
-    let hours = date.getHours();
-    const minutes = String(date.getMinutes()).padStart(2, "0");
-    const ampm = hours >= 12 ? "PM" : "AM"; // Determine AM/PM
-
-    // Convert hours to 12-hour format
-    hours = hours % 12;
-    hours = hours === 0 ? 12 : hours; // The hour '0' should be '12'
-    const hours12 = String(hours).padStart(2, "0");
-
-    return `${month}/${day}/${year} ${hours12}:${minutes} ${ampm}`; // Return MM/YYYY HH:MM AM/PM format
-  } catch (error) {
-    console.error(
-      "Error parsing ISO date string for month/year:",
-      isoDateString,
-      error
-    );
-    return "Invalid Date";
-  }
-};
-
-// New function to format ISO date string (from Supabase) to MM/DD/YYYY HH:MM for display
-const formatDateTimeFromISO = (isoDateString) => {
-  if (!isoDateString) return "N/A";
-  try {
-    const date = new Date(isoDateString);
-    if (isNaN(date.getTime())) {
-      return "Invalid Date";
-    }
-    const mm = String(date.getMonth() + 1).padStart(2, "0");
-    const dd = String(date.getDate()).padStart(2, "0");
-    const yyyy = date.getFullYear();
-
-    let hours = date.getHours();
-    const minutes = String(date.getMinutes()).padStart(2, "0");
-    const ampm = hours >= 12 ? "PM" : "AM"; // Determine AM/PM
-
-    // Convert hours to 12-hour format
-    hours = hours % 12;
-    hours = hours === 0 ? 12 : hours; // The hour '0' should be '12'
-    const hours12 = String(hours).padStart(2, "0");
-
-    return `${mm}/${dd}/${yyyy} ${hours12}:${minutes} ${ampm}`; // Return MM/DD/YYYY HH:MM AM/PM format
-  } catch (error) {
-    console.error(
-      "Error formatting ISO date string for display:",
-      isoDateString,
-      error
-    );
-    return "Invalid Date";
-  }
-};
-
-// Placeholder for accuracy calculation
-const calculateAccuracy = (total, incomplete) => {
-  if (total === 0) return "0.00";
-  return (((total - incomplete) / total) * 100).toFixed(2);
-};
+// Import backend utility functions and data fetching logic from the new file name
+import {
+  fetchAndProcessExcelData, calculateAccuracy, formatDateTimeFromISO } from "../../../../backend/insightfunctions/clossingaccuracyfunctions";
+import AccuracyProgress from "../../InsightsContent/AccuracyProgress";
 
 function ClosingAccuracy() {
   const [unmatchedRows, setUnmatchedRows] = useState([]);
   const [allProcessedRows, setAllProcessedRows] = useState([]);
-  // Separate state for ticket opened month options and file upload month options
   const [ticketOpenedMonthOptions, setTicketOpenedMonthOptions] = useState([]);
-  const [uploadedMonthOptions, setUploadedMonthOptions] = useState([]); // These are MM/YYYY
-  const [selectedMonth, setSelectedMonth] = useState(""); // For 'Opened' date filter (MM/YYYY)
-  const [selectedUploadedMonth, setSelectedUploadedMonth] = useState(""); // For 'Added on' date filter (MM/YYYY)
+  const [uploadedMonthOptions, setUploadedMonthOptions] = useState([]);
+  const [selectedMonth, setSelectedMonth] = useState("");
+  const [selectedUploadedMonth, setSelectedUploadedMonth] = useState("");
   const [error, setError] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [expandedIndex, setExpandedIndex] = useState(null);
   const [sortOrder, setSortOrder] = useState("desc");
 
-  // Supabase connection test
-  useEffect(() => {
-    const testSupabaseConnection = async () => {
-      const { error } = await supabase.storage.from("uploads").list("excels");
-
-      if (error) {
-        console.error("Supabase connection test error:", error);
-        setError("Failed to connect to Supabase Storage.");
-      }
-    };
-    testSupabaseConnection();
-  }, []);
-
-  const fetchAndProcessExcel = async () => {
+  const loadData = async () => {
     setError(null);
-    let tempAllUnmatched = [];
-    let tempAllProcessed = [];
-    const ticketMonthsSet = new Set(); // For months from 'Opened' column
-    const uploadMonthsSet = new Set(); // For months from Supabase 'created_at' for dropdown
-
     try {
-      const { data: files, error: listError } = await supabase.storage
-        .from("uploads")
-        .list("excels", { sortBy: { column: "name", order: "asc" } });
+      const {
+        unmatchedRows,
+        allProcessedRows,
+        ticketOpenedMonthOptions,
+        uploadedMonthOptions,
+      } = await fetchAndProcessExcelData();
 
-      if (listError) {
-        throw listError;
-      }
-
-      if (!files || files.length === 0) {
-        console.log("No Excel files found in the 'excels' folder.");
-        setUnmatchedRows([]);
-        setAllProcessedRows([]);
-        setTicketOpenedMonthOptions([]);
-        setUploadedMonthOptions([]);
-        return;
-      }
-
-      for (const file of files) {
-        // This is the raw ISO string for display later
-        const fileUploadFullDateTime = file.created_at;
-        // This is the MM/YYYY for dropdown filtering
-        const fileUploadMonth = getMonthYearFromISO(file.created_at);
-
-        if (fileUploadMonth !== "Invalid Date") {
-          uploadMonthsSet.add(fileUploadMonth); // Add to set for "Added on" dropdown (MM/YYYY)
-        }
-
-        const filePath = `excels/${file.name}`;
-        const { data: urlData } = supabase.storage
-          .from("uploads")
-          .getPublicUrl(filePath);
-
-        if (!urlData || !urlData.publicUrl) {
-          console.warn(`Could not get public URL for ${file.name}. Skipping.`);
-          continue;
-        }
-
-        const response = await fetch(urlData.publicUrl);
-        if (!response.ok) {
-          throw new Error(
-            `HTTP error! status: ${response.status} for ${file.name}`
-          );
-        }
-
-        const arrayBuffer = await response.arrayBuffer();
-        const workbook = XLSX.read(arrayBuffer, { type: "array" });
-        const sheet = XLSX.utils.sheet_to_json(
-          workbook.Sheets[workbook.SheetNames[0]],
-          {
-            defval: "",
-          }
-        );
-
-        sheet.forEach((row) => {
-           const state = row["State"];
-          if (state && String(state).trim().toLowerCase() === "cancelled") {
-            // console.log(`Skipping cancelled ticket: ${row["Number"]}`); // Optional: for debugging
-            return; // Skip this row
-          }
-          const cause = row["Cause"];
-          const reason = row["Reason For Outage"];
-          const assignedTo = row["Assigned to"];
-          const number = row["Number"];
-          const openedRaw = row["Opened"];
-          const openedFormatted = formatOpenedDate(openedRaw);
-
-          const missingColumns = [];
-          if (!cause || typeof cause !== "string") missingColumns.push("Cause");
-          if (!reason || typeof reason !== "string")
-            missingColumns.push("Reason For Outage");
-
-          const hasError =
-            !cause ||
-            !reason ||
-            typeof cause !== "string" ||
-            typeof reason !== "string" ||
-            reason.split("-")[0].trim().toLowerCase() !==
-              cause.trim().toLowerCase();
-
-          const ticketOpenedMonth = getMonthFromDate(openedFormatted);
-          if (ticketOpenedMonth !== "Invalid Date") {
-            ticketMonthsSet.add(ticketOpenedMonth); // Add to set for "Opened" dropdown
-          }
-
-          const processedRow = {
-            number,
-            cause,
-            reason,
-            assignedTo,
-            opened: openedFormatted,
-            ticketOpenedMonth: ticketOpenedMonth, // Month from the Excel's 'Opened' date (MM/YYYY)
-            fileUploadMonth: fileUploadMonth, // Month from Supabase 'created_at' for filtering (MM/YYYY)
-            fileUploadFullDateTime: fileUploadFullDateTime, // Raw ISO string for detailed display
-            hasError,
-            missingColumns,
-          };
-          tempAllProcessed.push(processedRow);
-
-          if (hasError) {
-            tempAllUnmatched.push(processedRow);
-          }
-        });
-      }
-
-      // Sort ticket opened months
-      const sortedTicketMonths = Array.from(ticketMonthsSet).sort((a, b) => {
-        const [ma, ya] = a.split("/").map(Number);
-        const [mb, yb] = b.split("/").map(Number);
-        return yb !== ya ? yb - ya : mb - ma;
-      });
-
-      // Sort uploaded months
-      const sortedUploadedMonths = Array.from(uploadMonthsSet).sort((a, b) => {
-        const [ma, ya] = a.split("/").map(Number);
-        const [mb, yb] = b.split("/").map(Number);
-        return yb !== ya ? yb - ya : mb - ma;
-      });
-
-      setTicketOpenedMonthOptions(sortedTicketMonths);
-      setUploadedMonthOptions(sortedUploadedMonths);
-      setUnmatchedRows(tempAllUnmatched);
-      setAllProcessedRows(tempAllProcessed);
+      setUnmatchedRows(unmatchedRows);
+      setAllProcessedRows(allProcessedRows);
+      setTicketOpenedMonthOptions(ticketOpenedMonthOptions);
+      setUploadedMonthOptions(uploadedMonthOptions);
     } catch (err) {
-      console.error("Error fetching or processing Excel files:", err);
+      console.error("Error loading data in component:", err);
       setError(`Failed to load data: ${err.message}`);
     }
   };
 
   useEffect(() => {
-    fetchAndProcessExcel();
+    loadData();
   }, []);
 
-  // Filter unmatched rows based on selected 'Opened' month AND 'Uploaded' month, and search term
   const filteredUnmatchedRows = unmatchedRows.filter((row) => {
     const matchesOpenedMonth =
       selectedMonth === "" || row.ticketOpenedMonth === selectedMonth;
@@ -284,14 +57,13 @@ function ClosingAccuracy() {
       (row.assignedTo &&
         row.assignedTo.toLowerCase().includes(searchTerm.toLowerCase())) ||
       (row.number &&
-        String(row.number).toLowerCase().includes(searchTerm.toLowerCase())); // Added ticketNumber to search
+        String(row.number).toLowerCase().includes(searchTerm.toLowerCase()));
     return matchesOpenedMonth && matchesUploadedMonth && matchesSearch;
   });
-  // --- Calculate Overall Accuracy for the Selected Filters ---
+
   let currentMonthTotalTickets = 0;
   let currentMonthIncompleteTickets = 0;
 
-  // Filter all processed rows based on both selected filters
   const filteredProcessedRows = allProcessedRows.filter((row) => {
     const matchesOpenedMonth =
       selectedMonth === "" || row.ticketOpenedMonth === selectedMonth;
@@ -301,7 +73,6 @@ function ClosingAccuracy() {
     return matchesOpenedMonth && matchesUploadedMonth;
   });
 
-  // Filter unmatched rows based on both selected filters (already done above, but good for clarity)
   const filteredUnmatchedTickets = unmatchedRows.filter((row) => {
     const matchesOpenedMonth =
       selectedMonth === "" || row.ticketOpenedMonth === selectedMonth;
@@ -319,10 +90,8 @@ function ClosingAccuracy() {
     currentMonthIncompleteTickets
   );
 
-  // --- Per-Person Accuracy Logic for the Table (based on selected filters) ---
-  const personStatsFiltered = {}; // Structure: { "Person Name": { total: N, incomplete: M } }
+  const personStatsFiltered = {};
 
-  // Populate personStatsFiltered with data from the currently filtered processed rows
   filteredProcessedRows.forEach((row) => {
     const name = row.assignedTo || "Unassigned";
 
@@ -337,10 +106,9 @@ function ClosingAccuracy() {
     }
   });
 
-  // Function to get individual person accuracy for expanded card (now aware of both selected months)
   const getPersonAccuracy = (assignedTo) => {
     const name = assignedTo || "Unassigned";
-    const stats = personStatsFiltered[name]; // Use the already filtered stats
+    const stats = personStatsFiltered[name];
 
     if (stats) {
       return calculateAccuracy(stats.total, stats.incomplete);
@@ -348,7 +116,6 @@ function ClosingAccuracy() {
     return "N/A";
   };
 
-  // Sort table entries based on currentMonthPersonStats (which is now personStatsFiltered)
   const sortedEntries = Object.entries(personStatsFiltered).sort(
     ([nameA, statsA], [nameB, statsB]) => {
       const accuracyA = parseFloat(
@@ -367,19 +134,10 @@ function ClosingAccuracy() {
   );
 
   const exportToPdf = () => {
-    // We no longer need to toggle row expansion here, as we're targeting only the accuracy table.
-    // const initialExpandedIndices = new Set(expandedIndices);
-    // const allFilteredUnmatchedIndices = new Set(filteredUnmatchedRows.map((_, idx) => idx));
-    // setExpandedIndices(allFilteredUnmatchedIndices);
-
-    // Give React a moment to render (though not strictly necessary if no state changes for this section)
     setTimeout(() => {
-      // CHANGE THIS ID!
       const input = document.getElementById("accuracy-table-report");
       if (!input) {
         console.error("Element with ID 'accuracy-table-report' not found.");
-        // If you had any previous temporary state changes, revert them here
-        // setExpandedIndices(initialExpandedIndices);
         return;
       }
 
@@ -391,8 +149,8 @@ function ClosingAccuracy() {
         .then((canvas) => {
           const imgData = canvas.toDataURL("image/png");
           const pdf = new jsPDF("p", "mm", "a4");
-          const imgWidth = 210; // A4 width in mm
-          const pageHeight = 297; // A4 height in mm
+          const imgWidth = 210;
+          const pageHeight = 297;
           const imgHeight = (canvas.height * imgWidth) / canvas.width;
           let heightLeft = imgHeight;
           let position = 0;
@@ -406,20 +164,14 @@ function ClosingAccuracy() {
             pdf.addImage(imgData, "PNG", 0, position, imgWidth, imgHeight);
             heightLeft -= pageHeight;
           }
-          pdf.save("accuracy_table_report.pdf"); // Give it a more specific file name
-
-          // 3. Revert to initial expanded state after PDF is generated (if you had any)
-          // setExpandedIndices(initialExpandedIndices);
+          pdf.save("accuracy_table_report.pdf");
         })
         .catch((err) => {
           console.error("Error generating PDF:", err);
-          // Revert expansion even if PDF generation fails (if you had any)
-          // setExpandedIndices(initialExpandedIndices);
         });
-    }, 100); // Small delay to allow re-render
+    }, 100);
   };
 
-  // --- New Function for Exporting to Excel ---
   const handleExportToExcel = () => {
     const dataToExport = filteredUnmatchedRows.map((row) => ({
       "Ticket Number": row.number || "N/A",
@@ -605,7 +357,7 @@ function ClosingAccuracy() {
       >
         <div className="flex items-center justify-between mb-4">
           <h3 className="font-semibold mb-4">
-            Completion Accuracy per Assigned Person - Closing Ticket - {" "}
+            Completion Accuracy per Assigned Person - Closing Ticket -{" "}
             {selectedMonth && selectedUploadedMonth
               ? `for tickets opened in ${selectedMonth} from files uploaded in ${selectedUploadedMonth}`
               : selectedMonth
@@ -621,7 +373,7 @@ function ClosingAccuracy() {
             <FileText
               className="h-7 w-7 text-red-600 cursor-pointer hover:text-red-800 transition-colors"
               onClick={exportToPdf}
-              title="Export to PDF" // Add a title for accessibility and hover tooltip
+              title="Export to PDF"
             />
           </div>
         </div>
