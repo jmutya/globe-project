@@ -3,7 +3,7 @@ import React from 'react'
 const cardtitlemanual = () => {
   return (
     <div className="flex items-center mb-4">
-            <div className="rounded-lg bg-yellow-500 h-12 w-12 flex items-center justify-center">
+            <div className="rounded-lg bg-pink-500 h-12 w-12 flex items-center justify-center">
               <svg
                 xmlns="http://www.w3.org/2000/svg"
                 fill="none"
