@@ -28,7 +28,7 @@ const componentMap = {
   // "First Touch Resolution": lazy(() => import("../../content/ftr")),
   Dashboard: lazy(() => import("../../pages/Dashboard_file")),
   // "Insights": lazy(() => import("../../content/insight/InsightContent/TicketIssuance")),
-  
+    // Dashboard: lazy(() => import("../../pages/comingSoon")),
 };
 
 const navigationItems = [
