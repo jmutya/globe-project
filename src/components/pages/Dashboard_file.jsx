@@ -16,7 +16,6 @@ import TitleforMycom from "../card/cardtitlemycom";
 const AlarmCount = React.lazy(() => import("../content/dashboardContent/alarmcount"));
 const AlarmTypeLineGraph = React.lazy(() => import("../content/dashboardContent/linegraph"));
 const AlarmTypeBarGraph = React.lazy(() => import("../content/dashboardContent/bargraph"));
-const AlarmsSeverity = React.lazy(() => import("../content/dashboardContent/alarmseveritygraph")); // Assuming you will add this to the render later
 const TerritoryGraph = React.lazy(() => import("../content/dashboardContent/territorygraph"));
 const AreaLineGraph = React.lazy(() => import("../content/dashboardContent/arealinegraph"));
 const AlarmCategory = React.lazy(() => import("../content/dashboardContent/AlarmCauseOfOutage"));
