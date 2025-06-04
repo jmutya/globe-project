@@ -1,4 +1,3 @@
-// components/AreaLineGraph.jsx
 import React, { useState, useEffect } from "react";
 import {
   LineChart,
@@ -10,9 +9,12 @@ import {
   ResponsiveContainer,
   CartesianGrid,
 } from "recharts";
-import Skeleton from "react-loading-skeleton";
-import "react-loading-skeleton/dist/skeleton.css";
 import { fetchAreaAlarmData } from "../../../backend/functions/alarmAreaLinegraphUtils";
+
+const COLORS = [
+  "#29ABE2", "#F27059", "#8E44AD", "#27AE60",
+  "#F39C12", "#1ABC9C", "#C0392B", "#34495E",
+];
 
 const AreaLineGraph = () => {
   const [chartData, setChartData] = useState([]);
@@ -30,16 +32,16 @@ const AreaLineGraph = () => {
     getData();
   }, []);
 
-  const colors = [
-    "#29ABE2", // Light Blue
-    "#F27059", // Coral
-    "#8E44AD", // Purple
-    "#27AE60", // Green
-    "#F39C12", // Orange
-    "#1ABC9C", // Turquoise
-    "#C0392B", // Red
-    "#34495E", // Dark Blue Gray
-  ];
+  const formatDate = (rawDate) => {
+    if (!rawDate) return "";
+    const cleaned = String(rawDate).replace(/,/g, "").trim();
+    const parsed = new Date(cleaned);
+    if (isNaN(parsed)) return cleaned;
+    const year = parsed.getFullYear();
+    const month = String(parsed.getMonth() + 1).padStart(2, "0");
+    const day = String(parsed.getDate()).padStart(2, "0");
+    return `${year}-${month}-${day}`;
+  };
 
   return (
     <div className="p-6 bg-white rounded-md shadow">
@@ -57,20 +59,8 @@ const AreaLineGraph = () => {
             <CartesianGrid stroke="#e0e0e0" strokeDasharray="2 2" />
             <XAxis
               dataKey="date"
-              tick={{ fontSize: 12, angle: 35, dy: 25 }} // <-- added this
-              tickFormatter={(date) => {
-                if (!date) return "";
-                const cleanedDate = String(date).replace(/,/g, "").trim(); // <-- REMOVE commas
-                const parsedDate = new Date(cleanedDate);
-                if (isNaN(parsedDate)) return cleanedDate; // fallback
-                const year = parsedDate.getFullYear();
-                const month = String(parsedDate.getMonth() + 1).padStart(
-                  2,
-                  "0"
-                );
-                const day = String(parsedDate.getDate()).padStart(2, "0");
-                return `${year}-${month}-${day}`;
-              }}
+              tick={{ fontSize: 12, angle: 35, dy: 25 }}
+              tickFormatter={formatDate}
             />
             <YAxis
               allowDecimals={false}
@@ -80,25 +70,9 @@ const AreaLineGraph = () => {
             />
             <Tooltip
               itemStyle={{ color: "#333", padding: 6 }}
-              labelStyle={{
-                color: "#000",
-                fontWeight: "bold",
-                marginBottom: 4,
-              }}
+              labelStyle={{ color: "#000", fontWeight: "bold" }}
               formatter={(value, name) => [`${value}`, name]}
-              labelFormatter={(label) => {
-                if (!label) return "";
-                const cleanedLabel = String(label).replace(/,/g, "").trim(); // SAME CLEANING
-                const parsedDate = new Date(cleanedLabel);
-                if (isNaN(parsedDate)) return cleanedLabel; // fallback
-                const year = parsedDate.getFullYear();
-                const month = String(parsedDate.getMonth() + 1).padStart(
-                  2,
-                  "0"
-                );
-                const day = String(parsedDate.getDate()).padStart(2, "0");
-                return `Date: ${year}-${month}-${day}`;
-              }}
+              labelFormatter={(label) => `Date: ${formatDate(label)}`}
               wrapperStyle={{
                 backgroundColor: "rgba(255, 255, 255, 0.9)",
                 padding: 10,
@@ -110,18 +84,17 @@ const AreaLineGraph = () => {
               align="right"
               verticalAlign="top"
               iconSize={8}
-              iconType="line" // Using 'line' icon for a flatter look
+              iconType="line"
               wrapperStyle={{ lineHeight: "20px" }}
-              textStyle={{ color: "#555" }}
             />
             {alarmTypes.map((type, index) => (
               <Line
                 key={type}
                 type="monotone"
                 dataKey={type}
-                stroke={colors[index % colors.length]}
+                stroke={COLORS[index % COLORS.length]}
                 strokeWidth={2}
-                dot={false} // Removing dots for a cleaner, flatter line
+                dot={false}
                 activeDot={{ r: 4 }}
               />
             ))}

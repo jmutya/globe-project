@@ -1,12 +1,7 @@
 // src/Dashboard_file.js
-import React from "react";
-import AlarmCount from "../content/dashboardContent/alarmcount";
-import AlarmTypeLineGraph from "../content/dashboardContent/linegraph";
-import AlarmTypeBarGraph from "../content/dashboardContent/bargraph";
-import AlarmsSeverity from "../content/dashboardContent/alarmseveritygraph";
-import TerritoryGraph from "../content/dashboardContent/territorygraph";
-import AreaLineGraph from "../content/dashboardContent/arealinegraph";
-import AlarmCategory from "../content/dashboardContent/AlarmCauseOfOutage";
+import React, { Suspense } from "react"; // Import Suspense from React
+
+// Import all Title components normally as they are lightweight
 import TitleforCount from "../card/cardtitleticketcount";
 import TitleforState from "../card/cardtitlestate";
 import TitleforFailure from "../card/cardtitlefailure";
@@ -15,11 +10,22 @@ import TitleforMindanao from "../card/cardtitlemindanao";
 import TitleforArea from "../card/cardtitlearea";
 import TitleforManual from "../card/cardtitlemanual";
 import TitleforMycom from "../card/cardtitlemycom";
-import Mycom from "../content/dashboardContent/mycom";
-import Manualvsauto from "../content/dashboardContent/manualvsauto";
 
-// Card Component Definition
-const Card = ({ title, children, isWide = false }) => { // Added isWide prop
+// Use React.lazy for all the heavy graph components
+// This tells React to dynamically import these components only when they are needed.
+const AlarmCount = React.lazy(() => import("../content/dashboardContent/alarmcount"));
+const AlarmTypeLineGraph = React.lazy(() => import("../content/dashboardContent/linegraph"));
+const AlarmTypeBarGraph = React.lazy(() => import("../content/dashboardContent/bargraph"));
+const AlarmsSeverity = React.lazy(() => import("../content/dashboardContent/alarmseveritygraph")); // Assuming you will add this to the render later
+const TerritoryGraph = React.lazy(() => import("../content/dashboardContent/territorygraph"));
+const AreaLineGraph = React.lazy(() => import("../content/dashboardContent/arealinegraph"));
+const AlarmCategory = React.lazy(() => import("../content/dashboardContent/AlarmCauseOfOutage"));
+const Mycom = React.lazy(() => import("../content/dashboardContent/mycom"));
+const Manualvsauto = React.lazy(() => import("../content/dashboardContent/manualvsauto"));
+
+
+// Card Component Definition (remains the same)
+const Card = ({ title, children, isWide = false }) => {
   const cardStyle = {
     border: "1px solid #ddd",
     borderRadius: "8px",
@@ -72,67 +78,73 @@ const Dashboard_file = () => {
   const rowContainerStyle = {
     display: "flex",
     flexWrap: "wrap",
-    justifyContent: "flex-start", // Changed to flex-start for consistent alignment
+    justifyContent: "flex-start",
     gap: "16px",
     marginBottom: "16px",
   };
 
-  // rowLinegraphStyLe is now just rowContainerStyle as it has the same properties
-  // const rowLinegraphStyLe = {
-  //   display: "flex",
-  //   flexWrap: "wrap",
-  //   justifyContent: "left",
-  //   gap: "16px",
-  //   marginBottom: "16px",
-  // };
-
   return (
     <div style={dashboardStyle}>
-      {/* First Row - explicitly limited to 3 cards */}
-      <div style={rowContainerStyle}>
-        <Card>
-          <TitleforCount />
-          <AlarmCount />
-        </Card>
-        <Card>
-          <TitleforFailure />
-          <AlarmTypeBarGraph />
-        </Card>
-        <Card>
-          <TitleforTerritory />
-          <TerritoryGraph />
-        </Card>
-      </div>
+      {/*
+        Wrap the entire content that contains lazy-loaded components with Suspense.
+        The `fallback` prop will render while any of the lazy components inside
+        are being loaded. You can create a more sophisticated skeleton for the whole dashboard here
+        if you prefer, or individual skeletons within each graph component (which you already have).
+      */}
+      <Suspense fallback={
+        <div className="flex justify-center items-center h-[calc(100vh-40px)]">
+          <div className="flex items-center space-x-2 text-lg text-gray-700">
+            <div className="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+            <span>Loading Dashboard...</span>
+          </div>
+        </div>
+      }>
+        {/* First Row - explicitly limited to 3 cards */}
+        <div style={rowContainerStyle}>
+          <Card>
+            <TitleforCount />
+            <AlarmCount />
+          </Card>
+          <Card>
+            <TitleforFailure />
+            <AlarmTypeBarGraph />
+          </Card>
+          <Card>
+            <TitleforTerritory />
+            <TerritoryGraph />
+          </Card>
+        </div>
 
-      {/* Second Row - for the remaining cards and the PDF button */}
-      <div style={rowContainerStyle}>
-        <Card>
-          <TitleforState />
-          <AlarmCategory />
-        </Card>
-        <Card>
-          <TitleforMycom />
-          <Mycom />
-        </Card>
-        <Card>
-          <TitleforManual />
-          <Manualvsauto />
-        </Card>
-      </div>
+        {/* Second Row - for the remaining cards and the PDF button */}
+        <div style={rowContainerStyle}>
+          <Card>
+            <TitleforState />
+            <AlarmCategory />
+          </Card>
+          <Card>
+            <TitleforMycom />
+            <Mycom />
+          </Card>
+          <Card>
+            <TitleforManual />
+            <Manualvsauto />
+          </Card>
+        </div>
 
-      {/* Third Row - for the remaining cards, with AreaLineGraph being wide */}
-      <div style={rowContainerStyle}> {/* Using rowContainerStyle directly */}
-        <Card>
-          <TitleforMindanao />
-          <AlarmTypeLineGraph />
-        </Card>
-        <Card isWide={true}> {/* <--- Added isWide prop here */}
-          <TitleforArea />
-          <AreaLineGraph />
-        </Card>
-      </div>
+        {/* Third Row - for the remaining cards, with AreaLineGraph being wide */}
+        <div style={rowContainerStyle}>
+          <Card>
+            <TitleforMindanao />
+            <AlarmTypeLineGraph />
+          </Card>
+          <Card isWide={true}>
+            <TitleforArea />
+            <AreaLineGraph />
+          </Card>
+        </div>
+      </Suspense>
 
-      {/* Standalone button row */}
+      {/* Standalone button row (outside Suspense as it doesn't depend on lazy components) */}
       <div className="flex justify-center mt-4">
         <button
           className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg shadow-md transition-colors duration-300 flex items-center gap-2"

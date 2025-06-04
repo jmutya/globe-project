@@ -16,7 +16,8 @@ import ExcelUploader from "./components/pages/documents";
 import { FaSpinner } from "react-icons/fa";
 
 function App() {
-  const { user, loading } = useAuth(); // Get authentication state
+  const { user, loading } = useAuth();
+   // Get authentication state
   if (loading) {
     return (
       <div className="fixed inset-0 flex justify-center items-center bg-white z-50">

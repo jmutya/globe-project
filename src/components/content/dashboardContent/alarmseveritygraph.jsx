@@ -1,9 +1,13 @@
 import React, { useState, useEffect } from "react";
 import {
-  PieChart, Pie, Tooltip, Legend, Cell, ResponsiveContainer,
+  PieChart,
+  Pie,
+  Tooltip,
+  Legend,
+  Cell,
+  ResponsiveContainer,
 } from "recharts";
 import { fetchAlarmSeverityData } from "../../../backend/functions/alarmUtilsGraph";
-
 
 const COLORS = [
   "#60a5fa", "#facc15", "#22c55e", "#ef4444",
@@ -25,7 +29,6 @@ const AlarmsSeverity = () => {
         setChartData([]);
       } else {
         setLatestMonth(latestMonth);
-
         const formattedData = Object.entries(severityCounts).map(
           ([name, value], index) => ({
             name,
@@ -33,20 +36,23 @@ const AlarmsSeverity = () => {
             fill: COLORS[index % COLORS.length],
           })
         );
-
         setChartData(formattedData);
       }
+
       setIsLoading(false);
     };
 
     loadData();
   }, []);
 
+  const total = chartData.reduce((sum, item) => sum + item.value, 0);
+
   return (
     <div className="bg-white rounded-md shadow overflow-hidden">
       <div className="p-6">
+        {/* Header */}
         <div className="flex items-center mb-4">
-          <div className="rounded-lg bg-red-500 h-12 w-12 flex items-center justify-center">
+          <div className="bg-red-500 h-12 w-12 rounded-lg flex items-center justify-center">
             <svg
               xmlns="http://www.w3.org/2000/svg"
               fill="none"
@@ -55,17 +61,22 @@ const AlarmsSeverity = () => {
               stroke="white"
               className="w-6 h-6"
             >
-              <path strokeLinecap="round" strokeLinejoin="round" d="M11.25 3.75a8.25 8.25 0 108.25 8.25h-8.25V3.75z" />
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M11.25 3.75a8.25 8.25 0 108.25 8.25h-8.25V3.75z"
+              />
             </svg>
           </div>
-          <h2 className="text-sm font-semibold text-gray-700 ml-3 uppercase tracking-wider">
+          <h2 className="ml-3 text-sm font-semibold text-gray-700 uppercase tracking-wider">
             Alarm Severity Distribution {latestMonth && `(${latestMonth})`}
           </h2>
         </div>
 
+        {/* Content */}
         {isLoading ? (
           <div className="flex justify-center items-center py-8">
-           <div className="w-6 h-6 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin" />
+            <div className="w-6 h-6 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin" />
             <p className="ml-3 text-gray-600">Loading Please Wait...</p>
           </div>
         ) : chartData.length > 0 ? (
@@ -85,16 +96,23 @@ const AlarmsSeverity = () => {
                   <Cell key={`cell-${index}`} fill={entry.fill} />
                 ))}
               </Pie>
+
               <Tooltip
                 formatter={(value, name) => {
-                  const total = chartData.reduce((sum, cur) => sum + cur.value, 0);
                   const percentage = ((value / total) * 100).toFixed(1);
                   return [`${value} (${percentage}%)`, name];
                 }}
                 itemStyle={{ color: "gray" }}
                 labelStyle={{ color: "black", fontWeight: "bold" }}
+                contentStyle={{ backgroundColor: "#fff", borderRadius: 12, border: "1px solid #eee", fontSize: 13 }}
               />
-              <Legend layout="horizontal" align="bottom" wrapperStyle={{ paddingTop: 20 }} iconSize={10} />
+
+              <Legend
+                layout="horizontal"
+                align="bottom"
+                iconSize={10}
+                wrapperStyle={{ paddingTop: 20, fontSize: 13, color: "#666" }}
+              />
             </PieChart>
           </ResponsiveContainer>
         ) : (

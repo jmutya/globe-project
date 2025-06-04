@@ -12,40 +12,59 @@ import {
 import { fetchAlarmTypeLineData } from "../../../backend/functions/alarmAORMinUtils";
 import "react-loading-skeleton/dist/skeleton.css";
 
+const COLORS = [
+  "#377EB8", // Blue
+  "#E41A1C", // Red
+  "#4DAF4A", // Green
+  "#984EA3", // Purple
+  "#FF7F00", // Orange
+  "#FFFF33", // Yellow
+  "#A65628", // Brown
+  "#F781BF", // Pink
+];
+
+// Helper to format date strings (YYYY-MM-DD)
+const formatDate = (dateStr) => {
+  if (!dateStr) return "";
+  const cleaned = String(dateStr).replace(/,/g, "").trim();
+  const parsed = new Date(cleaned);
+  if (isNaN(parsed)) return cleaned;
+  const y = parsed.getFullYear();
+  const m = String(parsed.getMonth() + 1).padStart(2, "0");
+  const d = String(parsed.getDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
+};
+
 const AlarmTypeLineGraph = () => {
   const [chartData, setChartData] = useState([]);
   const [alarmTypes, setAlarmTypes] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  const colors = [
-    "#377EB8", // Blue
-    "#E41A1C", // Red
-    "#4DAF4A", // Green
-    "#984EA3", // Purple
-    "#FF7F00", // Orange
-    "#FFFF33", // Yellow
-    "#A65628", // Brown
-    "#F781BF", // Pink
-  ];
-
   useEffect(() => {
+    let isMounted = true;
+
     const loadData = async () => {
       setIsLoading(true);
       const { chartData, alarmTypes } = await fetchAlarmTypeLineData();
-      setChartData(chartData);
-      setAlarmTypes(alarmTypes);
-      setIsLoading(false);
+      if (isMounted) {
+        setChartData(chartData);
+        setAlarmTypes(alarmTypes);
+        setIsLoading(false);
+      }
     };
 
     loadData();
+
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   return (
     <div className="p-6 bg-white rounded-md shadow">
-
       {isLoading ? (
         <div className="flex justify-center items-center h-[300px]">
-        <div className="w-6 h-6 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin" />
+          <div className="w-6 h-6 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin" />
           <p className="ml-3 text-gray-600">Loading Please Wait...</p>
         </div>
       ) : chartData.length > 0 ? (
@@ -57,20 +76,8 @@ const AlarmTypeLineGraph = () => {
             <CartesianGrid stroke="#e0e0e0" strokeDasharray="2 2" />
             <XAxis
               dataKey="date"
-              tick={{ fontSize: 12, angle: 35, dy: 25 }} // <-- added this
-              tickFormatter={(date) => {
-                if (!date) return "";
-                const cleanedDate = String(date).replace(/,/g, "").trim(); // <-- REMOVE commas
-                const parsedDate = new Date(cleanedDate);
-                if (isNaN(parsedDate)) return cleanedDate; // fallback
-                const year = parsedDate.getFullYear();
-                const month = String(parsedDate.getMonth() + 1).padStart(
-                  2,
-                  "0"
-                );
-                const day = String(parsedDate.getDate()).padStart(2, "0");
-                return `${year}-${month}-${day}`;
-              }}
+              tick={{ fontSize: 12, angle: 35, dy: 25 }}
+              tickFormatter={formatDate}
             />
             <YAxis
               allowDecimals={false}
@@ -80,25 +87,9 @@ const AlarmTypeLineGraph = () => {
             />
             <Tooltip
               itemStyle={{ color: "#333", padding: 4 }}
-              labelStyle={{
-                color: "#000",
-                fontWeight: "bold",
-                marginBottom: 4,
-              }}
+              labelStyle={{ color: "#000", fontWeight: "bold", marginBottom: 4 }}
               formatter={(value, name) => [`${value}`, name]}
-              labelFormatter={(label) => {
-                if (!label) return "";
-                const cleanedLabel = String(label).replace(/,/g, "").trim(); // SAME CLEANING
-                const parsedDate = new Date(cleanedLabel);
-                if (isNaN(parsedDate)) return cleanedLabel; // fallback
-                const year = parsedDate.getFullYear();
-                const month = String(parsedDate.getMonth() + 1).padStart(
-                  2,
-                  "0"
-                );
-                const day = String(parsedDate.getDate()).padStart(2, "0");
-                return `Date: ${year}-${month}-${day}`;
-              }}
+              labelFormatter={(label) => `Date: ${formatDate(label)}`}
               wrapperStyle={{
                 backgroundColor: "rgba(255, 255, 255, 0.9)",
                 padding: 10,
@@ -119,9 +110,9 @@ const AlarmTypeLineGraph = () => {
                 key={type}
                 type="monotone"
                 dataKey={type}
-                stroke={colors[index % colors.length]}
+                stroke={COLORS[index % COLORS.length]}
                 strokeWidth={2}
-                dot={{ r: 3 }} // Keep the points
+                dot={{ r: 3 }}
                 activeDot={{ r: 5 }}
               />
             ))}

@@ -27,7 +27,7 @@ const componentMap = {
   // "Mean Time To Investigate": lazy(() => import("../../content/mtti")),
   // "First Touch Resolution": lazy(() => import("../../content/ftr")),
   Dashboard: lazy(() => import("../../pages/Dashboard_file")),
-  "Insights": lazy(() => import("../../content/insight/InsightContent/TicketIssuance")),
+  // "Insights": lazy(() => import("../../content/insight/InsightContent/TicketIssuance")),
   
 };
 
@@ -37,7 +37,7 @@ const navigationItems = [
     icon: ChartBarSquareIcon,
     subItems: [
       { name: "Dashboard" },
-      { name: "Insights" },
+      // { name: "Insights" },
       // { name: "Mean Time To Ticket" },
       // { name: "Mean Time To Investigate" },
       // { name: "First Touch Resolution" },

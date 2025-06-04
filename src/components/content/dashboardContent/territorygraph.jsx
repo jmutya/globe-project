@@ -17,9 +17,12 @@ const TerritoryGraph = () => {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
+    let isMounted = true;
+
     const loadData = async () => {
       setIsLoading(true);
       const data = await fetchTerritoryGraphData();
+      if (!isMounted) return;
       const totalCount = data.reduce((sum, item) => sum + item.count, 0);
       const dataWithPercentage = data.map((item, index) => ({
         ...item,
@@ -31,6 +34,10 @@ const TerritoryGraph = () => {
     };
 
     loadData();
+
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   return (
