@@ -6,6 +6,7 @@ const CACHE_TTL = 30 * 60 * 1000; // 30 minutes
 
 /**
  * Fetches and processes the count from the most recent Excel file in Supabase storage.
+ * Filters rows where `u_service_priority` is exactly "3 - access".
  * @param {boolean} forceRefresh - If true, bypasses the cache and fetches fresh data.
  * @returns {Promise<{count: number, fileName: string, processedTimestamp: number}>}
  * @throws {Error} If there's an issue fetching or processing the file.
@@ -45,11 +46,46 @@ export const fetchAlarmCount = async (forceRefresh = false) => {
   const arrayBuffer = await res.arrayBuffer();
   const workbook = XLSX.read(arrayBuffer, { type: "array" });
   const sheet = workbook.Sheets[workbook.SheetNames[0]];
-  const jsonData = XLSX.utils.sheet_to_json(sheet);
+  const rawData = XLSX.utils.sheet_to_json(sheet);
 
-  const rowCount = jsonData.filter(
-    (row) => row.number !== undefined && row.number !== null && row.number !== ""
-  ).length;
+  if (!rawData || rawData.length === 0) {
+    throw new Error("Excel file is empty or unreadable.");
+  }
+
+  // Normalize headers and row keys
+  const jsonData = rawData.map((row) => {
+    const normalizedRow = {};
+    Object.entries(row).forEach(([key, value]) => {
+      const normalizedKey = key.trim().toLowerCase().replace(/\s+/g, "_");
+      normalizedRow[normalizedKey] = value;
+    });
+    return normalizedRow;
+  });
+
+  // Debug log
+  console.log("Headers:", Object.keys(jsonData[0] || {}));
+  console.log("First row sample:", jsonData[0]);
+
+  const rowCount = jsonData.filter((row) => {
+    const number = row.number;
+    const priorityRaw = row.u_service_priority;
+
+    const normalizedPriority =
+      typeof priorityRaw === "string"
+        ? priorityRaw
+            .replace(/\s+/g, " ")
+            .replace(/[–—−]/g, "-")
+            .trim()
+            .toLowerCase()
+        : "";
+
+    return (
+      number !== undefined &&
+      number !== null &&
+      number !== "" &&
+      normalizedPriority === "3 - access"
+    );
+  }).length;
 
   const timestamp = Date.now();
   const dataToCache = {
@@ -57,7 +93,7 @@ export const fetchAlarmCount = async (forceRefresh = false) => {
     fileName: recentFile.name,
     processedTimestamp: timestamp,
   };
-  localStorage.setItem(CACHE_KEY, JSON.stringify(dataToCache));
 
+  localStorage.setItem(CACHE_KEY, JSON.stringify(dataToCache));
   return dataToCache;
 };
