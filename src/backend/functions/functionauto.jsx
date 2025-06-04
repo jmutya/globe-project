@@ -7,9 +7,9 @@ const chartColors = [
 ];
 
 // Define cache constants outside the function
-const CACHE_KEY = "AutomaticticketingChartDataCacheperstate";
-const CACHE_TIMESTAMP_KEY = "AutomaticticketingDataTimestamp";
-const CACHE_TOTAL_COUNT_KEY = "AutomaticticketingChartTotalCountCache"; // New key for total count
+const CACHE_KEY = "ManualticketingChartDataCacheperstate";
+const CACHE_TIMESTAMP_KEY = "ManualticketingDataTimestamp";
+const CACHE_TOTAL_COUNT_KEY = "ManualticketingChartTotalCountCache"; // New key for total count
 const CACHE_DURATION = 30 * 60 * 1000; // 30 minutes in milliseconds
 
 /**
