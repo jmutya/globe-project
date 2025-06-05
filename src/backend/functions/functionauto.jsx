@@ -2,15 +2,21 @@ import * as XLSX from "xlsx";
 import supabase from "../supabase/supabase";
 
 const chartColors = [
-  "#FF5E5E", "#FFB84C", "#FFD93D", "#72D86B",
-  "#2BA8FF", "#0087A5", "#9951FF", "#FF7BAC"
+  "#FF5E5E",
+  "#FFB84C",
+  "#FFD93D",
+  "#72D86B",
+  "#2BA8FF",
+  "#0087A5",
+  "#9951FF",
+  "#FF7BAC",
 ];
 
 // Define cache constants outside the function
 const CACHE_KEY = "ManualticketingChartDataCacheperstate";
 const CACHE_TIMESTAMP_KEY = "ManualticketingDataTimestamp";
 const CACHE_TOTAL_COUNT_KEY = "ManualticketingChartTotalCountCache"; // New key for total count
-const CACHE_DURATION = 1 * 60 * 1000; // 30 minutes in milliseconds
+const CACHE_DURATION = 30 * 60 * 1000; // 30 minutes in milliseconds
 
 /**
  * Helper function to get the latest monthly file based on a date pattern in its name.
@@ -28,7 +34,9 @@ const getLatestMonthlyFile = (files) => {
     if (matchMonthYear) {
       const [_, monthName, year] = matchMonthYear;
       // Date.parse can convert month name to a date, then get month index
-      const monthIndex = new Date(Date.parse(`${monthName} 1, ${year}`)).getMonth();
+      const monthIndex = new Date(
+        Date.parse(`${monthName} 1, ${year}`)
+      ).getMonth();
       fileDate = new Date(parseInt(year), monthIndex, 1); // Day doesn't matter for monthly comparison
     }
 
@@ -51,7 +59,6 @@ const getLatestMonthlyFile = (files) => {
 
   return latestFile;
 };
-
 
 export const fetchAutomaticticketingChartData = async () => {
   const now = new Date().getTime();
@@ -77,7 +84,9 @@ export const fetchAutomaticticketingChartData = async () => {
   console.log("Fetching fresh alarm category data...");
   try {
     // Step 1: Fetch all Excel files from the 'excels' folder
-    const { data: files, error } = await supabase.storage.from("uploads").list("excels");
+    const { data: files, error } = await supabase.storage
+      .from("uploads")
+      .list("excels");
     if (error) throw error;
 
     // Step 2: Find the latest monthly file
@@ -100,13 +109,17 @@ export const fetchAutomaticticketingChartData = async () => {
     // Step 4: Download and parse the Excel file
     const response = await fetch(signedUrlData.signedUrl);
     if (!response.ok) {
-      throw new Error(`Failed to fetch file: ${response.status} ${response.statusText}`);
+      throw new Error(
+        `Failed to fetch file: ${response.status} ${response.statusText}`
+      );
     }
 
     const blob = await response.arrayBuffer();
     const workbook = XLSX.read(blob, { type: "array" });
     const sheetName = workbook.SheetNames[0];
-    const sheet = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName], { header: 1 });
+    const sheet = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName], {
+      header: 1,
+    });
 
     if (sheet.length <= 1) {
       console.warn("Excel sheet is empty or contains only headers.");
@@ -118,14 +131,18 @@ export const fetchAutomaticticketingChartData = async () => {
 
     const headers = sheet[0];
     const findHeaderIndex = (label) =>
-      headers.findIndex((h) => String(h).trim().toLowerCase() === label.toLowerCase());
+      headers.findIndex(
+        (h) => String(h).trim().toLowerCase() === label.toLowerCase()
+      );
 
     const stateIndex = findHeaderIndex("state");
     const callerIdIndex = findHeaderIndex("caller_id");
     const priorityIndex = findHeaderIndex("u_service_priority");
 
     if (stateIndex === -1 || callerIdIndex === -1 || priorityIndex === -1) {
-      console.warn("Required columns ('state', 'caller_id', 'u_service_priority') not found.");
+      console.warn(
+        "Required columns ('state', 'caller_id', 'u_service_priority') not found."
+      );
       localStorage.removeItem(CACHE_KEY);
       localStorage.removeItem(CACHE_TIMESTAMP_KEY);
       localStorage.removeItem(CACHE_TOTAL_COUNT_KEY);
@@ -142,14 +159,22 @@ export const fetchAutomaticticketingChartData = async () => {
       const priorityRaw = row[priorityIndex];
 
       const stateValue = String(stateRaw || "").trim();
-      const callerValue = String(callerRaw || "").trim().toLowerCase();
-      const priorityValue = String(priorityRaw || "").trim().toLowerCase();
+      const callerValue = String(callerRaw || "")
+        .trim()
+        .toLowerCase();
+      const priorityValue = String(priorityRaw || "")
+        .trim()
+        .toLowerCase()
+        .replace(/\s+/g, " ")
+        .replace(/[–—−]/g, "-");
 
+      // ✅ Include ONLY if caller is NOT "mycom integration user"
+      // AND priority is exactly "3 - access"
       if (
-        callerValue === "mycom integration user" &&
-        priorityValue === "3 - access"
+        callerValue === "mycom integration user" ||
+        priorityValue !== "3 - access"
       ) {
-        continue; // skip non-matching rows
+        continue; // skip rows that don't meet both criteria
       }
 
       const finalState = stateValue || "Unknown";
@@ -158,11 +183,13 @@ export const fetchAutomaticticketingChartData = async () => {
     }
 
     // Step 6: Format for chart
-    const formattedData = Object.entries(categoryCounts).map(([name, value], index) => ({
-      name,
-      value,
-      fill: chartColors[index % chartColors.length],
-    }));
+    const formattedData = Object.entries(categoryCounts).map(
+      ([name, value], index) => ({
+        name,
+        value,
+        fill: chartColors[index % chartColors.length],
+      })
+    );
 
     // Step 7: Cache and return
     localStorage.setItem(CACHE_KEY, JSON.stringify(formattedData));
@@ -172,7 +199,10 @@ export const fetchAutomaticticketingChartData = async () => {
 
     return { formattedData, totalCount };
   } catch (error) {
-    console.error("Error fetching or processing alarm category chart data:", error);
+    console.error(
+      "Error fetching or processing alarm category chart data:",
+      error
+    );
     localStorage.removeItem(CACHE_KEY);
     localStorage.removeItem(CACHE_TIMESTAMP_KEY);
     localStorage.removeItem(CACHE_TOTAL_COUNT_KEY);
