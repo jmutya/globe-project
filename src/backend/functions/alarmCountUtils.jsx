@@ -2,7 +2,7 @@ import * as XLSX from "xlsx";
 import supabase from "../../backend/supabase/supabase"; // Adjust path as needed
 
 const CACHE_KEY = "mostRecentFileNumberCount";
-const CACHE_TTL = 1 * 60 * 1000; // 30 minutes
+const CACHE_TTL = 30 * 60 * 1000; // 30 minutes
 
 /**
  * Fetches and processes the count from the most recent Excel file in Supabase storage.

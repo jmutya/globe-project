@@ -16,7 +16,7 @@ const chartColors = [
 const CACHE_KEY = "AutomaticticketingChartDataCacheperstate";
 const CACHE_TIMESTAMP_KEY = "AutomaticticketingDataTimestamp";
 const CACHE_TOTAL_COUNT_KEY = "AutomaticticketingChartTotalCountCache"; // New key for total count
-const CACHE_DURATION = 1 * 60 * 1000; // 30 minutes in milliseconds
+const CACHE_DURATION = 30 * 60 * 1000; // 30 minutes in milliseconds
 
 /**
  * Helper function to get the latest monthly file based on a date pattern in its name.
