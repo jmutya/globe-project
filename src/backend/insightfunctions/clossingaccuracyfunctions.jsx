@@ -1,44 +1,37 @@
+// src/services/excelService.js
+
 import * as XLSX from "xlsx";
 import supabase from "../supabase/supabase"; // Adjust path if necessary
 
-// Helper function to get the latest monthly file (reused from your existing code)
-const getLatestMonthlyFile = (files) => {
-  let latestFile = null;
-  let latestDate = null;
+// --- Caching Configuration ---
+const CACHE_KEY = "excelDataCache";
+const CACHE_DURATION_MINUTES = 7 * 24 * 60 * 60 * 1000; // Cache data for 5 minutes
 
-  files.forEach((file) => {
-    let fileDate = null;
+// Simple in-memory cache store
+let dataCache = null; // { timestamp: Date, data: { unmatchedRows, allProcessedRows, ... } }
 
-    const matchMonthYear = file.name.match(/(\w+)\s+(\d{4})/);
-    if (matchMonthYear) {
-      const [_, monthName, year] = matchMonthYear;
-      const monthIndex = new Date(Date.parse(`${monthName} 1, ${year}`)).getMonth();
-      fileDate = new Date(parseInt(year), monthIndex, 1);
-    }
-
-    if (!fileDate) {
-      const matchYearMonth = file.name.match(/(\d{4})-(\d{2})/);
-      if (matchYearMonth) {
-        const [_, year, month] = matchYearMonth;
-        fileDate = new Date(parseInt(year), parseInt(month) - 1, 1);
-      }
-    }
-
-    if (fileDate) {
-      if (!latestDate || fileDate > latestDate) {
-        latestDate = fileDate;
-        latestFile = file;
-      }
-    }
-  });
-
-  return latestFile;
+/**
+ * Helper to check if the cache is valid (not expired).
+ */
+const isCacheValid = () => {
+  if (!dataCache || !dataCache.timestamp || !dataCache.data) {
+    return false;
+  }
+  const now = new Date();
+  const cacheTime = new Date(dataCache.timestamp);
+  const diffMinutes = (now.getTime() - cacheTime.getTime()) / (1000 * 60);
+  return diffMinutes < CACHE_DURATION_MINUTES;
 };
 
-// Format Excel serial to "YYYY/MM/DD"
+// --- Helper Functions (No changes needed here) ---
+
+/**
+ * Format Excel-serial date (number) or raw string into "YYYY/MM/DD".
+ */
 const formatOpenedDate = (value) => {
   if (!value) return "";
   if (typeof value === "number") {
+    // Excel dates start from Jan 1, 1900. 25569 is the offset to 1970-01-01.
     const date = new Date((value - 25569) * 86400 * 1000);
     const yyyy = date.getFullYear();
     const mm = String(date.getMonth() + 1).padStart(2, "0");
@@ -48,7 +41,9 @@ const formatOpenedDate = (value) => {
   return value;
 };
 
-// Turn "YYYY/MM/DD" into "MM/YYYY" for consistent monthly grouping (for ticket opened dates)
+/**
+ * Convert "YYYY/MM/DD" into "MM/YYYY". Used for grouping by ticket opened month.
+ */
 const getMonthFromDate = (dateStr) => {
   if (!dateStr || dateStr === "Invalid Date") return "Invalid Date";
   const date = new Date(dateStr);
@@ -58,14 +53,15 @@ const getMonthFromDate = (dateStr) => {
   return `${month < 10 ? "0" : ""}${month}/${year}`;
 };
 
-// Get MM/YYYY from ISO string for upload date
+/**
+ * Convert an ISO date string (from Supabase created_at) into "MM/YYYY".
+ * Returns "Invalid Date" if unable to parse.
+ */
 const getMonthYearFromISO = (isoDateString) => {
   if (!isoDateString) return "Invalid Date";
   try {
     const date = new Date(isoDateString);
-    if (isNaN(date.getTime())) {
-      return "Invalid Date";
-    }
+    if (isNaN(date.getTime())) return "Invalid Date";
     const month = String(date.getMonth() + 1).padStart(2, "0");
     const year = date.getFullYear();
     return `${month}/${year}`;
@@ -73,20 +69,21 @@ const getMonthYearFromISO = (isoDateString) => {
     console.error(
       "Error parsing ISO date string for month/year:",
       isoDateString,
-      String(error) // <--- CHANGE HERE: Explicitly convert error to string
+      error
     );
     return "Invalid Date";
   }
 };
 
-// New function to format ISO date string (from Supabase) to MM/DD/YYYY HH:MM for display
+/**
+ * Formats an ISO date string (from Supabase) to "MM/DD/YYYY HH:MM AM/PM".
+ */
 export const formatDateTimeFromISO = (isoDateString) => {
   if (!isoDateString) return "N/A";
   try {
     const date = new Date(isoDateString);
-    if (isNaN(date.getTime())) {
-      return "Invalid Date";
-    }
+    if (isNaN(date.getTime())) return "Invalid Date";
+
     const mm = String(date.getMonth() + 1).padStart(2, "0");
     const dd = String(date.getDate()).padStart(2, "0");
     const yyyy = date.getFullYear();
@@ -95,6 +92,7 @@ export const formatDateTimeFromISO = (isoDateString) => {
     const minutes = String(date.getMinutes()).padStart(2, "0");
     const ampm = hours >= 12 ? "PM" : "AM";
 
+    // Convert to 12-hour format
     hours = hours % 12;
     hours = hours === 0 ? 12 : hours;
     const hours12 = String(hours).padStart(2, "0");
@@ -104,94 +102,130 @@ export const formatDateTimeFromISO = (isoDateString) => {
     console.error(
       "Error formatting ISO date string for display:",
       isoDateString,
-      String(error) // <--- CHANGE HERE: Explicitly convert error to string
+      error
     );
     return "Invalid Date";
   }
 };
 
-// Placeholder for accuracy calculation
+/**
+ * Calculate accuracy percentage (two decimal places).
+ */
 export const calculateAccuracy = (total, incomplete) => {
   if (total === 0) return "0.00";
   return (((total - incomplete) / total) * 100).toFixed(2);
 };
 
-export const fetchAndProcessExcelData = async () => {
-  let allUnmatched = [];
-  let allProcessed = [];
+/**
+ * Main function: fetches all Excel files from Supabase Storage -> parses them -> returns:
+ * {
+ * unmatchedRows: Array<...>,
+ * allProcessedRows: Array<...>,
+ * ticketOpenedMonthOptions: Array<"MM/YYYY">,
+ * uploadedFileOptions: Array<string> // <-- CHANGED: Now contains filenames
+ * }
+ *
+ * Each processed row has shape:
+ * {
+ * number,
+ * cause,
+ * reason,
+ * assignedTo,
+ * opened,             // "YYYY/MM/DD"
+ * ticketOpenedMonth,      // "MM/YYYY"
+ * fileName,               // <-- ADDED: The name of the Excel file
+ * fileUploadFullDateTime, // raw ISO string from Supabase
+ * hasError: boolean,
+ * missingColumns: Array<string>
+ * }
+ *
+ * @param {boolean} forceRefresh - If true, bypass the cache and refetch data.
+ */
+export async function fetchAndProcessExcelData(forceRefresh = false) {
+  // 1. Check Cache
+  if (!forceRefresh && isCacheValid()) {
+    console.log("Returning data from cache.");
+    return dataCache.data;
+  }
+
+  console.log("Fetching and processing data (cache bypassed or expired).");
+  const allUnmatched = [];
+  const allProcessed = [];
   const ticketMonthsSet = new Set();
-  const uploadMonthsSet = new Set();
+  // Changed set name for clarity and to store filenames
+  const uploadedFileNamesSet = new Set();
 
   try {
+    // 2) List all files under "uploads/excels"
     const { data: files, error: listError } = await supabase.storage
       .from("uploads")
-      .list("excels", { sortBy: { column: "name", order: "asc" } });
+      .list("excels", {
+        sortBy: { column: "name", order: "asc" },
+      });
 
     if (listError) {
       throw listError;
     }
 
     if (!files || files.length === 0) {
-      console.log("No Excel files found in the 'excels' folder.");
-      return {
+      // No files -> return empty structures and clear cache
+      const emptyResult = {
         unmatchedRows: [],
         allProcessedRows: [],
         ticketOpenedMonthOptions: [],
-        uploadedMonthOptions: [],
+        uploadedFileOptions: [], // <-- CHANGED: empty array for filenames
       };
+      dataCache = { timestamp: new Date(), data: emptyResult }; // Cache the empty result
+      return emptyResult;
     }
 
+    // 3) Iterate over each file
     for (const file of files) {
-      const fileUploadFullDateTime = file.created_at;
-      const fileUploadMonth = getMonthYearFromISO(file.created_at);
-
-      if (fileUploadMonth !== "Invalid Date") {
-        uploadMonthsSet.add(fileUploadMonth);
+      // Skip any placeholder files (e.g. ".emptyFolderPlaceholder")
+      if (file.name === ".emptyFolderPlaceholder") {
+        continue;
       }
 
-      const filePath = `excels/${file.name}`;
+      const fileName = file.name;
+      const fileUploadFullDateTime = file.created_at; // ISO timestamp
+      // Removed fileUploadMonth as it's no longer needed for filter options
+      // const fileUploadMonth = getMonthYearFromISO(file.created_at);
 
-      // --- CHANGE STARTS HERE ---
-      // Generate a signed URL for the private file, valid for 60 seconds (adjust as needed)
+      // --- CHANGE START ---
+      // Instead of adding month, add the filename to the set
+      uploadedFileNamesSet.add(fileName);
+      // --- CHANGE END ---
+
+      // 4) Get a **signed URL** for this file (recommended for private buckets)
       const { data: signedUrlData, error: signedUrlError } = await supabase.storage
         .from("uploads")
-        .createSignedUrl(filePath, 60); // URL valid for 60 seconds
+        .createSignedUrl(`excels/${fileName}`, 60); // URL valid for 60 seconds
 
-      if (signedUrlError) {
-        console.warn(
-          `Could not generate signed URL for ${file.name}: ${signedUrlError.message}. Skipping.`
-        );
+      if (signedUrlError || !signedUrlData?.signedUrl) {
+        console.warn(`Could not get signed URL for "${fileName}": ${signedUrlError?.message || 'Unknown error'}. Skipping.`);
         continue;
       }
 
-      if (!signedUrlData || !signedUrlData.signedUrl) {
-        console.warn(`No signed URL received for ${file.name}. Skipping.`);
-        continue;
-      }
-
-      // Use the signed URL to fetch the file
+      // 5) Fetch the raw .xlsx
       const response = await fetch(signedUrlData.signedUrl);
       if (!response.ok) {
-        throw new Error(
-          `HTTP error! status: ${response.status} for signed URL of ${file.name}`
+        console.warn(
+          `Failed to fetch ${fileName}: HTTP ${response.status}. Skipping.`
         );
+        continue;
       }
-
       const arrayBuffer = await response.arrayBuffer();
-      // --- CHANGE ENDS HERE ---
 
+      // 6) Parse with XLSX
       const workbook = XLSX.read(arrayBuffer, { type: "array" });
-      const sheet = XLSX.utils.sheet_to_json(
-        workbook.Sheets[workbook.SheetNames[0]],
-        {
-          defval: "",
-        }
-      );
+      const worksheet = workbook.Sheets[workbook.SheetNames[0]];
+      const sheetJson = XLSX.utils.sheet_to_json(worksheet, { defval: "" });
 
-      sheet.forEach((row) => {
+      // 7) Process each row
+      sheetJson.forEach((row) => {
         const state = String(row["state"] || "").trim().toLowerCase();
-        if (state === "cancelled") {
-          return; // Skip this row
+        if (state === "cancelled") { // Ensure case-insensitive check
+          return; // skip cancelled entries
         }
 
         const cause = row["u_cause"];
@@ -206,6 +240,7 @@ export const fetchAndProcessExcelData = async () => {
         if (!reason || typeof reason !== "string")
           missingColumns.push("u_reason_for_outage");
 
+        // Determine if there's an error: cause mismatch
         const hasError =
           !cause ||
           !reason ||
@@ -225,40 +260,53 @@ export const fetchAndProcessExcelData = async () => {
           reason,
           assignedTo,
           opened: openedFormatted,
-          ticketOpenedMonth: ticketOpenedMonth,
-          fileUploadMonth: fileUploadMonth,
-          fileUploadFullDateTime: fileUploadFullDateTime,
+          ticketOpenedMonth,
+          // --- CHANGE START ---
+          fileName, // Add fileName to each processed row
+          // fileUploadMonth, // Removed as it's no longer used for filtering by filename
+          // --- CHANGE END ---
+          fileUploadFullDateTime,
           hasError,
           missingColumns,
         };
-        allProcessed.push(processedRow);
 
+        allProcessed.push(processedRow);
         if (hasError) {
           allUnmatched.push(processedRow);
         }
       });
     }
 
-    const sortedTicketMonths = Array.from(ticketMonthsSet).sort((a, b) => {
-      const [ma, ya] = a.split("/").map(Number);
-      const [mb, yb] = b.split("/").map(Number);
-      return yb !== ya ? yb - ya : mb - ma;
-    });
+    // 8) Sort month arrays (descending: newest first)
+    const sortMonthsDesc = (arr) =>
+      arr.sort((a, b) => {
+        const [ma, ya] = a.split("/").map(Number);
+        const [mb, yb] = b.split("/").map(Number);
+        if (ya !== yb) return yb - ya;
+        return mb - ma;
+      });
 
-    const sortedUploadedMonths = Array.from(uploadMonthsSet).sort((a, b) => {
-      const [ma, ya] = a.split("/").map(Number);
-      const [mb, yb] = b.split("/").map(Number);
-      return yb !== ya ? yb - ya : mb - ma;
-    });
+    const ticketOpenedMonthOptions = sortMonthsDesc(
+      Array.from(ticketMonthsSet)
+    );
+    // --- CHANGE START ---
+    // Sort filenames alphabetically
+    const uploadedFileOptions = Array.from(uploadedFileNamesSet).sort();
+    // --- CHANGE END ---
 
-    return {
+    const result = {
       unmatchedRows: allUnmatched,
       allProcessedRows: allProcessed,
-      ticketOpenedMonthOptions: sortedTicketMonths,
-      uploadedMonthOptions: sortedUploadedMonths,
+      ticketOpenedMonthOptions,
+      uploadedFileOptions, // <-- CHANGED: Now returns filenames
     };
+
+    // 9. Cache the result before returning
+    dataCache = { timestamp: new Date(), data: result };
+    return result;
+
   } catch (err) {
     console.error("Error in fetchAndProcessExcelData:", err);
-    throw err; // Re-throw the error so the component can catch it
+    throw err;
   }
-};
+}

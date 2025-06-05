@@ -20,14 +20,14 @@ import Dashboard from "../../pages/dashboard";
 
 const componentMap = {
   // Dashboard: lazy(() => import("../../pages/dashboard")),
-  // "Insights": lazy(() => import("../../content/insight/InsightLayout")),
+  "Insights": lazy(() => import("../../content/insight/InsightLayout")),
   "Upload Files": lazy(() => import("../../pages/documents")),
   "Authorized Users": lazy(() => import("../../pages/addemail")),
   // "Mean Time To Ticket": lazy(() => import("../../content/mttt")),
   // "Mean Time To Investigate": lazy(() => import("../../content/mtti")),
   // "First Touch Resolution": lazy(() => import("../../content/ftr")),
   Dashboard: lazy(() => import("../../pages/Dashboard_file")),
-  // "Insights": lazy(() => import("../../content/insight/InsightContent/TicketIssuance")),
+  //"Insights": lazy(() => import("../../content/insight/InsightContent/TicketIssuance")),
   
 };
 
@@ -37,7 +37,7 @@ const navigationItems = [
     icon: ChartBarSquareIcon,
     subItems: [
       { name: "Dashboard" },
-      // { name: "Insights" },
+      { name: "Insights" },
       // { name: "Mean Time To Ticket" },
       // { name: "Mean Time To Investigate" },
       // { name: "First Touch Resolution" },

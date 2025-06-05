@@ -36,7 +36,7 @@ const InsightLayout = () => {
           <AdjustmentsHorizontalIcon className="w-7 h-7 text-indigo-600 mr-3" /> {/* Slightly larger icon */}
           <h2 className="text-xl lg:text-2xl font-semibold text-gray-800">Outage Advanced Filters</h2>
         </div>
-        <FilterData />
+        {/* <FilterData /> */}
       </div>
 
       {/* === Accuracy View Switcher Section === */}
