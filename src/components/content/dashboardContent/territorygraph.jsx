@@ -11,6 +11,7 @@ import {
   Cell,
 } from "recharts";
 import { fetchTerritoryGraphData } from "../../../backend/functions/alarmTerritoryGraph"; // Adjust path if needed
+import BarSkeleton from "../../UI/BarChartSkeleton"; // Import the skeleton component
 
 const TerritoryGraph = () => {
   const [chartData, setChartData] = useState([]);
@@ -27,7 +28,7 @@ const TerritoryGraph = () => {
       const dataWithPercentage = data.map((item, index) => ({
         ...item,
         fill: `hsl(${(index * 50) % 360}, 60%, 50%)`,
-        percentage: totalCount > 0 ? (item.count / totalCount) * 100 : 0, // Calculate percentage
+        percentage: totalCount > 0 ? (item.count / totalCount) * 100 : 0,
       }));
       setChartData(dataWithPercentage);
       setIsLoading(false);
@@ -41,15 +42,9 @@ const TerritoryGraph = () => {
   }, []);
 
   return (
-    <div
-      className="p-6 bg-white rounded-md shadow"
-      style={{ maxHeight: "450px" }}
-    >
+    <div className="p-6 bg-white rounded-md shadow" style={{ maxHeight: "450px" }}>
       {isLoading ? (
-        <div className="flex justify-center items-center py-8">
-          <div className="w-6 h-6 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin" />
-          <p className="ml-3 text-gray-600">Loading Please Wait...</p>
-        </div>
+        <BarSkeleton />
       ) : chartData.length > 0 ? (
         <ResponsiveContainer width="100%" height={360}>
           <BarChart
@@ -95,7 +90,7 @@ const TerritoryGraph = () => {
             <Legend
               align="right"
               verticalAlign="top"
-              wrapperStyle={{ lineHeight: "24px", marginBottom: 20 }} // Add bottom margin here
+              wrapperStyle={{ lineHeight: "24px", marginBottom: 20 }}
               iconSize={14}
               iconType="square"
               textStyle={{ color: "#4a5568" }}

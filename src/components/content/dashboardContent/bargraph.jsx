@@ -10,6 +10,7 @@ import {
   ResponsiveContainer,
 } from "recharts";
 import { fetchFailureCategoryData } from "../../../backend/functions/alarmBargraphUtils";
+import BarSkeleton from "../../UI/BarChartSkeleton"; // Import the new skeleton component
 
 const COLORS = [
   "#60a5fa", // Blue 400
@@ -48,10 +49,7 @@ const AlarmTypeBarGraph = () => {
   return (
     <div className="bg-white rounded-md shadow p-6">
       {isLoading ? (
-        <div className="flex justify-center items-center py-8">
-          <div className="w-6 h-6 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin" />
-          <p className="ml-3 text-gray-600">Loading Please Wait...</p>
-        </div>
+        <BarSkeleton />
       ) : chartData.length > 0 ? (
         <ResponsiveContainer width="100%" height={350}>
           <BarChart

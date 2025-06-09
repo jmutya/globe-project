@@ -3,7 +3,7 @@ import supabase from "../supabase/supabase";
 
 const CACHE_KEY = "failureCategoryDataCache";
 const CACHE_TIMESTAMP_KEY = "failureCategoryDataTimestamp";
-const CACHE_DURATION = 30 * 60 * 1000;
+const CACHE_DURATION = 59 * 60 * 1000;
 
 const getLatestMonthlyFile = (files) => {
   let latestFile = null;
