@@ -36,6 +36,7 @@
     "firebase": "^11.6.0",
     "firebase-admin": "^13.2.0",
     "html2canvas": "^1.4.1",
+    "html2pdf.js": "^0.10.3",
     "idb": "^8.0.3",
     "jspdf": "^3.0.1",
     "leaflet": "^1.9.4",
