@@ -29,6 +29,7 @@ const componentMap = {
   Dashboard: lazy(() => import("../../pages/Dashboard_file")),
   // "Insights": lazy(() => import("../../content/insight/InsightContent/TicketIssuance")),
     // Dashboard: lazy(() => import("../../pages/comingSoon")),
+    // "sampleUpload": lazy(() => import("../../layout/sampleUpload")),
 };
 
 const navigationItems = [
@@ -41,6 +42,7 @@ const navigationItems = [
       // { name: "Mean Time To Ticket" },
       // { name: "Mean Time To Investigate" },
       // { name: "First Touch Resolution" },
+      // { name: "sampleUpload" },
     ],
   },
   { name: "Upload Files", icon: ArrowUpTrayIcon },
