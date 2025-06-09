@@ -88,6 +88,7 @@ const Dashboard_file = () => {
     <div>
       <div style={dashboardStyle} ref={dashboardRef}>
         <Suspense fallback={<div>Loading Dashboard...</div>}>
+          {/* First row */}
           <div style={rowContainerStyle}>
             <Card>
               <TitleforCount />
@@ -102,6 +103,8 @@ const Dashboard_file = () => {
               <TerritoryGraph />
             </Card>
           </div>
+
+          {/* Second row */}
           <div style={rowContainerStyle}>
             <Card>
               <TitleforState />
@@ -116,6 +119,8 @@ const Dashboard_file = () => {
               <Manualvsauto />
             </Card>
           </div>
+
+          {/* Third row */}
           <div style={rowContainerStyle}>
             <Card>
               <TitleforMindanao />

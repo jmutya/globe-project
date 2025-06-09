@@ -8,6 +8,7 @@ import {
   ResponsiveContainer,
 } from "recharts";
 import { fetchmycomChartData } from "../../../backend/functions/mycomFunction";
+import ChartSkeleton from "../../UI/ChartSkeleton"; // Import the new skeleton component
 
 const Mycom = () => {
   const [chartData, setChartData] = useState([]);
@@ -38,10 +39,7 @@ const Mycom = () => {
   return (
     <div className="bg-white rounded-md shadow overflow-hidden p-6">
       {isLoading ? (
-        <div className="flex justify-center items-center py-8">
-          <div className="w-6 h-6 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin" />
-          <p className="text-sm text-gray-500 ml-2">Loading Please Wait...</p>
-        </div>
+        <ChartSkeleton />
       ) : chartData.length > 0 ? (
         <ResponsiveContainer width="100%" height={350}>
           <PieChart>

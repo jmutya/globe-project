@@ -8,6 +8,7 @@ import {
   ResponsiveContainer,
 } from "recharts";
 import { fetchAutomaticticketingChartData } from "../../../backend/functions/functionauto";
+import ChartSkeleton from "../../UI/ChartSkeleton"; // Import the new skeleton component
 
 const Manualvsauto = () => {
   const [chartData, setChartData] = useState([]);
@@ -20,7 +21,8 @@ const Manualvsauto = () => {
 
     const loadChartData = async () => {
       setIsLoading(true);
-      const { formattedData, totalCount } = await fetchAutomaticticketingChartData();
+      const { formattedData, totalCount } =
+        await fetchAutomaticticketingChartData();
       if (isMounted) {
         setChartData(formattedData);
         setTotalCount(totalCount);
@@ -38,10 +40,7 @@ const Manualvsauto = () => {
   return (
     <div className="bg-white rounded-md shadow overflow-hidden p-6">
       {isLoading ? (
-        <div className="flex justify-center items-center py-8">
-          <div className="w-6 h-6 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin" />
-          <p className="text-sm text-gray-500 ml-2">Loading Please Wait...</p>
-        </div>
+        <ChartSkeleton />
       ) : chartData.length > 0 ? (
         <ResponsiveContainer width="100%" height={350}>
           <PieChart>
