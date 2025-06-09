@@ -52,7 +52,6 @@ const getLatestMonthlyFile = (files) => {
   return latestFile;
 };
 
-
 export const fetchAutomaticticketingChartData = async () => {
   const now = new Date().getTime();
 

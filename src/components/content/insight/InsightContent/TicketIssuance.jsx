@@ -21,25 +21,35 @@ function TicketIssuance() {
   const [unmatchedRows, setUnmatchedRows] = useState([]);
   const [allProcessedRows, setAllProcessedRows] = useState([]);
   const [ticketOpenedMonthOptions, setTicketOpenedMonthOptions] = useState([]);
-  const [uploadedFileOptions, setUploadedFileOptions] = useState([]); // Changed name
+  const [uploadedFileOptions, setUploadedFileOptions] = useState([]);
   const [selectedMonth, setSelectedMonth] = useState("");
-  const [selectedFileName, setSelectedFileName] = useState(""); // Changed name
+  const [selectedFileName, setSelectedFileName] = useState(""); // This is where the selected file name is stored
   const [error, setError] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [expandedIndex, setExpandedIndex] = useState(null);
   const [sortOrder, setSortOrder] = useState("desc");
   const [isLoading, setIsLoading] = useState(true);
 
-  const loadData = async () => {
+  // --- MODIFIED loadData function ---
+  const loadData = async (fileNameToProcess = null) => { // Accept a parameter
     setError(null);
     setIsLoading(true);
     try {
-      const data = await fetchAndProcessExcelData();
+      // Pass the selectedFileName to the backend function
+      const data = await fetchAndProcessExcelData(fileNameToProcess);
 
       setUnmatchedRows(data.unmatchedRows);
       setAllProcessedRows(data.allProcessedRows);
+      // ONLY update ticketOpenedMonthOptions if a specific file was selected,
+      // or if you want to initially load all months from all files.
+      // The backend function is already designed to return filtered months.
       setTicketOpenedMonthOptions(data.ticketOpenedMonthOptions);
-      setUploadedFileOptions(data.uploadedMonthOptions); // Make sure backend returns 'uploadedMonthOptions' as filenames now
+      setUploadedFileOptions(data.uploadedMonthOptions);
+
+      // Reset selected month when file changes, to avoid invalid selections
+      // This is important because the available months will change.
+      setSelectedMonth("");
+
     } catch (err) {
       console.error("Error loading data in component:", err.message || String(err));
       setError(`Failed to load data: ${err.message || "Unknown error"}`);
@@ -48,16 +58,26 @@ function TicketIssuance() {
     }
   };
 
+  // --- MODIFIED useEffect for initial load AND when selectedFileName changes ---
   useEffect(() => {
-    loadData();
-  }, []);
+    // Initial load: no file selected, so pass null
+    loadData(null);
+  }, []); // Run once on mount to get the initial list of files
+
+  // --- NEW useEffect to react to selectedFileName changes ---
+  useEffect(() => {
+    if (selectedFileName !== null) { // Only re-load if a file is actually selected/deselected
+      loadData(selectedFileName);
+    }
+  }, [selectedFileName]); // Re-run whenever selectedFileName changes
 
   // Filtered rows for display based on selected filters and search term
+  // Your existing filtering logic is good for frontend display
   const filteredUnmatchedRows = unmatchedRows.filter((row) => {
     const matchesOpenedMonth =
       selectedMonth === "" || row.ticketOpenedMonth === selectedMonth;
     const matchesFileName =
-      selectedFileName === "" || row.fileName === selectedFileName; // Changed filter property
+      selectedFileName === "" || row.fileName === selectedFileName;
     const matchesSearch =
       searchTerm === "" ||
       (row.assignedTo &&
@@ -72,7 +92,7 @@ function TicketIssuance() {
     const matchesOpenedMonth =
       selectedMonth === "" || row.ticketOpenedMonth === selectedMonth;
     const matchesFileName =
-      selectedFileName === "" || row.fileName === selectedFileName; // Changed filter property
+      selectedFileName === "" || row.fileName === selectedFileName;
     return matchesOpenedMonth && matchesFileName;
   });
 
@@ -238,36 +258,41 @@ function TicketIssuance() {
                 />
                 <select
                   className="flex-1 p-2 border rounded-lg"
-                  value={selectedFileName} // Changed to selectedFileName
+                  value={selectedFileName}
                   onChange={(e) => {
-                    setSelectedFileName(e.target.value); // Changed to setSelectedFileName
+                    // When the file changes, update selectedFileName
+                    setSelectedFileName(e.target.value);
+                    // Reset expanded index
                     setExpandedIndex(null);
+                    // loadData will be called by the new useEffect hook for selectedFileName
                   }}
                 >
-                  <option value="">All Uploaded Files</option> {/* Changed label */}
-                  {uploadedFileOptions.map((fileName) => ( // Changed to uploadedFileOptions and fileName
+                  <option value="">All Uploaded Files</option>
+                  {uploadedFileOptions.map((fileName) => (
                     <option key={`uploaded-${fileName}`} value={fileName}>
                       {fileName}
                     </option>
                   ))}
                 </select>
 
-                {selectedFileName && (
-                <select
-                  className="flex-1 p-2 border rounded-lg"
-                  value={selectedMonth}
-                  onChange={(e) => {
-                    setSelectedMonth(e.target.value);
-                    setExpandedIndex(null);
-                  }}
-                >
-                  <option value="">All Opened Months</option>
-                  {ticketOpenedMonthOptions.map((month) => (
-                    <option key={`opened-${month}`} value={month}>
-                      {month}
-                    </option>
-                  ))}
-                </select>
+                {/* The month dropdown is conditionally rendered */}
+                {/* It will only show if a specific file is selected */}
+                {selectedFileName && ( // <--- Conditional rendering based on selectedFileName
+                  <select
+                    className="flex-1 p-2 border rounded-lg"
+                    value={selectedMonth}
+                    onChange={(e) => {
+                      setSelectedMonth(e.target.value);
+                      setExpandedIndex(null);
+                    }}
+                  >
+                    <option value="">All Opened Months</option>
+                    {ticketOpenedMonthOptions.map((month) => (
+                      <option key={`opened-${month}`} value={month}>
+                        {month}
+                      </option>
+                    ))}
+                  </select>
                 )}
                 <button
                   onClick={handleExportToExcel}
@@ -301,7 +326,7 @@ function TicketIssuance() {
                             {formatDateTimeFromISO(row.fileUploadFullDateTime)}
                           </p>
                           <p className="text-sm text-gray-600">
-                            Filename: {row.fileName || "N/A"} {/* Added filename display */}
+                            Filename: {row.fileName || "N/A"}
                           </p>
                         </div>
                         {expandedIndex === idx ? (
@@ -367,12 +392,12 @@ function TicketIssuance() {
           <div className="flex items-center justify-between mb-4">
             <h3 className="font-semibold mb-4">
               Completion Accuracy per Assigned Person - Ticket Issuance -{" "}
-              {selectedMonth && selectedFileName // Changed to selectedFileName
-                ? `for tickets opened in ${selectedMonth} from file ${selectedFileName}` // Updated text
+              {selectedMonth && selectedFileName // Changed condition
+                ? `for tickets opened in ${selectedMonth} from file ${selectedFileName}`
                 : selectedMonth
                 ? `for tickets opened in ${selectedMonth}`
-                : selectedFileName // Changed to selectedFileName
-                ? `for file ${selectedFileName}` // Updated text
+                : selectedFileName // Changed condition
+                ? `for file ${selectedFileName}`
                 : "Overall"}
             </h3>
             <div className="flex items-center gap-2">

@@ -16,49 +16,49 @@ const CACHE_EXPIRY_DURATION = 24 * 60 * 60 * 1000; // 24 hours
  * Checks for expiry and clears if stale.
  */
 const loadCacheFromLocalStorage = () => {
-    const cachedData = localStorage.getItem('excelFileCache');
-    const cacheExpiry = localStorage.getItem('excelFileCacheExpiry');
+  const cachedData = localStorage.getItem('excelFileCache');
+  const cacheExpiry = localStorage.getItem('excelFileCacheExpiry');
 
-    if (cachedData && cacheExpiry) {
-        const now = new Date().getTime();
-        if (now < parseInt(cacheExpiry, 10)) {
-            try {
-                // Convert string back to Map. JSON.parse will give plain objects, need to reconstruct Map.
-                const parsedData = JSON.parse(cachedData);
-                for (const [key, value] of Object.entries(parsedData)) {
-                    excelFileCache.set(key, value);
-                }
-                console.log('Cache loaded from localStorage and is valid.');
-            } catch (e) {
-                console.error('Failed to parse cache from localStorage:', e);
-                // Clear corrupted cache
-                localStorage.removeItem('excelFileCache');
-                localStorage.removeItem('excelFileCacheExpiry');
-            }
-        } else {
-            console.log('Cache in localStorage expired. Clearing cache.');
-            localStorage.removeItem('excelFileCache');
-            localStorage.removeItem('excelFileCacheExpiry');
+  if (cachedData && cacheExpiry) {
+    const now = new Date().getTime();
+    if (now < parseInt(cacheExpiry, 10)) {
+      try {
+        // Convert string back to Map. JSON.parse will give plain objects, need to reconstruct Map.
+        const parsedData = JSON.parse(cachedData);
+        for (const [key, value] of Object.entries(parsedData)) {
+          excelFileCache.set(key, value);
         }
+        console.log('Cache loaded from localStorage and is valid.');
+      } catch (e) {
+        console.error('Failed to parse cache from localStorage:', e);
+        // Clear corrupted cache
+        localStorage.removeItem('excelFileCache');
+        localStorage.removeItem('excelFileCacheExpiry');
+      }
+    } else {
+      console.log('Cache in localStorage expired. Clearing cache.');
+      localStorage.removeItem('excelFileCache');
+      localStorage.removeItem('excelFileCacheExpiry');
     }
+  }
 };
 
 /**
  * Saves the current in-memory cache to localStorage with an expiry.
  */
 const saveCacheToLocalStorage = () => {
-    try {
-        // Convert Map to plain object for JSON serialization
-        const cacheAsObject = {};
-        for (const [key, value] of excelFileCache.entries()) {
-            cacheAsObject[key] = value;
-        }
-        localStorage.setItem('excelFileCache', JSON.stringify(cacheAsObject));
-        localStorage.setItem('excelFileCacheExpiry', (new Date().getTime() + CACHE_EXPIRY_DURATION).toString());
-        console.log('Cache saved to localStorage.');
-    } catch (e) {
-        console.error('Failed to save cache to localStorage:', e);
+  try {
+    // Convert Map to plain object for JSON serialization
+    const cacheAsObject = {};
+    for (const [key, value] of excelFileCache.entries()) {
+      cacheAsObject[key] = value;
     }
+    localStorage.setItem('excelFileCache', JSON.stringify(cacheAsObject));
+    localStorage.setItem('excelFileCacheExpiry', (new Date().getTime() + CACHE_EXPIRY_DURATION).toString());
+    console.log('Cache saved to localStorage.');
+  } catch (e) {
+    console.error('Failed to save cache to localStorage:', e);
+  }
 };
 
 
@@ -159,14 +159,17 @@ export const calculateAccuracy = (total, incomplete) => {
   return (((total - incomplete) / total) * 100).toFixed(2);
 };
 
+
 /**
  * Fetches Excel files from Supabase Storage, processes them, and returns relevant data,
  * while caching each file’s processed output keyed by file.name + file.created_at.
  *
  * On subsequent calls, if a given file’s created_at hasn’t changed, it returns the cached
  * processedRows/unmatchedRows immediately without re‐fetching from Supabase.
+ *
+ * @param {string | null} selectedFileName - The name of the file to filter months by, or null for all months.
  */
-export const fetchAndProcessExcelData = async () => {
+export const fetchAndProcessExcelData = async (selectedFileName = null) => {
   // Load cache from localStorage at the beginning of the function call
   loadCacheFromLocalStorage();
 
@@ -175,6 +178,9 @@ export const fetchAndProcessExcelData = async () => {
   const allProcessed = [];
   const ticketMonthsSet = new Set(); // months from 'Opened' column
   const uploadedFilesSet = new Set(); // Changed from uploadMonthsSet to hold filenames
+
+  // This new set will hold months specifically for the selected file
+  const selectedFileTicketMonthsSet = new Set(); 
 
   try {
     // 1) List all files in "uploads/excels" folder (sorted by name asc)
@@ -194,7 +200,7 @@ export const fetchAndProcessExcelData = async () => {
         unmatchedRows: [],
         allProcessedRows: [],
         ticketOpenedMonthOptions: [],
-        uploadedMonthOptions: [], // This will now contain filenames
+        uploadedMonthOptions: [],
       };
     }
 
@@ -225,7 +231,12 @@ export const fetchAndProcessExcelData = async () => {
         fileProcessedRows.forEach((row) => {
           const tMonth = row.ticketOpenedMonth;
           if (tMonth && tMonth !== "Invalid Date") {
+            // Add to the main set for all files
             ticketMonthsSet.add(tMonth);
+            // If this is the selected file, add to its specific month set
+            if (selectedFileName && fileName === selectedFileName) {
+              selectedFileTicketMonthsSet.add(tMonth);
+            }
           }
         });
 
@@ -334,7 +345,11 @@ export const fetchAndProcessExcelData = async () => {
 
         const ticketOpenedMonth = getMonthFromDate(openedFormatted);
         if (ticketOpenedMonth !== "Invalid Date") {
-          ticketMonthsSet.add(ticketOpenedMonth);
+          ticketMonthsSet.add(ticketOpenedMonth); // Add to the main set
+          // If this is the selected file, add to its specific month set
+          if (selectedFileName && fileName === selectedFileName) {
+            selectedFileTicketMonthsSet.add(ticketOpenedMonth);
+          }
         }
 
         const processedRow = {
@@ -364,7 +379,7 @@ export const fetchAndProcessExcelData = async () => {
         processedRows: fileProcessedRows,
         unmatchedRows: fileUnmatchedRows,
       });
-      
+
       // 7) Add this file’s rows to the global aggregates
       allProcessed.push(...fileProcessedRows);
       allUnmatched.push(...fileUnmatchedRows);
@@ -383,7 +398,15 @@ export const fetchAndProcessExcelData = async () => {
         return mb - ma;
       });
 
-    const ticketOpenedMonthOptions = sortMonthsDesc(Array.from(ticketMonthsSet));
+    // Determine which set of months to use for the dropdown
+    let monthsToReturn;
+    if (selectedFileName) {
+      monthsToReturn = selectedFileTicketMonthsSet;
+    } else {
+      monthsToReturn = ticketMonthsSet;
+    }
+
+    const ticketOpenedMonthOptions = sortMonthsDesc(Array.from(monthsToReturn));
     // Sort filenames alphabetically for consistency
     const uploadedFileOptions = Array.from(uploadedFilesSet).sort();
 
