@@ -1,127 +1,93 @@
 import React, { useState } from 'react';
-import supabase from './../../backend/supabase/supabase'; // your Supabase client
+import Papa from 'papaparse';
+import supabase from './../../backend/supabase/supabase'; // Supabase client
+// import TableRowCount from './fetchdatarow';
 
 const FileUploader = () => {
   const [file, setFile] = useState(null);
-  const [uploading, setUploading] = useState(false);
-  const [uploadResult, setUploadResult] = useState(null);
-  const [fileUrl, setFileUrl] = useState(null);
-  const [csvContent, setCsvContent] = useState(null);
-
-  const bucketName = 'uploads'; // your bucket name
+  const [message, setMessage] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [tableName, setTableName] = useState('');
 
   const handleFileChange = (e) => {
     const selectedFile = e.target.files[0];
+    if (!selectedFile) return;
+
     setFile(selectedFile);
-    setUploadResult(null);
-    setFileUrl(null);
-    setCsvContent(null);
-    if (selectedFile) {
-      console.log('Selected file:', selectedFile.name, selectedFile.type);
-    }
+    setMessage('');
+
+    // Convert file name to a valid SQL table name
+    const rawName = selectedFile.name.replace(/\.[^/.]+$/, ""); // remove .csv
+    const timestamp = Date.now(); // avoid collisions
+    const safeName = rawName.toLowerCase().replace(/[^a-z0-9_]/g, "_");
+    setTableName(`csv_${safeName}_${timestamp}`);
   };
 
   const handleUpload = async () => {
-    if (!file) {
-      alert('Please select a file first!');
-      return;
-    }
+    if (!file || !tableName) return alert('Please select a CSV file.');
 
-    setUploading(true);
+    setLoading(true);
+    Papa.parse(file, {
+      header: true,
+      skipEmptyLines: true,
+      complete: async (results) => {
+        const headers = results.meta.fields;
+        const rows = results.data;
 
-    // Unique file path with timestamp prefix to avoid collisions
-    const filePath = `uploads/${Date.now()}_${file.name}`;
+        try {
+          // Step 1: Create table if not exists
+          const createSQL = `
+            CREATE TABLE IF NOT EXISTS "${tableName}" (
+              ${headers.map(h => `"${h}" TEXT`).join(', ')}
+            );
+          `;
+          await supabase.rpc('run_sql', { sql: createSQL });
 
-    try {
-      // Upload the file to Supabase Storage
-      const { data, error } = await supabase.storage
-        .from(bucketName)
-        .upload(filePath, file, {
-          cacheControl: '3600',
-          upsert: false,
-        });
+          // Step 2: Attempt to add missing columns
+          for (const header of headers) {
+            const alterSQL = `ALTER TABLE "${tableName}" ADD COLUMN IF NOT EXISTS "${header}" TEXT;`;
+            await supabase.rpc('run_sql', { sql: alterSQL });
+          }
 
-      if (error) {
-        console.error('Upload error:', error);
-        alert('Upload error: ' + error.message);
-        setUploading(false);
-        return;
+          // Step 3: Insert rows in chunks
+          const chunkSize = 500;
+          for (let i = 0; i < rows.length; i += chunkSize) {
+            const chunk = rows.slice(i + 0, i + chunkSize);
+            const { error: insertError } = await supabase
+              .from(tableName)
+              .insert(chunk);
+            if (insertError) throw insertError;
+          }
+
+          setMessage(`✅ Uploaded ${rows.length} rows to '${tableName}'.`);
+        } catch (err) {
+          console.error(err);
+          setMessage('❌ Upload failed: ' + err.message);
+        } finally {
+          setLoading(false);
+        }
+      },
+      error: (error) => {
+        console.error('Parsing failed:', error);
+        setMessage('Parsing failed: ' + error.message);
+        setLoading(false);
       }
-
-      setUploadResult(`File uploaded successfully! Path: ${data.path}`);
-
-      // Create a signed URL valid for 1 hour (3600 seconds)
-      const { signedURL, error: signError } = await supabase.storage
-        .from(bucketName)
-        .createSignedUrl(data.path, 3600);
-
-      if (signError) {
-        console.error('Signed URL error:', signError);
-        alert('Error creating signed URL: ' + signError.message);
-      } else {
-        setFileUrl(signedURL);
-      }
-
-    } catch (error) {
-      console.error('Unexpected error during upload:', error);
-      alert('Unexpected error: ' + error.message);
-    } finally {
-      setUploading(false);
-    }
-  };
-
-  const fetchCSVContent = async () => {
-    console.log('Fetching CSV from URL:', fileUrl);
-    if (!fileUrl) {
-      alert('No file URL to fetch!');
-      return;
-    }
-    try {
-      const response = await fetch(fileUrl);
-      if (!response.ok) throw new Error('Network response was not ok');
-      const text = await response.text();
-      setCsvContent(text);
-      console.log('CSV content:', text);
-      alert('CSV content fetched! Check the console or textarea below.');
-    } catch (error) {
-      alert('Failed to fetch CSV: ' + error.message);
-    }
+    });
   };
 
   return (
-    <div style={{ maxWidth: 400, margin: '20px auto', textAlign: 'center' }}>
-      <input
-        type="file"
-        accept=".csv,.xlsx,.xls"
-        onChange={handleFileChange}
-        disabled={uploading}
-        style={{ marginBottom: 12 }}
-      />
+    <div style={{ maxWidth: 500, margin: 'auto', textAlign: 'center' }}>
+      <h2>CSV to Supabase Uploader</h2>
+      <input type="file" accept=".csv" onChange={handleFileChange} />
+      {tableName && <p><strong>Target Table:</strong> {tableName}</p>}
       <br />
-      <button onClick={handleUpload} disabled={uploading || !file}>
-        {uploading ? 'Uploading...' : 'Upload'}
+      <button onClick={handleUpload} disabled={loading || !file}>
+        {loading ? 'Uploading...' : 'Upload to Supabase'}
       </button>
+      {message && <p style={{ marginTop: 20 }}>{message}</p>}
 
-      {uploadResult && <p style={{ marginTop: 20 }}>{uploadResult}</p>}
+      {/* <TableRowCount latestTableName={tableName} /> */}
 
-      {fileUrl && (
-        <>
-          <p>
-            File URL: <br />
-            <a href={fileUrl} target="_blank" rel="noopener noreferrer">{fileUrl}</a>
-          </p>
-          <button onClick={fetchCSVContent}>Fetch CSV Content</button>
-        </>
-      )}
-
-      {csvContent && (
-        <textarea
-          readOnly
-          value={csvContent}
-          rows={10}
-          style={{ width: '100%', marginTop: 20 }}
-        />
-      )}
     </div>
   );
 };
