@@ -11,6 +11,7 @@ import {
 } from "recharts";
 import { fetchAlarmTypeLineData } from "../../../backend/functions/alarmAORMinUtils";
 import "react-loading-skeleton/dist/skeleton.css";
+import LineSkeleton from "../../UI/LineChartSkeleton"; // Import the skeleton component
 
 const COLORS = [
   "#377EB8", // Blue
@@ -63,9 +64,8 @@ const AlarmTypeLineGraph = () => {
   return (
     <div className="p-6 bg-white rounded-md shadow">
       {isLoading ? (
-        <div className="flex justify-center items-center h-[300px]">
-          <div className="w-6 h-6 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin" />
-          <p className="ml-3 text-gray-600">Loading Please Wait...</p>
+        <div className="h-[350px]">
+          <LineSkeleton />
         </div>
       ) : chartData.length > 0 ? (
         <ResponsiveContainer width="100%" height={350}>
@@ -87,7 +87,11 @@ const AlarmTypeLineGraph = () => {
             />
             <Tooltip
               itemStyle={{ color: "#333", padding: 4 }}
-              labelStyle={{ color: "#000", fontWeight: "bold", marginBottom: 4 }}
+              labelStyle={{
+                color: "#000",
+                fontWeight: "bold",
+                marginBottom: 4,
+              }}
               formatter={(value, name) => [`${value}`, name]}
               labelFormatter={(label) => `Date: ${formatDate(label)}`}
               wrapperStyle={{

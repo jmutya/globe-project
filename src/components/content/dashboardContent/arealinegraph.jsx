@@ -10,6 +10,7 @@ import {
   CartesianGrid,
 } from "recharts";
 import { fetchAreaAlarmData } from "../../../backend/functions/alarmAreaLinegraphUtils";
+import LineSkeleton from "../../UI/LineChartSkeleton"; // Import the skeleton component
 
 // A slightly refreshed color palette, feel free to adjust
 const COLORS = [
@@ -66,7 +67,7 @@ const AreaLineGraph = () => {
   const CustomTooltip = ({ active, payload, label }) => {
     if (active && payload && payload.length) {
       // Filter out items with value 0 if you don't want them in the tooltip
-      const relevantPayload = payload.filter(item => item.value > 0);
+      const relevantPayload = payload.filter((item) => item.value > 0);
 
       if (relevantPayload.length === 0) return null; // If no relevant data, don't show tooltip
 
@@ -75,7 +76,9 @@ const AreaLineGraph = () => {
           <p className="font-semibold text-gray-800 mb-2">
             Date: {formatDate(label)}
           </p>
-          <div className="flex flex-wrap gap-x-4 gap-y-2"> {/* Flex container for horizontal layout */}
+          <div className="flex flex-wrap gap-x-4 gap-y-2">
+            {" "}
+            {/* Flex container for horizontal layout */}
             {relevantPayload.map((entry, index) => (
               <div key={`item-${index}`} className="flex items-center">
                 <span
@@ -99,12 +102,9 @@ const AreaLineGraph = () => {
 
   return (
     <div className="bg-white rounded-lg shadow-xl p-6 sm:p-8 border border-gray-100">
-  
-
       {isLoading ? (
-        <div className="flex flex-col items-center justify-center h-[350px] text-gray-600">
-          <div className="w-10 h-10 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
-          <p className="mt-4 text-lg">Loading Alarm Data...</p>
+        <div className="h-[350px]">
+          <LineSkeleton />
         </div>
       ) : chartData.length > 0 ? (
         <ResponsiveContainer width="100%" height={350}>
