@@ -1,26 +1,89 @@
 import * as XLSX from "xlsx";
 import supabase from "../supabase/supabase"; // Adjust path if necessary
 
+/**
+ * In-memory cache for Excel files.
+ * Key: file.name
+ * Value: { fileUploadFullDateTime: string, processedRows: Array, unmatchedRows: Array }
+ */
+const excelFileCache = new Map();
+
+// Define a cache expiry duration (e.g., 24 hours in milliseconds)
+const CACHE_EXPIRY_DURATION = 24 * 60 * 60 * 1000; // 24 hours
+
+/**
+ * Loads the cache from localStorage.
+ * Checks for expiry and clears if stale.
+ */
+const loadCacheFromLocalStorage = () => {
+  const cachedData = localStorage.getItem('excelFileCache');
+  const cacheExpiry = localStorage.getItem('excelFileCacheExpiry');
+
+  if (cachedData && cacheExpiry) {
+    const now = new Date().getTime();
+    if (now < parseInt(cacheExpiry, 10)) {
+      try {
+        // Convert string back to Map. JSON.parse will give plain objects, need to reconstruct Map.
+        const parsedData = JSON.parse(cachedData);
+        for (const [key, value] of Object.entries(parsedData)) {
+          excelFileCache.set(key, value);
+        }
+        console.log('Cache loaded from localStorage and is valid.');
+      } catch (e) {
+        console.error('Failed to parse cache from localStorage:', e);
+        // Clear corrupted cache
+        localStorage.removeItem('excelFileCache');
+        localStorage.removeItem('excelFileCacheExpiry');
+      }
+    } else {
+      console.log('Cache in localStorage expired. Clearing cache.');
+      localStorage.removeItem('excelFileCache');
+      localStorage.removeItem('excelFileCacheExpiry');
+    }
+  }
+};
+
+/**
+ * Saves the current in-memory cache to localStorage with an expiry.
+ */
+const saveCacheToLocalStorage = () => {
+  try {
+    // Convert Map to plain object for JSON serialization
+    const cacheAsObject = {};
+    for (const [key, value] of excelFileCache.entries()) {
+      cacheAsObject[key] = value;
+    }
+    localStorage.setItem('excelFileCache', JSON.stringify(cacheAsObject));
+    localStorage.setItem('excelFileCacheExpiry', (new Date().getTime() + CACHE_EXPIRY_DURATION).toString());
+    console.log('Cache saved to localStorage.');
+  } catch (e) {
+    console.error('Failed to save cache to localStorage:', e);
+  }
+};
+
+
+/**
+ * Converts an Excel‐style serial date or ISO string into "YYYY/MM/DD".
+ */
 const formatOpenedDate = (value) => {
   if (!value) return "";
   if (typeof value === "number") {
     const date = new Date((value - 25569) * 86400 * 1000);
-    const yyyy = date.getFullYear(); // Corrected variable name
+    const yyyy = date.getFullYear();
     const mm = String(date.getMonth() + 1).padStart(2, "0");
     const dd = String(date.getDate()).padStart(2, "0");
     return `${yyyy}/${mm}/${dd}`;
   }
-  // If already a string, assume it's a date string and try to format
+  // If already a string, parse and re‐format if valid
   try {
     const date = new Date(value);
     if (!isNaN(date.getTime())) {
-      const yyyy = date.getFullYear(); // Corrected variable name
+      const yyyy = date.getFullYear();
       const mm = String(date.getMonth() + 1).padStart(2, "0");
       const dd = String(date.getDate()).padStart(2, "0");
       return `${yyyy}/${mm}/${dd}`;
     }
   } catch (e) {
-    // Fallback for invalid date strings
     return value;
   }
   return value;
@@ -28,8 +91,6 @@ const formatOpenedDate = (value) => {
 
 /**
  * Extracts "MM/YYYY" from a "YYYY/MM/DD" date string.
- * @param {string} dateStr - The date string in "YYYY/MM/DD" format.
- * @returns {string} "MM/YYYY" string or "Invalid Date".
  */
 const getMonthFromDate = (dateStr) => {
   if (!dateStr || dateStr === "Invalid Date") return "Invalid Date";
@@ -41,9 +102,24 @@ const getMonthFromDate = (dateStr) => {
 };
 
 /**
+ * Formats an ISO date string (from Supabase 'created_at') to "MM/YYYY".
+ * We only use the first 7 characters, but still validate.
+ */
+const getUploadMonthFromISO = (isoDateString) => {
+  if (!isoDateString) return "Invalid Date";
+  try {
+    const date = new Date(isoDateString);
+    if (isNaN(date.getTime())) return "Invalid Date";
+    const mm = String(date.getMonth() + 1).padStart(2, "0");
+    const yyyy = date.getFullYear();
+    return `${mm}/${yyyy}`;
+  } catch {
+    return "Invalid Date";
+  }
+};
+
+/**
  * Formats an ISO date string (from Supabase 'created_at') to "MM/DD/YYYY HH:MM AM/PM".
- * @param {string} isoDateString - The ISO date string.
- * @returns {string} Formatted date-time string or "N/A" / "Invalid Date".
  */
 export const formatDateTimeFromISO = (isoDateString) => {
   if (!isoDateString) return "N/A";
@@ -54,7 +130,7 @@ export const formatDateTimeFromISO = (isoDateString) => {
     }
     const mm = String(date.getMonth() + 1).padStart(2, "0");
     const dd = String(date.getDate()).padStart(2, "0");
-    const yyyy = date.getFullYear(); // Corrected variable name
+    const yyyy = date.getFullYear();
 
     let hours = date.getHours();
     const minutes = String(date.getMinutes()).padStart(2, "0");
@@ -77,29 +153,37 @@ export const formatDateTimeFromISO = (isoDateString) => {
 
 /**
  * Calculates accuracy percentage.
- * @param {number} total - Total number of items.
- * @param {number} incomplete - Number of incomplete items.
- * @returns {string} Accuracy percentage formatted to two decimal places.
  */
 export const calculateAccuracy = (total, incomplete) => {
   if (total === 0) return "0.00";
   return (((total - incomplete) / total) * 100).toFixed(2);
 };
 
+
 /**
- * Fetches Excel files from Supabase Storage, processes them, and returns relevant data.
- * Uses createSignedUrl for private file access.
- * @returns {Promise<object>} An object containing unmatchedRows, allProcessedRows,
- * ticketOpenedMonthOptions, and uploadedMonthOptions.
- * @throws {Error} If there's an error listing files, generating signed URLs, or parsing Excel.
+ * Fetches Excel files from Supabase Storage, processes them, and returns relevant data,
+ * while caching each file’s processed output keyed by file.name + file.created_at.
+ *
+ * On subsequent calls, if a given file’s created_at hasn’t changed, it returns the cached
+ * processedRows/unmatchedRows immediately without re‐fetching from Supabase.
+ *
+ * @param {string | null} selectedFileName - The name of the file to filter months by, or null for all months.
  */
-export const fetchAndProcessExcelData = async () => {
-  let allUnmatched = [];
-  let allProcessed = [];
-  const ticketMonthsSet = new Set(); // For months from 'Opened' column
-  const uploadMonthsSet = new Set(); // For months from Supabase 'created_at'
+export const fetchAndProcessExcelData = async (selectedFileName = null) => {
+  // Load cache from localStorage at the beginning of the function call
+  loadCacheFromLocalStorage();
+
+  // These will hold the aggregated results across ALL files:
+  const allUnmatched = [];
+  const allProcessed = [];
+  const ticketMonthsSet = new Set(); // months from 'Opened' column
+  const uploadedFilesSet = new Set(); // Changed from uploadMonthsSet to hold filenames
+
+  // This new set will hold months specifically for the selected file
+  const selectedFileTicketMonthsSet = new Set(); 
 
   try {
+    // 1) List all files in "uploads/excels" folder (sorted by name asc)
     const { data: files, error: listError } = await supabase.storage
       .from("uploads")
       .list("excels", { sortBy: { column: "name", order: "asc" } });
@@ -110,6 +194,8 @@ export const fetchAndProcessExcelData = async () => {
 
     if (!files || files.length === 0) {
       console.log("No Excel files found in the 'excels' folder.");
+      // Save empty cache to localStorage if no files are found or loaded to ensure expiry is updated
+      saveCacheToLocalStorage(); // Ensure cache expiry is set even if no files
       return {
         unmatchedRows: [],
         allProcessedRows: [],
@@ -118,122 +204,129 @@ export const fetchAndProcessExcelData = async () => {
       };
     }
 
+    // 2) Loop through each file (& skip ".emptyFolderPlaceholder")
     for (const file of files) {
-      // Skip the .emptyFolderPlaceholder file
       if (file.name === ".emptyFolderPlaceholder") {
-        console.log("Skipping .emptyFolderPlaceholder file.");
         continue;
       }
 
-      const fileUploadFullDateTime = file.created_at; // Raw ISO string
-      // Use formatDateTimeFromISO and substring to get "MM/YYYY" for dropdown
-      const fileUploadMonth = formatDateTimeFromISO(file.created_at).substring(
-        0,
-        7
-      );
+      const fileName = file.name;
+      const fileUploadFullDateTime = file.created_at; // ISO string
+      uploadedFilesSet.add(fileName); // Add filename to the set
 
-      if (fileUploadMonth !== "Invalid Date") {
-        uploadMonthsSet.add(fileUploadMonth);
+      // 3) Check cache: do we already have an entry for this file AND same timestamp?
+      const cachedEntry = excelFileCache.get(fileName);
+      if (
+        cachedEntry &&
+        cachedEntry.fileUploadFullDateTime === fileUploadFullDateTime
+      ) {
+        // Cache hit: reuse processedRows & unmatchedRows
+        const { processedRows: fileProcessedRows, unmatchedRows: fileUnmatchedRows } = cachedEntry;
+
+        // Push to aggregated arrays
+        allProcessed.push(...fileProcessedRows);
+        allUnmatched.push(...fileUnmatchedRows);
+
+        // Re‐populate month sets from the cached rows
+        fileProcessedRows.forEach((row) => {
+          const tMonth = row.ticketOpenedMonth;
+          if (tMonth && tMonth !== "Invalid Date") {
+            // Add to the main set for all files
+            ticketMonthsSet.add(tMonth);
+            // If this is the selected file, add to its specific month set
+            if (selectedFileName && fileName === selectedFileName) {
+              selectedFileTicketMonthsSet.add(tMonth);
+            }
+          }
+        });
+
+        // Skip re‐processing this file entirely
+        continue;
       }
 
-      const filePath = `excels/${file.name}`;
-
-      // --- Using createSignedUrl for private access ---
-      // This call requires the client to be authenticated and have RLS permissions
+      // 4) Cache miss (or changed file): fetch, parse, and process from scratch
+      const filePath = `excels/${fileName}`;
       const { data: signedUrlData, error: signedUrlError } =
-        await supabase.storage.from("uploads").createSignedUrl(filePath, 60); // URL valid for 60 seconds
+        await supabase.storage.from("uploads").createSignedUrl(filePath, 60); // Signed URL validity
 
-      if (signedUrlError) {
+      if (signedUrlError || !signedUrlData || !signedUrlData.signedUrl) {
         console.warn(
-          `Could not generate signed URL for ${file.name}: ${
-            signedUrlError.message || String(signedUrlError)
+          `Could not generate signed URL for ${fileName}: ${
+            (signedUrlError && signedUrlError.message) || "No signedUrl"
           }. Skipping.`
         );
         continue;
       }
 
-      if (!signedUrlData || !signedUrlData.signedUrl) {
-        console.warn(`No signed URL received for ${file.name}. Skipping.`);
-        continue;
-      }
-
-      // Use the generated signed URL to fetch the file content
       const response = await fetch(signedUrlData.signedUrl);
       if (!response.ok) {
-        throw new Error(
-          `HTTP error! status: ${response.status} for signed URL of ${file.name}`
+        console.warn(
+          `HTTP error! status: ${response.status} fetching ${fileName}. Skipping.`
         );
+        continue;
       }
 
       const arrayBuffer = await response.arrayBuffer();
       const workbook = XLSX.read(arrayBuffer, { type: "array" });
 
-      // --- NEW LOGIC: Pre-process the second sheet into a lookup map ---
-      let firstUpdatedByIdToNameMap = new Map();
-      const secondSheetName = workbook.SheetNames[1]; // Get the name of the second sheet (index 1)
-
+      // --- Build ID→Name map from second sheet (if it exists) ---
+      const firstUpdatedByIdToNameMap = new Map();
+      const secondSheetName = workbook.SheetNames[1];
       if (secondSheetName) {
         const sheet1Data = XLSX.utils.sheet_to_json(
           workbook.Sheets[secondSheetName],
-          {
-            defval: "",
-          }
+          { defval: "" }
         );
-        // Populate the map: ID -> Name
         sheet1Data.forEach((row) => {
-          const ID = String(row["ID"]).trim(); // Ensure ID is a string and trimmed
-          const name = String(row["Name"]).trim(); // Ensure Name is a string and trimmed
+          const ID = String(row["ID"] || "").trim();
+          const name = String(row["Name"] || "").trim();
           if (ID) {
             firstUpdatedByIdToNameMap.set(ID, name || "Unknown Name");
           }
         });
       } else {
         console.warn(
-          `Excel file ${file.name} does not have a second sheet for ID-to-Name mapping.`
+          `Excel file ${fileName} does not have a second sheet for ID-to-Name mapping.`
         );
-        // Continue processing the first sheet, but firstupdatedby might remain as original ID if not found
       }
-      // --- END NEW LOGIC ---
 
-      const sheet = XLSX.utils.sheet_to_json(
+      // 5) Process the first sheet, row by row
+      const rawSheetRows = XLSX.utils.sheet_to_json(
         workbook.Sheets[workbook.SheetNames[0]],
-        {
-          defval: "", // Ensure empty cells are empty strings
-        }
+        { defval: "" }
       );
 
-      const requiredTicketIssuanceFields = [
+      const requiredFields = [
         "u_failure_category",
         "u_cause",
         "u_aor001",
         "u_aor002",
       ];
 
-      sheet.forEach((row) => {
-        const state = row["state"];
-        if (state && String(state).trim().toLowerCase() === "Cancelled") {
-          return; // Skip this row
+      // Store just for this file, so we can cache later:
+      const fileProcessedRows = [];
+      const fileUnmatchedRows = [];
+
+      rawSheetRows.forEach((row) => {
+        const state = String(row["state"] || "").trim().toLowerCase();
+        if (state === "cancelled") {
+          return; // skip cancelled tickets
         }
 
         let assignedTo = row["caller_id"];
         const callervalue = row["assigned_to"];
-        let firstupdatedbyFromMainSheet = String(
-          row["u_ntg_first_updated_by"] || ""
-        ).trim(); // Get ID from first sheet
+        const firstUpdatedId = String(row["u_ntg_first_updated_by"] || "").trim();
 
-        const normalizedAssignedTo = String(assignedTo || "")
-          .trim()
-          .toLowerCase();
+        const normalizedAssignedTo = String(assignedTo || "").trim().toLowerCase();
         const normalizedCallervalue = String(callervalue || "").trim();
 
         if (normalizedAssignedTo === "mycom integration user") {
-          if (normalizedCallervalue === "") {
+          if (!normalizedCallervalue) {
             return;
           } else {
-            // Lookup the name using the ID from the first sheet in our pre-processed map
+            // Replace with mapped name if available
             assignedTo =
-              firstUpdatedByIdToNameMap.get(firstupdatedbyFromMainSheet) ||
-              "N/A";
+              firstUpdatedByIdToNameMap.get(firstUpdatedId) || "N/A";
           }
         }
 
@@ -243,8 +336,7 @@ export const fetchAndProcessExcelData = async () => {
 
         const missingColumns = [];
         let hasError = false;
-
-        requiredTicketIssuanceFields.forEach((field) => {
+        requiredFields.forEach((field) => {
           if (!row[field] || String(row[field]).trim() === "") {
             missingColumns.push(field);
             hasError = true;
@@ -253,16 +345,20 @@ export const fetchAndProcessExcelData = async () => {
 
         const ticketOpenedMonth = getMonthFromDate(openedFormatted);
         if (ticketOpenedMonth !== "Invalid Date") {
-          ticketMonthsSet.add(ticketOpenedMonth);
+          ticketMonthsSet.add(ticketOpenedMonth); // Add to the main set
+          // If this is the selected file, add to its specific month set
+          if (selectedFileName && fileName === selectedFileName) {
+            selectedFileTicketMonthsSet.add(ticketOpenedMonth);
+          }
         }
 
         const processedRow = {
           number,
           assignedTo: assignedTo || "Unknown",
           opened: openedFormatted,
-          ticketOpenedMonth: ticketOpenedMonth,
-          fileUploadMonth: fileUploadMonth,
-          fileUploadFullDateTime: fileUploadFullDateTime,
+          ticketOpenedMonth,
+          fileName, // Add fileName to each processedRow
+          fileUploadFullDateTime,
           hasError,
           missingColumns,
           failureCategory: row["u_failure_category"],
@@ -270,31 +366,55 @@ export const fetchAndProcessExcelData = async () => {
           aor001: row["u_aor001"],
           aor002: row["u_aor002"],
         };
-        allProcessed.push(processedRow);
 
+        fileProcessedRows.push(processedRow);
         if (hasError) {
-          allUnmatched.push(processedRow);
+          fileUnmatchedRows.push(processedRow);
         }
       });
+
+      // 6) Cache this file’s processed results
+      excelFileCache.set(fileName, {
+        fileUploadFullDateTime,
+        processedRows: fileProcessedRows,
+        unmatchedRows: fileUnmatchedRows,
+      });
+
+      // 7) Add this file’s rows to the global aggregates
+      allProcessed.push(...fileProcessedRows);
+      allUnmatched.push(...fileUnmatchedRows);
+      // (ticketMonthsSet has already been added per row, uploadedFilesSet per file)
+    } // end for(files)
+
+    // Save the entire updated cache to localStorage after all files are processed
+    saveCacheToLocalStorage();
+
+    // 8) Sort month dropdowns descending (newest first):
+    const sortMonthsDesc = (arr) =>
+      arr.sort((a, b) => {
+        const [ma, ya] = a.split("/").map(Number);
+        const [mb, yb] = b.split("/").map(Number);
+        if (ya !== yb) return yb - ya;
+        return mb - ma;
+      });
+
+    // Determine which set of months to use for the dropdown
+    let monthsToReturn;
+    if (selectedFileName) {
+      monthsToReturn = selectedFileTicketMonthsSet;
+    } else {
+      monthsToReturn = ticketMonthsSet;
     }
 
-    const sortedTicketMonths = Array.from(ticketMonthsSet).sort((a, b) => {
-      const [ma, ya] = a.split("/").map(Number);
-      const [mb, yb] = b.split("/").map(Number);
-      return yb !== ya ? yb - ya : mb - ma;
-    });
-
-    const sortedUploadedMonths = Array.from(uploadMonthsSet).sort((a, b) => {
-      const [ma, ya] = a.split("/").map(Number);
-      const [mb, yb] = b.split("/").map(Number);
-      return yb !== ya ? yb - ya : mb - ma;
-    });
+    const ticketOpenedMonthOptions = sortMonthsDesc(Array.from(monthsToReturn));
+    // Sort filenames alphabetically for consistency
+    const uploadedFileOptions = Array.from(uploadedFilesSet).sort();
 
     return {
       unmatchedRows: allUnmatched,
       allProcessedRows: allProcessed,
-      ticketOpenedMonthOptions: sortedTicketMonths,
-      uploadedMonthOptions: sortedUploadedMonths,
+      ticketOpenedMonthOptions,
+      uploadedMonthOptions: uploadedFileOptions, // Renamed to accurately reflect filenames
     };
   } catch (err) {
     console.error(

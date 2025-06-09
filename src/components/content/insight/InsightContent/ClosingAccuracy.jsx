@@ -1,7 +1,6 @@
+// src/components/ClosingAccuracy/ClosingAccuracy.jsx
+
 import React, { useEffect, useState } from "react";
-import * as XLSX from "xlsx";
-import AccuracyProgress from "../../InsightsContent/AccuracyProgress";
-import supabase from "../../../../backend/supabase/supabase";
 import {
   ExclamationCircleIcon,
   ChevronUpIcon,
@@ -10,12 +9,19 @@ import {
 import { ArrowUp, ArrowDown, FileText } from "lucide-react";
 import html2canvas from "html2canvas";
 import jsPDF from "jspdf";
+import * as XLSX from "xlsx";
 
-// Format Excel serial to "YYYY/MM/DD"
+import AccuracyProgress from "../../InsightsContent/AccuracyProgress";
+import {
+  fetchAndProcessExcelData,
+  formatDateTimeFromISO,
+  calculateAccuracy,
+} from "../../../../backend/insightfunctions/clossingaccuracyfunctions"; // <-- import the service
+
+// Local helper: Format Excel serial to "YYYY/MM/DD"
 const formatOpenedDate = (value) => {
   if (!value) return "";
   if (typeof value === "number") {
-    // Excel dates start from Jan 1, 1900. 25569 is the number of days from 1900-01-01 to 1970-01-01.
     const date = new Date((value - 25569) * 86400 * 1000);
     const yyyy = date.getFullYear();
     const mm = String(date.getMonth() + 1).padStart(2, "0");
@@ -25,51 +31,18 @@ const formatOpenedDate = (value) => {
   return value;
 };
 
-// Turn "YYYY/MM/DD" into "MM/YYYY" for consistent monthly grouping (for ticket opened dates)
+// Local helper: "YYYY/MM/DD" → "MM/YYYY"
 const getMonthFromDate = (dateStr) => {
-  // Ensure dateStr is a valid date string before parsing
   if (!dateStr || dateStr === "Invalid Date") return "Invalid Date";
   const date = new Date(dateStr);
-  if (isNaN(date.getTime())) return "Invalid Date"; // Check for invalid date object
+  if (isNaN(date.getTime())) return "Invalid Date";
   const month = date.getMonth() + 1;
   const year = date.getFullYear();
   return `${month < 10 ? "0" : ""}${month}/${year}`;
 };
 
-const getMonthYearFromISO = (isoDateString) => {
-  if (!isoDateString) return "Invalid Date";
-  try {
-    const date = new Date(isoDateString);
-    if (isNaN(date.getTime())) {
-      // Check for invalid date
-      return "Invalid Date";
-    }
-    const month = String(date.getMonth() + 1).padStart(2, "0");
-    const year = date.getFullYear();
-    const day = String(date.getDate()).padStart(2, "0");
-
-    let hours = date.getHours();
-    const minutes = String(date.getMinutes()).padStart(2, "0");
-    const ampm = hours >= 12 ? "PM" : "AM"; // Determine AM/PM
-
-    // Convert hours to 12-hour format
-    hours = hours % 12;
-    hours = hours === 0 ? 12 : hours; // The hour '0' should be '12'
-    const hours12 = String(hours).padStart(2, "0");
-
-    return `${month}/${day}/${year} ${hours12}:${minutes} ${ampm}`; // Return MM/YYYY HH:MM AM/PM format
-  } catch (error) {
-    console.error(
-      "Error parsing ISO date string for month/year:",
-      isoDateString,
-      error
-    );
-    return "Invalid Date";
-  }
-};
-
-// New function to format ISO date string (from Supabase) to MM/DD/YYYY HH:MM for display
-const formatDateTimeFromISO = (isoDateString) => {
+// Local helper: convert ISO string → "MM/DD/YYYY HH:MM AM/PM"
+const formatDateTimeFromISO_Local = (isoDateString) => {
   if (!isoDateString) return "N/A";
   try {
     const date = new Date(isoDateString);
@@ -82,14 +55,13 @@ const formatDateTimeFromISO = (isoDateString) => {
 
     let hours = date.getHours();
     const minutes = String(date.getMinutes()).padStart(2, "0");
-    const ampm = hours >= 12 ? "PM" : "AM"; // Determine AM/PM
+    const ampm = hours >= 12 ? "PM" : "AM";
 
-    // Convert hours to 12-hour format
     hours = hours % 12;
-    hours = hours === 0 ? 12 : hours; // The hour '0' should be '12'
+    hours = hours === 0 ? 12 : hours;
     const hours12 = String(hours).padStart(2, "0");
 
-    return `${mm}/${dd}/${yyyy} ${hours12}:${minutes} ${ampm}`; // Return MM/DD/YYYY HH:MM AM/PM format
+    return `${mm}/${dd}/${yyyy} ${hours12}:${minutes} ${ampm}`;
   } catch (error) {
     console.error(
       "Error formatting ISO date string for display:",
@@ -100,299 +72,137 @@ const formatDateTimeFromISO = (isoDateString) => {
   }
 };
 
-// Placeholder for accuracy calculation
-const calculateAccuracy = (total, incomplete) => {
-  if (total === 0) return "0.00";
-  return (((total - incomplete) / total) * 100).toFixed(2);
-};
-
 function ClosingAccuracy() {
   const [unmatchedRows, setUnmatchedRows] = useState([]);
   const [allProcessedRows, setAllProcessedRows] = useState([]);
-  // Separate state for ticket opened month options and file upload month options
   const [ticketOpenedMonthOptions, setTicketOpenedMonthOptions] = useState([]);
-  const [uploadedMonthOptions, setUploadedMonthOptions] = useState([]); // These are MM/YYYY
-  const [selectedMonth, setSelectedMonth] = useState(""); // For 'Opened' date filter (MM/YYYY)
-  const [selectedUploadedMonth, setSelectedUploadedMonth] = useState(""); // For 'Added on' date filter (MM/YYYY)
+  // Renamed for clarity: now it holds filenames
+  const [uploadedFileOptions, setUploadedFileOptions] = useState([]);
+  const [selectedMonth, setSelectedMonth] = useState("");
+  // Renamed to reflect it's for selected file
+  const [selectedFile, setSelectedFile] = useState("");
   const [error, setError] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [expandedIndex, setExpandedIndex] = useState(null);
   const [sortOrder, setSortOrder] = useState("desc");
 
-  // Supabase connection test
+  // 1) Fetch data on mount
   useEffect(() => {
-    const testSupabaseConnection = async () => {
-      const { error } = await supabase.storage.from("uploads").list("excels");
+    const loadData = async () => {
+      setError(null);
+      try {
+        const {
+          unmatchedRows: fetchedUnmatched,
+          allProcessedRows: fetchedAllProcessed,
+          ticketOpenedMonthOptions: fetchedTicketMonths,
+          // Renamed here to match the new return from the backend function
+          uploadedFileOptions: fetchedFileNames, // This now receives filenames
+        } = await fetchAndProcessExcelData();
 
-      if (error) {
-        console.error("Supabase connection test error:", error);
-        setError("Failed to connect to Supabase Storage.");
+        setUnmatchedRows(fetchedUnmatched);
+        setAllProcessedRows(fetchedAllProcessed);
+        setTicketOpenedMonthOptions(fetchedTicketMonths);
+        setUploadedFileOptions(fetchedFileNames); // Set the filenames
+      } catch (err) {
+        console.error("Error fetching or processing Excel data:", err);
+        setError(`Failed to load data: ${err.message}`);
       }
     };
-    testSupabaseConnection();
+
+    loadData();
   }, []);
 
-  const fetchAndProcessExcel = async () => {
-    setError(null);
-    let tempAllUnmatched = [];
-    let tempAllProcessed = [];
-    const ticketMonthsSet = new Set(); // For months from 'Opened' column
-    const uploadMonthsSet = new Set(); // For months from Supabase 'created_at' for dropdown
-
-    try {
-      const { data: files, error: listError } = await supabase.storage
-        .from("uploads")
-        .list("excels", { sortBy: { column: "name", order: "asc" } });
-
-      if (listError) {
-        throw listError;
-      }
-
-      if (!files || files.length === 0) {
-        console.log("No Excel files found in the 'excels' folder.");
-        setUnmatchedRows([]);
-        setAllProcessedRows([]);
-        setTicketOpenedMonthOptions([]);
-        setUploadedMonthOptions([]);
-        return;
-      }
-
-      for (const file of files) {
-        // This is the raw ISO string for display later
-        const fileUploadFullDateTime = file.created_at;
-        // This is the MM/YYYY for dropdown filtering
-        const fileUploadMonth = getMonthYearFromISO(file.created_at);
-
-        if (fileUploadMonth !== "Invalid Date") {
-          uploadMonthsSet.add(fileUploadMonth); // Add to set for "Added on" dropdown (MM/YYYY)
-        }
-
-        const filePath = `excels/${file.name}`;
-        const { data: urlData } = supabase.storage
-          .from("uploads")
-          .getPublicUrl(filePath);
-
-        if (!urlData || !urlData.publicUrl) {
-          console.warn(`Could not get public URL for ${file.name}. Skipping.`);
-          continue;
-        }
-
-        const response = await fetch(urlData.publicUrl);
-        if (!response.ok) {
-          throw new Error(
-            `HTTP error! status: ${response.status} for ${file.name}`
-          );
-        }
-
-        const arrayBuffer = await response.arrayBuffer();
-        const workbook = XLSX.read(arrayBuffer, { type: "array" });
-        const sheet = XLSX.utils.sheet_to_json(
-          workbook.Sheets[workbook.SheetNames[0]],
-          {
-            defval: "",
-          }
-        );
-
-        sheet.forEach((row) => {
-           const state = row["State"];
-          if (state && String(state).trim().toLowerCase() === "cancelled") {
-            // console.log(`Skipping cancelled ticket: ${row["Number"]}`); // Optional: for debugging
-            return; // Skip this row
-          }
-          const cause = row["Cause"];
-          const reason = row["Reason For Outage"];
-          const assignedTo = row["Assigned to"];
-          const number = row["Number"];
-          const openedRaw = row["Opened"];
-          const openedFormatted = formatOpenedDate(openedRaw);
-
-          const missingColumns = [];
-          if (!cause || typeof cause !== "string") missingColumns.push("Cause");
-          if (!reason || typeof reason !== "string")
-            missingColumns.push("Reason For Outage");
-
-          const hasError =
-            !cause ||
-            !reason ||
-            typeof cause !== "string" ||
-            typeof reason !== "string" ||
-            reason.split("-")[0].trim().toLowerCase() !==
-              cause.trim().toLowerCase();
-
-          const ticketOpenedMonth = getMonthFromDate(openedFormatted);
-          if (ticketOpenedMonth !== "Invalid Date") {
-            ticketMonthsSet.add(ticketOpenedMonth); // Add to set for "Opened" dropdown
-          }
-
-          const processedRow = {
-            number,
-            cause,
-            reason,
-            assignedTo,
-            opened: openedFormatted,
-            ticketOpenedMonth: ticketOpenedMonth, // Month from the Excel's 'Opened' date (MM/YYYY)
-            fileUploadMonth: fileUploadMonth, // Month from Supabase 'created_at' for filtering (MM/YYYY)
-            fileUploadFullDateTime: fileUploadFullDateTime, // Raw ISO string for detailed display
-            hasError,
-            missingColumns,
-          };
-          tempAllProcessed.push(processedRow);
-
-          if (hasError) {
-            tempAllUnmatched.push(processedRow);
-          }
-        });
-      }
-
-      // Sort ticket opened months
-      const sortedTicketMonths = Array.from(ticketMonthsSet).sort((a, b) => {
-        const [ma, ya] = a.split("/").map(Number);
-        const [mb, yb] = b.split("/").map(Number);
-        return yb !== ya ? yb - ya : mb - ma;
-      });
-
-      // Sort uploaded months
-      const sortedUploadedMonths = Array.from(uploadMonthsSet).sort((a, b) => {
-        const [ma, ya] = a.split("/").map(Number);
-        const [mb, yb] = b.split("/").map(Number);
-        return yb !== ya ? yb - ya : mb - ma;
-      });
-
-      setTicketOpenedMonthOptions(sortedTicketMonths);
-      setUploadedMonthOptions(sortedUploadedMonths);
-      setUnmatchedRows(tempAllUnmatched);
-      setAllProcessedRows(tempAllProcessed);
-    } catch (err) {
-      console.error("Error fetching or processing Excel files:", err);
-      setError(`Failed to load data: ${err.message}`);
-    }
-  };
-
-  useEffect(() => {
-    fetchAndProcessExcel();
-  }, []);
-
-  // Filter unmatched rows based on selected 'Opened' month AND 'Uploaded' month, and search term
+  // 2) Filter unmatchedRows by opened‐month, filename, and search term
   const filteredUnmatchedRows = unmatchedRows.filter((row) => {
     const matchesOpenedMonth =
       selectedMonth === "" || row.ticketOpenedMonth === selectedMonth;
-    const matchesUploadedMonth =
-      selectedUploadedMonth === "" ||
-      row.fileUploadMonth === selectedUploadedMonth;
+    // Now filters by 'fileName' instead of 'fileUploadMonth'
+    const matchesUploadedFile =
+      selectedFile === "" || row.fileName === selectedFile;
     const matchesSearch =
       searchTerm === "" ||
       (row.assignedTo &&
         row.assignedTo.toLowerCase().includes(searchTerm.toLowerCase())) ||
       (row.number &&
-        String(row.number).toLowerCase().includes(searchTerm.toLowerCase())); // Added ticketNumber to search
-    return matchesOpenedMonth && matchesUploadedMonth && matchesSearch;
+        String(row.number).toLowerCase().includes(searchTerm.toLowerCase()));
+    return matchesOpenedMonth && matchesUploadedFile && matchesSearch;
   });
-  // --- Calculate Overall Accuracy for the Selected Filters ---
-  let currentMonthTotalTickets = 0;
-  let currentMonthIncompleteTickets = 0;
 
-  // Filter all processed rows based on both selected filters
+  // 3) Calculate overall completeness accuracy
   const filteredProcessedRows = allProcessedRows.filter((row) => {
     const matchesOpenedMonth =
       selectedMonth === "" || row.ticketOpenedMonth === selectedMonth;
-    const matchesUploadedMonth =
-      selectedUploadedMonth === "" ||
-      row.fileUploadMonth === selectedUploadedMonth;
-    return matchesOpenedMonth && matchesUploadedMonth;
+    // Now filters by 'fileName'
+    const matchesUploadedFile =
+      selectedFile === "" || row.fileName === selectedFile;
+    return matchesOpenedMonth && matchesUploadedFile;
   });
 
-  // Filter unmatched rows based on both selected filters (already done above, but good for clarity)
-  const filteredUnmatchedTickets = unmatchedRows.filter((row) => {
+  const filteredUnmatchedForAccuracy = unmatchedRows.filter((row) => {
     const matchesOpenedMonth =
       selectedMonth === "" || row.ticketOpenedMonth === selectedMonth;
-    const matchesUploadedMonth =
-      selectedUploadedMonth === "" ||
-      row.fileUploadMonth === selectedUploadedMonth;
-    return matchesOpenedMonth && matchesUploadedMonth;
+    // Now filters by 'fileName'
+    const matchesUploadedFile =
+      selectedFile === "" || row.fileName === selectedFile;
+    return matchesOpenedMonth && matchesUploadedFile;
   });
 
-  currentMonthTotalTickets = filteredProcessedRows.length;
-  currentMonthIncompleteTickets = filteredUnmatchedTickets.length;
-
+  const totalTicketsThisFilter = filteredProcessedRows.length;
+  const incompleteTicketsThisFilter = filteredUnmatchedForAccuracy.length;
   const displayAccuracyForProgressBar = calculateAccuracy(
-    currentMonthTotalTickets,
-    currentMonthIncompleteTickets
+    totalTicketsThisFilter,
+    incompleteTicketsThisFilter
   );
 
-  // --- Per-Person Accuracy Logic for the Table (based on selected filters) ---
-  const personStatsFiltered = {}; // Structure: { "Person Name": { total: N, incomplete: M } }
-
-  // Populate personStatsFiltered with data from the currently filtered processed rows
+  // 4) Per‐person accuracy (for table)
+  const personStatsFiltered = {};
   filteredProcessedRows.forEach((row) => {
     const name = row.assignedTo || "Unassigned";
-
-    if (name) {
-      if (!personStatsFiltered[name]) {
-        personStatsFiltered[name] = { total: 0, incomplete: 0 };
-      }
-      personStatsFiltered[name].total++;
-      if (row.hasError) {
-        personStatsFiltered[name].incomplete++;
-      }
+    if (!personStatsFiltered[name]) {
+      personStatsFiltered[name] = { total: 0, incomplete: 0 };
+    }
+    personStatsFiltered[name].total += 1;
+    if (row.hasError) {
+      personStatsFiltered[name].incomplete += 1;
     }
   });
 
-  // Function to get individual person accuracy for expanded card (now aware of both selected months)
+  // Helper to get individual accuracy
   const getPersonAccuracy = (assignedTo) => {
     const name = assignedTo || "Unassigned";
-    const stats = personStatsFiltered[name]; // Use the already filtered stats
-
-    if (stats) {
-      return calculateAccuracy(stats.total, stats.incomplete);
-    }
-    return "N/A";
+    const stats = personStatsFiltered[name];
+    return stats ? calculateAccuracy(stats.total, stats.incomplete) : "N/A";
   };
 
-  // Sort table entries based on currentMonthPersonStats (which is now personStatsFiltered)
+  // Sort table entries by accuracy
   const sortedEntries = Object.entries(personStatsFiltered).sort(
-    ([nameA, statsA], [nameB, statsB]) => {
+    ([, statsA], [, statsB]) => {
       const accuracyA = parseFloat(
         calculateAccuracy(statsA.total, statsA.incomplete)
       );
       const accuracyB = parseFloat(
         calculateAccuracy(statsB.total, statsB.incomplete)
       );
-
-      if (sortOrder === "asc") {
-        return accuracyA - accuracyB;
-      } else {
-        return accuracyB - accuracyA;
-      }
+      return sortOrder === "asc"
+        ? accuracyA - accuracyB
+        : accuracyB - accuracyA;
     }
   );
 
+  // 5) Export to PDF (accuracy table)
   const exportToPdf = () => {
-    // We no longer need to toggle row expansion here, as we're targeting only the accuracy table.
-    // const initialExpandedIndices = new Set(expandedIndices);
-    // const allFilteredUnmatchedIndices = new Set(filteredUnmatchedRows.map((_, idx) => idx));
-    // setExpandedIndices(allFilteredUnmatchedIndices);
-
-    // Give React a moment to render (though not strictly necessary if no state changes for this section)
     setTimeout(() => {
-      // CHANGE THIS ID!
       const input = document.getElementById("accuracy-table-report");
       if (!input) {
-        console.error("Element with ID 'accuracy-table-report' not found.");
-        // If you had any previous temporary state changes, revert them here
-        // setExpandedIndices(initialExpandedIndices);
+        console.error("Element #accuracy-table-report not found.");
         return;
       }
-
-      html2canvas(input, {
-        scale: 2,
-        useCORS: true,
-        logging: true,
-      })
+      html2canvas(input, { scale: 2, useCORS: true, logging: true })
         .then((canvas) => {
           const imgData = canvas.toDataURL("image/png");
           const pdf = new jsPDF("p", "mm", "a4");
-          const imgWidth = 210; // A4 width in mm
-          const pageHeight = 297; // A4 height in mm
+          const imgWidth = 210; // A4 width
+          const pageHeight = 297;
           const imgHeight = (canvas.height * imgWidth) / canvas.width;
           let heightLeft = imgHeight;
           let position = 0;
@@ -406,26 +216,22 @@ function ClosingAccuracy() {
             pdf.addImage(imgData, "PNG", 0, position, imgWidth, imgHeight);
             heightLeft -= pageHeight;
           }
-          pdf.save("accuracy_table_report.pdf"); // Give it a more specific file name
-
-          // 3. Revert to initial expanded state after PDF is generated (if you had any)
-          // setExpandedIndices(initialExpandedIndices);
+          pdf.save("accuracy_table_report.pdf");
         })
         .catch((err) => {
           console.error("Error generating PDF:", err);
-          // Revert expansion even if PDF generation fails (if you had any)
-          // setExpandedIndices(initialExpandedIndices);
         });
-    }, 100); // Small delay to allow re-render
+    }, 100);
   };
 
-  // --- New Function for Exporting to Excel ---
+  // 6) Export incomplete → Excel
   const handleExportToExcel = () => {
     const dataToExport = filteredUnmatchedRows.map((row) => ({
       "Ticket Number": row.number || "N/A",
       "Assigned To": row.assignedTo || "N/A",
       "Opened Date": row.opened || "N/A",
-      "Uploaded On": formatDateTimeFromISO(row.fileUploadFullDateTime),
+      // Changed to show fileName
+      "Uploaded From File": row.fileName || "N/A",
       "Cause (Original)": row.cause || "Empty",
       "Reason For Outage (Original)": row.reason || "Empty",
       "Missing/Incorrect Fields":
@@ -476,39 +282,48 @@ function ClosingAccuracy() {
                 setExpandedIndex(null);
               }}
             />
-            {/* Dropdown for Ticket Opened Month */}
+
+            {/* Dropdown for File Uploaded (Filename) */}
             <select
               className="flex-1 p-2 border rounded-lg"
-              value={selectedMonth}
+              value={selectedFile} // Changed state variable
               onChange={(e) => {
-                setSelectedMonth(e.target.value);
+                setSelectedFile(e.target.value); // Changed setter
                 setExpandedIndex(null);
               }}
             >
-              <option value="">All Opened Months</option>
-              {ticketOpenedMonthOptions.map((month) => (
-                <option key={`opened-${month}`} value={month}>
-                  {month}
-                </option>
-              ))}
+              <option value="">All Uploaded Files</option>{" "}
+              {/* Changed option text */}
+              {uploadedFileOptions.map(
+                (
+                  fileName // Iterating over filenames
+                ) => (
+                  <option key={`uploaded-${fileName}`} value={fileName}>
+                    {fileName} {/* Displaying the filename */}
+                  </option>
+                )
+              )}
             </select>
 
-            {/* Dropdown for File Uploaded Month */}
-            <select
-              className="flex-1 p-2 border rounded-lg"
-              value={selectedUploadedMonth}
-              onChange={(e) => {
-                setSelectedUploadedMonth(e.target.value);
-                setExpandedIndex(null);
-              }}
-            >
-              <option value="">All Uploaded Months</option>
-              {uploadedMonthOptions.map((month) => (
-                <option key={`uploaded-${month}`} value={month}>
-                  {month}
-                </option>
-              ))}
-            </select>
+            {/* Dropdown for Ticket Opened Month */}
+            {selectedFile && (
+              <select
+                className="flex-1 p-2 border rounded-lg"
+                value={selectedMonth}
+                onChange={(e) => {
+                  setSelectedMonth(e.target.value);
+                  setExpandedIndex(null);
+                }}
+              >
+                <option value="">All Opened Months</option>
+                {ticketOpenedMonthOptions.map((month) => (
+                  <option key={`opened-${month}`} value={month}>
+                    {month}
+                  </option>
+                ))}
+              </select>
+            )}
+
             {/* Export to Excel Button */}
             <button
               onClick={handleExportToExcel}
@@ -535,65 +350,62 @@ function ClosingAccuracy() {
 
           {/* Incomplete Row Cards */}
           <div className="space-y-4 max-h-96 overflow-y-auto mb-5">
-            {filteredUnmatchedRows.length > 0
-              ? filteredUnmatchedRows.map((row, idx) => (
-                  <div
-                    key={idx}
-                    className="p-3 border rounded-lg cursor-pointer bg-white hover:bg-gray-50 transition-colors"
-                    onClick={() =>
-                      setExpandedIndex(expandedIndex === idx ? null : idx)
-                    }
-                  >
-                    <div className="flex justify-between items-center">
-                      <div>
-                        <p className="font-bold">#{row.number || "N/A"}</p>
-                        <p className="text-m text-black-600">
-                          Assigned To: {row.assignedTo || "N/A"}
-                        </p>
-                        <p className="text-sm text-gray-600">
-                          Opened: {row.opened || "N/A"}
-                        </p>
-                        {/* Display the full upload date and time */}
-                        <p className="text-sm text-gray-600">
-                          Uploaded:{" "}
-                          {formatDateTimeFromISO(row.fileUploadFullDateTime)}
-                        </p>
-                      </div>
-                      {expandedIndex === idx ? (
-                        <ChevronUpIcon className="w-5 h-5 text-gray-500" />
-                      ) : (
-                        <ChevronDownIcon className="w-5 h-5 text-gray-500" />
-                      )}
-                    </div>
-                    {expandedIndex === idx && (
-                      <div className="mt-2 pt-2 border-t border-gray-200">
-                        <p className="text-sm text-gray-700 mb-1">
-                          **Cause:**{" "}
-                          <span className="text-red-600 font-semibold">
-                            {row.cause || "Empty"}
-                          </span>
-                        </p>
-                        <p className="text-sm text-gray-700 mb-1">
-                          **Reason For Outage:**{" "}
-                          <span className="text-red-600 font-semibold">
-                            {row.reason || "Empty"}
-                          </span>
-                        </p>
-                        {row.missingColumns &&
-                          row.missingColumns.length > 0 && (
-                            <p className="text-sm text-red-600">
-                              Missing: {row.missingColumns.join(", ")}
-                            </p>
-                          )}
-                        <p className="text-sm text-gray-600 mt-2">
-                          Accuracy for **{row.assignedTo || "N/A"}**:{" "}
-                          {getPersonAccuracy(row.assignedTo)}%
-                        </p>
-                      </div>
-                    )}
+            {filteredUnmatchedRows.map((row, idx) => (
+              <div
+                key={idx}
+                className="p-3 border rounded-lg cursor-pointer bg-white hover:bg-gray-50 transition-colors"
+                onClick={() =>
+                  setExpandedIndex(expandedIndex === idx ? null : idx)
+                }
+              >
+                <div className="flex justify-between items-center">
+                  <div>
+                    <p className="font-bold">#{row.number || "N/A"}</p>
+                    <p className="text-m text-black-600">
+                      Assigned To: {row.assignedTo || "N/A"}
+                    </p>
+                    <p className="text-sm text-gray-600">
+                      Opened: {row.opened || "N/A"}
+                    </p>
+                    {/* Display filename instead of full upload date/time if desired */}
+                    <p className="text-sm text-gray-600">
+                      File: {row.fileName || "N/A"}{" "}
+                      {/* Displaying the filename */}
+                    </p>
                   </div>
-                ))
-              : null}
+                  {expandedIndex === idx ? (
+                    <ChevronUpIcon className="w-5 h-5 text-gray-500" />
+                  ) : (
+                    <ChevronDownIcon className="w-5 h-5 text-gray-500" />
+                  )}
+                </div>
+                {expandedIndex === idx && (
+                  <div className="mt-2 pt-2 border-t border-gray-200">
+                    <p className="text-sm text-gray-700 mb-1">
+                      <strong>Cause:</strong>{" "}
+                      <span className="text-red-600 font-semibold">
+                        {row.cause || "Empty"}
+                      </span>
+                    </p>
+                    <p className="text-sm text-gray-700 mb-1">
+                      <strong>Reason For Outage:</strong>{" "}
+                      <span className="text-red-600 font-semibold">
+                        {row.reason || "Empty"}
+                      </span>
+                    </p>
+                    {row.missingColumns?.length > 0 && (
+                      <p className="text-sm text-red-600">
+                        Missing: {row.missingColumns.join(", ")}
+                      </p>
+                    )}
+                    <p className="text-sm text-gray-600 mt-2">
+                      Accuracy for <strong>{row.assignedTo || "N/A"}</strong>:{" "}
+                      {getPersonAccuracy(row.assignedTo)}%
+                    </p>
+                  </div>
+                )}
+              </div>
+            ))}
           </div>
         </div>
       </div>
@@ -605,13 +417,13 @@ function ClosingAccuracy() {
       >
         <div className="flex items-center justify-between mb-4">
           <h3 className="font-semibold mb-4">
-            Completion Accuracy per Assigned Person - Closing Ticket - {" "}
-            {selectedMonth && selectedUploadedMonth
-              ? `for tickets opened in ${selectedMonth} from files uploaded in ${selectedUploadedMonth}`
+            Completion Accuracy per Assigned Person – Closing Ticket –{" "}
+            {selectedMonth && selectedFile // Updated condition
+              ? `for tickets opened in ${selectedMonth} from file ${selectedFile}` // Updated text
               : selectedMonth
               ? `for tickets opened in ${selectedMonth}`
-              : selectedUploadedMonth
-              ? `for files uploaded in ${selectedUploadedMonth}`
+              : selectedFile // Updated condition
+              ? `for file ${selectedFile}` // Updated text
               : "Overall"}
           </h3>
           <div className="flex items-center gap-2">
@@ -621,10 +433,11 @@ function ClosingAccuracy() {
             <FileText
               className="h-7 w-7 text-red-600 cursor-pointer hover:text-red-800 transition-colors"
               onClick={exportToPdf}
-              title="Export to PDF" // Add a title for accessibility and hover tooltip
+              title="Export to PDF"
             />
           </div>
         </div>
+
         <table className="w-full table-auto border border-gray-300">
           <thead>
             <tr className="bg-gray-100">
