@@ -4,7 +4,7 @@ import supabase from "../supabase/supabase";
 // Define cache constants
 const CACHE_KEY = "areaAlarmDataCache";
 const CACHE_TIMESTAMP_KEY = "areaAlarmDataTimestamp";
-const CACHE_DURATION = 59 * 60 * 1000; // 59 minutes in milliseconds
+const CACHE_DURATION = 1 * 60 * 1000; // 59 minutes in milliseconds
 
 const getLatestUploadedFile = (files) => {
   let latestFile = null;
@@ -30,40 +30,48 @@ export const fetchAreaAlarmData = async (forceRefresh = false) => {
   if (cachedData && cachedTimestamp && !forceRefresh) {
     const timestamp = parseInt(cachedTimestamp, 10);
     if (now - timestamp < CACHE_DURATION) {
-      // Changed console log to match the function's purpose
       console.log("Serving area alarm data from cache.");
       return JSON.parse(cachedData);
     }
   }
 
-  // Corrected cache invalidation logic
   if (
     forceRefresh ||
     !cachedData ||
     !cachedTimestamp ||
-    (cachedTimestamp && now - parseInt(cachedTimestamp, 10) >= CACHE_DURATION) // Ensures cachedTimestamp exists
+    (cachedTimestamp && now - parseInt(cachedTimestamp, 10) >= CACHE_DURATION)
   ) {
-    // Changed console log to match the function's purpose
-    console.log("Area alarm data cache expired or forced refresh. Fetching fresh data.");
+    console.log(
+      "Area alarm data cache expired or forced refresh. Fetching fresh data."
+    );
     localStorage.removeItem(CACHE_KEY);
     localStorage.removeItem(CACHE_TIMESTAMP_KEY);
   }
 
   try {
-    const { data: files, error } = await supabase.storage.from("uploads").list("excels");
+    const { data: files, error } = await supabase.storage
+      .from("uploads")
+      .list("excels");
     if (error) throw error;
 
-    console.log("Files found:", files.map((f) => ({ name: f.name, created_at: f.created_at })));
+    console.log(
+      "Files found:",
+      files.map((f) => ({ name: f.name, created_at: f.created_at }))
+    );
 
     const latestFile = getLatestUploadedFile(files);
-
     if (!latestFile) {
-      console.warn("No files found in Supabase storage 'uploads/excels' folder."); // More specific message
+      console.warn(
+        "No files found in Supabase storage 'uploads/excels' folder."
+      );
       localStorage.removeItem(CACHE_KEY);
       localStorage.removeItem(CACHE_TIMESTAMP_KEY);
       return { chartData: [], alarmTypes: [] };
     }
-    console.log(`Processing latest file for area alarm data: ${latestFile.name}`); // Specific log
+
+    console.log(
+      `Processing latest file for area alarm data: ${latestFile.name}`
+    );
 
     const { data: signedUrlData, error: urlError } = await supabase.storage
       .from("uploads")
@@ -72,13 +80,17 @@ export const fetchAreaAlarmData = async (forceRefresh = false) => {
 
     const response = await fetch(signedUrlData.signedUrl);
     if (!response.ok) {
-      throw new Error(`Failed to fetch file: ${response.status} ${response.statusText}`);
+      throw new Error(
+        `Failed to fetch file: ${response.status} ${response.statusText}`
+      );
     }
 
     const blob = await response.arrayBuffer();
     const workbook = XLSX.read(blob, { type: "array" });
     const sheetName = workbook.SheetNames[0];
-    const sheet = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName], { header: 1 });
+    const sheet = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName], {
+      header: 1,
+    });
 
     if (sheet.length <= 1) {
       console.warn("Excel sheet is empty or has only headers.");
@@ -89,52 +101,52 @@ export const fetchAreaAlarmData = async (forceRefresh = false) => {
 
     const headers = sheet[0];
     const timestampIndex = headers.indexOf("opened_at");
-    const alarmTypeIndex = headers.indexOf("u_aor002"); // Specific to area alarms
+    const alarmTypeIndex = headers.indexOf("u_aor002");
     const servicePriorityIndex = headers.indexOf("u_service_priority");
+    const stateIndex = headers.indexOf("state");
 
-    if (timestampIndex === -1 || alarmTypeIndex === -1 || servicePriorityIndex === -1) {
+    if (
+      timestampIndex === -1 ||
+      alarmTypeIndex === -1 ||
+      servicePriorityIndex === -1
+    ) {
       console.warn(
-        "Required columns ('opened_at', 'u_aor002', or 'u_service_priority') not found in the Excel sheet headers."
+        "Required columns ('opened_at', 'u_aor002', or 'u_service_priority') not found."
       );
       if (timestampIndex === -1) console.warn("Column 'opened_at' is missing.");
-      if (alarmTypeIndex === -1) console.warn("Column 'u_aor002' (for area alarm type) is missing."); // Corrected column name
-      if (servicePriorityIndex === -1) console.warn("Column 'u_service_priority' is missing.");
-
+      if (alarmTypeIndex === -1) console.warn("Column 'u_aor002' is missing.");
+      if (servicePriorityIndex === -1)
+        console.warn("Column 'u_service_priority' is missing.");
       localStorage.removeItem(CACHE_KEY);
       localStorage.removeItem(CACHE_TIMESTAMP_KEY);
       return { chartData: [], alarmTypes: [] };
     }
 
-    // Filter rows based on conditions
     const dataRows = sheet.slice(1).filter((row) => {
       const timestamp = row[timestampIndex];
-      const alarmTypeRaw = row[alarmTypeIndex]; // Use alarmTypeRaw here
+      const alarmTypeRaw = row[alarmTypeIndex];
       const servicePriority = row[servicePriorityIndex];
+      const state = row[stateIndex];
 
-      // Include row if all conditions are met:
-      // 1. Timestamp cell is not empty.
-      // 2. AlarmType cell contains a non-empty string after trimming.
-      // 3. ServicePriority cell contains a string, when trimmed, starts with "3".
       return (
         timestamp &&
-        typeof alarmTypeRaw === "string" && alarmTypeRaw.trim() !== '' && // Ensures non-empty string for alarmType
+        typeof alarmTypeRaw === "string" &&
+        alarmTypeRaw.trim() !== "" &&
         typeof servicePriority === "string" &&
-        servicePriority.trim().startsWith("3")
+        servicePriority.trim().startsWith("3") &&
+        typeof state === "string" &&
+        state.trim().toLowerCase() !== "cancelled"
       );
     });
 
     let alarmData = {};
-
     dataRows.forEach((row) => {
-      const timestampValue = row[timestampIndex]; // Renamed to avoid conflict
-      const alarmTypeRaw = row[alarmTypeIndex];
-      // Trim here as it's confirmed to be a string from the filter
-      const alarmType = alarmTypeRaw.trim();
+      const timestampValue = row[timestampIndex];
+      const alarmType = row[alarmTypeIndex].trim();
 
-      if (!timestampValue) return; // Should already be guaranteed by filter, but good for safety
+      if (!timestampValue) return;
 
       let date = "";
-
       if (typeof timestampValue === "number") {
         const excelEpoch = new Date(1899, 11, 30);
         date = new Date(excelEpoch.getTime() + timestampValue * 86400000)
@@ -176,11 +188,11 @@ export const fetchAreaAlarmData = async (forceRefresh = false) => {
 
     localStorage.setItem(CACHE_KEY, JSON.stringify(result));
     localStorage.setItem(CACHE_TIMESTAMP_KEY, now.toString());
-    console.log("Fresh area alarm data fetched, processed, and cached."); // Matched to function purpose
+    console.log("Fresh area alarm data fetched, processed, and cached.");
 
     return result;
   } catch (error) {
-    console.error("Error fetching or processing area alarm data:", error); // Matched to function purpose
+    console.error("Error fetching or processing area alarm data:", error);
     localStorage.removeItem(CACHE_KEY);
     localStorage.removeItem(CACHE_TIMESTAMP_KEY);
     return { chartData: [], alarmTypes: [] };
