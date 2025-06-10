@@ -49,6 +49,7 @@ const getLatestUploadedFile = (files) => {
 export const fetchTerritoryGraphData = async (forceRefresh = false) => {
   const now = new Date().getTime();
 
+  // 1. Check Cache First (unless forceRefresh is true)
   const cachedData = localStorage.getItem(CACHE_KEY);
   const cachedTimestamp = localStorage.getItem(CACHE_TIMESTAMP_KEY);
 
@@ -60,6 +61,7 @@ export const fetchTerritoryGraphData = async (forceRefresh = false) => {
     }
   }
 
+  // 2. Clear expired or forced cache
   if (
     forceRefresh ||
     !cachedData ||
@@ -71,6 +73,7 @@ export const fetchTerritoryGraphData = async (forceRefresh = false) => {
     localStorage.removeItem(CACHE_TIMESTAMP_KEY);
   }
 
+  // 3. Fetch fresh data
   console.log("Fetching fresh territory graph data...");
   try {
     const { data: files, error } = await supabase.storage
@@ -129,9 +132,8 @@ export const fetchTerritoryGraphData = async (forceRefresh = false) => {
 
     let territoryCounts = {};
     let totalAlarms = 0;
-    const acceptedStates = new Set();
 
-    sheet.slice(1).forEach((row, idx) => {
+    sheet.slice(1).forEach((row) => {
       const priorityRaw = row[priorityIndex];
       const stateRaw = row[stateIndex];
       const territoryRaw = row[territoryIndex];
@@ -141,50 +143,25 @@ export const fetchTerritoryGraphData = async (forceRefresh = false) => {
           ? priorityRaw
               .replace(/\s+/g, " ")
               .replace(/[–—−]/g, "-")
-              .replace(/\u00A0/g, " ")
               .trim()
               .toLowerCase()
           : "";
 
       const normalizedState =
-        typeof stateRaw === "string"
-          ? stateRaw
-              .replace(/\s+/g, " ")
-              .replace(/[–—−]/g, "-")
-              .replace(/\u00A0/g, " ")
-              .trim()
-              .toLowerCase()
-          : "";
+        typeof stateRaw === "string" ? stateRaw.trim().toLowerCase() : "";
 
-      const territory = String(territoryRaw || "")
-        .replace(/\s+/g, " ")
-        .replace(/[–—−]/g, "-")
-        .replace(/\u00A0/g, " ")
-        .trim();
+      const territory = String(territoryRaw || "").trim();
 
-      // Filtering logic
+      // Apply filtering conditions:
       if (
-        normalizedPriority !== "3 - access" ||
-        normalizedState === "cancelled" ||
-        (territory !== "7" && territory !== "8")
+        normalizedPriority === "3 - access" &&
+        normalizedState !== "cancelled" &&
+        (territory === "7" || territory === "8")
       ) {
-        console.log(`Skipping row ${idx + 2}:`, {
-          priorityRaw,
-          normalizedPriority,
-          stateRaw,
-          normalizedState,
-          territoryRaw,
-          territory,
-        });
-      } else {
         territoryCounts[territory] = (territoryCounts[territory] || 0) + 1;
         totalAlarms++;
-        acceptedStates.add(normalizedState); // Collect accepted state
       }
     });
-
-    // ✅ Log all accepted states after filtering
-    console.log("Unique states after filtering:", [...acceptedStates]);
 
     const formattedData = Object.entries(territoryCounts).map(
       ([category, count], index) => ({

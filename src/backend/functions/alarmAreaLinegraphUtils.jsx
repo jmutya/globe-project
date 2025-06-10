@@ -123,9 +123,6 @@ export const fetchAreaAlarmData = async (forceRefresh = false) => {
       );
     });
 
-    // ✨ Log the total count of accepted data rows after filtering.
-    console.log(`Total accepted area alarm data rows after filtering: ${dataRows.length}`);
-
     let alarmData = {};
 
     dataRows.forEach((row) => {
