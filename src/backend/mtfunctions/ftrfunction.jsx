@@ -34,11 +34,22 @@ export const fetchFtrData = async () => {
     })
   );
 
-  const allData = allSheetsData.flat();
+  const rawData = allSheetsData.flat();
 
-  const filteredResolutionCodes = allData.filter(
+  // Apply the filtering condition
+  const filteredData = rawData.filter((row) => {
+    const state = String(row["state"] || "").trim().toLowerCase();
+    const priority = String(row["u_service_priority"] || "").trim().toLowerCase();
+    return !(state === "cancelled" || priority !== "3 - access");
+  });
+
+  const excludedCount = rawData.length - filteredData.length;
+  console.log(`Filtered out ${excludedCount} rows due to cancelled state or unmatched priority.`);
+
+  // Then, filter for resolution codes
+  const filteredResolutionCodes = filteredData.filter(
     (row) => row["close_code"]?.trim() === "Closed/Resolved by Caller"
   );
 
-  return { allData, filteredResolutionCodes };
+  return { allData: filteredData, filteredResolutionCodes };
 };

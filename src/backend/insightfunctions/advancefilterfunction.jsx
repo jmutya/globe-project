@@ -14,9 +14,10 @@ const cache = {
 // Helper function to convert Excel dates
 const convertExcelDate = (value) => {
   const formatDate = (date) =>
-    `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(
-      date.getDate()
-    ).padStart(2, "0")}`;
+    `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(
+      2,
+      "0"
+    )}-${String(date.getDate()).padStart(2, "0")}`;
 
   if (typeof value === "number") {
     const millisecondsPerDay = 86400000;
@@ -54,12 +55,16 @@ export const fetchAndProcessAllExcelData = async () => {
     cache.parsingErrors &&
     cache.monthOptions
   ) {
+    console.log("✅ Data served from in-memory cache");
     return {
       structuredData: cache.structuredData,
       parsingErrors: cache.parsingErrors,
       monthOptions: cache.monthOptions,
     };
   }
+  console.log(
+    "♻️ Cache expired or not found — fetching fresh data from Supabase..."
+  );
 
   const { data: files, error } = await supabase.storage
     .from("uploads")
@@ -78,12 +83,15 @@ export const fetchAndProcessAllExcelData = async () => {
     if (file.name === ".emptyFolderPlaceholder") continue;
 
     const filePath = `excels/${file.name}`;
-    const { data: signedUrlData, error: signedUrlError } = await supabase.storage
-      .from("uploads")
-      .createSignedUrl(filePath, 60);
+    const { data: signedUrlData, error: signedUrlError } =
+      await supabase.storage.from("uploads").createSignedUrl(filePath, 60);
 
     if (signedUrlError || !signedUrlData?.signedUrl) {
-      errors.push(`Failed to get signed URL for ${file.name}: ${signedUrlError?.message || "Unknown error"}`);
+      errors.push(
+        `Failed to get signed URL for ${file.name}: ${
+          signedUrlError?.message || "Unknown error"
+        }`
+      );
       continue;
     }
 
@@ -105,14 +113,14 @@ export const fetchAndProcessAllExcelData = async () => {
 
   const structuredData = allData
     .map((row, idx) => {
-      const state = row["state"];
-      const service = row["u_service_priority"];
-      if (
-        (state && String(state).trim().toLowerCase() === "cancelled") ||
-        (service && String(service).trim().toLowerCase() !== "3-access")
-      ) {
-        return null;
-      }
+      // const state = row["state"];
+      // const service = row["u_service_priority"];
+      // if (
+      //   (state && String(state).trim().toLowerCase() === "cancelled") ||
+      //   (service && String(service).trim().toLowerCase() !== "3-access")
+      // ) {
+      //   return null;
+      // }
 
       const desc = row["short_description"];
       const cleanDesc = desc?.replace(/^[\s']+/, "");
@@ -122,16 +130,30 @@ export const fetchAndProcessAllExcelData = async () => {
       const number = row["number"] || "";
 
       if (!desc) {
-        errors.push(`Row ${idx + 1}: Missing Short description (Ticket Number: ${number || 'N/A'})`);
+        errors.push(
+          `Row ${idx + 1}: Missing Short description (Ticket Number: ${
+            number || "N/A"
+          })`
+        );
         return null;
       }
       if (!match) {
-        errors.push(`Row ${idx + 1}: Could not match pattern in "${desc}" (Ticket Number: ${number || 'N/A'})`);
+        errors.push(
+          `Row ${
+            idx + 1
+          }: Could not match pattern in "${desc}" (Ticket Number: ${
+            number || "N/A"
+          })`
+        );
         return null;
       }
       const parts = match[1].split("-");
       if (parts.length < 5) {
-        errors.push(`Row ${idx + 1}: Not enough parts in "${match[1]}" (Ticket Number: ${number || 'N/A'})`);
+        errors.push(
+          `Row ${idx + 1}: Not enough parts in "${match[1]}" (Ticket Number: ${
+            number || "N/A"
+          })`
+        );
         return null;
       }
 
@@ -148,7 +170,9 @@ export const fetchAndProcessAllExcelData = async () => {
     .filter(Boolean);
 
   const monthOptions = [
-    ...new Set(structuredData.map((item) => item.date?.slice(0, 7)).filter(Boolean)),
+    ...new Set(
+      structuredData.map((item) => item.date?.slice(0, 7)).filter(Boolean)
+    ),
   ].sort();
 
   // Update cache
@@ -156,6 +180,8 @@ export const fetchAndProcessAllExcelData = async () => {
   cache.structuredData = structuredData;
   cache.parsingErrors = errors;
   cache.monthOptions = monthOptions;
+
+  console.log("✅ Fetched and cached fresh data from Supabase");
 
   return { structuredData, parsingErrors: errors, monthOptions };
 };
@@ -167,7 +193,8 @@ export const fetchAndProcessAllExcelData = async () => {
  * @returns {Object} An object containing chartData, reasonSummary, uniqueReasonTableData, and tableData.
  */
 export const generateFilteredData = (data, filters) => {
-  const { selectedMonth, selectTerritory, selectedArea, selectedProvince } = filters;
+  const { selectedMonth, selectTerritory, selectedArea, selectedProvince } =
+    filters;
 
   let filtered = [...data];
 
@@ -201,7 +228,8 @@ export const generateFilteredData = (data, filters) => {
       const fullReason = item.reason || "Empty";
 
       if (!groupedByDate[date]) groupedByDate[date] = {};
-      groupedByDate[date][reasonCategory] = (groupedByDate[date][reasonCategory] || 0) + 1;
+      groupedByDate[date][reasonCategory] =
+        (groupedByDate[date][reasonCategory] || 0) + 1;
       reasonCount[reasonCategory] = (reasonCount[reasonCategory] || 0) + 1;
       uniqueReasons[fullReason] = (uniqueReasons[fullReason] || 0) + 1;
     });
@@ -242,7 +270,8 @@ export const generateFilteredData = (data, filters) => {
       if (!grouped[keyGroup]) grouped[keyGroup] = {};
       grouped[keyGroup][keyDate] = (grouped[keyGroup][keyDate] || 0) + 1;
 
-      reasonCountLocal[reasonCategory] = (reasonCountLocal[reasonCategory] || 0) + 1;
+      reasonCountLocal[reasonCategory] =
+        (reasonCountLocal[reasonCategory] || 0) + 1;
     });
 
     const dates = Array.from(

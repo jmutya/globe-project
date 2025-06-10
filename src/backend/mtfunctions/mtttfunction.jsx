@@ -101,7 +101,13 @@ export const getReportedAndCreatedData = async () => {
   console.log("Fetching new data from Supabase.");
   const rawData = await fetchAndParseExcelFiles();
 
-  const processedData = rawData.map((row) => {
+  const processedData = rawData
+  .filter((row) => {
+    const state = String(row["state"] || "").trim().toLowerCase();
+    const servicePriority = String(row["u_service_priority"] || "").trim().toLowerCase();
+    return !(state === "cancelled" || servicePriority !== "3 - access");
+  })
+  .map((row) => {
     const reportedRaw = row["u_reported_date"];
     const createdRaw = row["sys_created_on"];
     const caller = String(row["caller_id"] || "Unknown Caller").trim();
@@ -126,6 +132,7 @@ export const getReportedAndCreatedData = async () => {
       mttt,
     };
   });
+
 
   // Cache the newly fetched data
   localStorage.setItem(

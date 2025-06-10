@@ -82,9 +82,25 @@ export const fetchMttiData = async () => {
     }
   }
 
-  const processedData = allData.map((row) => {
+  // Filter out unwanted rows
+  const filteredData = allData.filter((row) => {
+    const state = String(row["state"] || "")
+      .trim()
+      .toLowerCase();
+    const priority = String(row["u_service_priority"] || "")
+      .trim()
+      .toLowerCase();
+    return !(state === "cancelled" || priority !== "3 - access");
+  });
+
+  const excludedCount = allData.length - filteredData.length;
+  console.log(
+    `Filtered out ${excludedCount} rows due to cancelled state or unmatched priority.`
+  );
+
+  const processedData = filteredData.map((row) => {
     const icRaw = row["u_investigation_completed"];
-    const reportedRaw = row["u_reported_date"]; 
+    const reportedRaw = row["u_reported_date"];
     const caller = String(row["caller_id"] || "Unknown Caller").trim();
     const number = String(row["number"] || "N/A").trim();
 

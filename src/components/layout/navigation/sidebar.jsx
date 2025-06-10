@@ -20,16 +20,17 @@ import Dashboard from "../../pages/dashboard";
 
 const componentMap = {
   // Dashboard: lazy(() => import("../../pages/dashboard")),
-  "Insights": lazy(() => import("../../content/insight/InsightLayout")),
+  Insights: lazy(() => import("../../content/insight/InsightLayout")),
   "Upload Files": lazy(() => import("../../pages/documents")),
   "Authorized Users": lazy(() => import("../../pages/addemail")),
- "Mean Time To Ticket": lazy(() => import("../../content/mttt")),
- "Mean Time To Investigate": lazy(() => import("../../content/mtti")),
-   "First Touch Resolution": lazy(() => import("../../content/ftr")),
+  "Mean Time To Ticket": lazy(() => import("../../content/mttt")),
+  "Mean Time To Investigate": lazy(() => import("../../content/mtti")),
+  "First Touch Resolution": lazy(() => import("../../content/ftr")),
+  "Outage Advanced Filters": lazy(() => import("../../content/outage")),
   Dashboard: lazy(() => import("../../pages/Dashboard_file")),
   // "Insights": lazy(() => import("../../content/insight/InsightContent/TicketIssuance")),
-    // Dashboard: lazy(() => import("../../pages/comingSoon")),
-    // "sampleUpload": lazy(() => import("../../layout/sampleUpload")),
+  // Dashboard: lazy(() => import("../../pages/comingSoon")),
+  // "sampleUpload": lazy(() => import("../../layout/sampleUpload")),
 };
 
 const navigationItems = [
@@ -39,10 +40,10 @@ const navigationItems = [
     subItems: [
       { name: "Dashboard" },
       { name: "Insights" },
-     { name: "Mean Time To Ticket" },
-     { name: "Mean Time To Investigate" },
+      { name: "Outage Advanced Filters" },
+      { name: "Mean Time To Ticket" },
+      { name: "Mean Time To Investigate" },
       { name: "First Touch Resolution" },
-      // { name: "sampleUpload" },
     ],
   },
   { name: "Upload Files", icon: ArrowUpTrayIcon },
@@ -72,7 +73,9 @@ const Sidebar = ({ user }) => {
         <Suspense
           fallback={
             <div className="relative h-full w-full flex flex-col items-center justify-center">
-              <div className="text-gray-600 mb-10 animate-pulse">Loading {selected}....</div>
+              <div className="text-gray-600 mb-10 animate-pulse">
+                Loading {selected}....
+              </div>
               <div className="absolute bottom-0 left-0 right-0 h-1.5 bg-indigo-200 overflow-hidden">
                 <div className="h-full w-1/4 bg-indigo-500 animate-pulse-fast origin-left"></div>
               </div>
@@ -83,7 +86,9 @@ const Sidebar = ({ user }) => {
         </Suspense>
       );
     }
-    return <div className="text-gray-600">Select an option from the sidebar.</div>;
+    return (
+      <div className="text-gray-600">Select an option from the sidebar.</div>
+    );
   }, [selected]);
 
   return (

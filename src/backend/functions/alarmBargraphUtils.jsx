@@ -144,6 +144,9 @@ export const fetchFailureCategoryData = async (colors) => {
       })
     );
 
+
+
+    
     localStorage.setItem(CACHE_KEY, JSON.stringify(formattedData));
     localStorage.setItem(CACHE_TIMESTAMP_KEY, now.toString());
     console.log("Fresh failure category data fetched and cached.");
