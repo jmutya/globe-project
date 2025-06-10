@@ -94,6 +94,7 @@ export const fetchFailureCategoryData = async (colors) => {
       const headers = sheet[0];
       const failureCategoryIndex = headers.indexOf("u_failure_category");
       const priorityIndex = headers.indexOf("u_service_priority");
+      const stateIndex = headers.indexOf("state");
 
       if (failureCategoryIndex === -1 || priorityIndex === -1) {
         console.warn("Required columns not found in the Excel sheet.");
@@ -102,6 +103,7 @@ export const fetchFailureCategoryData = async (colors) => {
 
       sheet.slice(1).forEach((row) => {
         const priority = row[priorityIndex];
+        const state = row[stateIndex];
 
         if (
           typeof priority !== "string" ||
@@ -112,6 +114,13 @@ export const fetchFailureCategoryData = async (colors) => {
             .toLowerCase() !== "3 - access"
         ) {
           return; // skip this row
+        }
+
+        if (
+          typeof state === "string" &&
+          state.trim().toLowerCase() === "cancelled"
+        ) {
+          return; // skip cancelled rows
         }
 
         let failureCategory = row[failureCategoryIndex];

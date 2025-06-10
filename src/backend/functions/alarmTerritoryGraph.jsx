@@ -49,88 +49,67 @@ const getLatestUploadedFile = (files) => {
 export const fetchTerritoryGraphData = async (forceRefresh = false) => {
   const now = new Date().getTime();
 
-  // 1. Check Cache First (unless forceRefresh is true)
   const cachedData = localStorage.getItem(CACHE_KEY);
   const cachedTimestamp = localStorage.getItem(CACHE_TIMESTAMP_KEY);
 
   if (cachedData && cachedTimestamp && !forceRefresh) {
     const timestamp = parseInt(cachedTimestamp, 10);
-    // Check if the cache is still fresh (within CACHE_DURATION)
     if (now - timestamp < CACHE_DURATION) {
       console.log("Serving territory graph data from cache.");
       return JSON.parse(cachedData);
     }
   }
 
-  // If forceRefresh is true or cache is expired/missing, clear existing cache
   if (
     forceRefresh ||
     !cachedData ||
     !cachedTimestamp ||
     now - parseInt(cachedTimestamp, 10) >= CACHE_DURATION
   ) {
-    console.log(
-      "Territory graph cache either forced refresh, expired, or missing. Clearing cache and fetching fresh data."
-    );
+    console.log("Refreshing or clearing stale cache for territory graph data.");
     localStorage.removeItem(CACHE_KEY);
     localStorage.removeItem(CACHE_TIMESTAMP_KEY);
   }
 
-  // 2. Fetch fresh data
   console.log("Fetching fresh territory graph data...");
   try {
-    // Step 1: Fetch all Excel files from the 'excels' folder
-    // The `list` method returns file metadata, including `created_at`.
     const { data: files, error } = await supabase.storage
       .from("uploads")
       .list("excels");
     if (error) throw error;
 
-    // Log files found with their names and creation timestamps for debugging
     console.log(
       "Files found:",
       files.map((f) => ({ name: f.name, created_at: f.created_at }))
     );
 
-    // Step 2: Find the latest uploaded file based on its Supabase 'created_at' timestamp
     const latestFile = getLatestUploadedFile(files);
-
     if (!latestFile) {
-      console.warn("No files found in the specified bucket path.");
-      // Clear cache if no valid file is found to prevent stale data
+      console.warn("No valid files found.");
       localStorage.removeItem(CACHE_KEY);
       localStorage.removeItem(CACHE_TIMESTAMP_KEY);
       return [];
     }
 
-    // Use createSignedUrl for private bucket access (recommended for security)
-    // This is more secure than getPublicUrl as it generates a temporary, signed URL.
     const { data: signedUrlData, error: urlError } = await supabase.storage
       .from("uploads")
-      .createSignedUrl(`excels/${latestFile.name}`, 60); // URL valid for 60 seconds
+      .createSignedUrl(`excels/${latestFile.name}`, 60);
     if (urlError) throw urlError;
 
-    // Step 3: Fetch the content of the most recent file using the signed URL
     const response = await fetch(signedUrlData.signedUrl);
     if (!response.ok) {
-      throw new Error(
-        `Failed to fetch file: ${response.status} ${response.statusText}`
-      );
+      throw new Error(`Failed to fetch file: ${response.statusText}`);
     }
 
     const blob = await response.arrayBuffer();
     const workbook = XLSX.read(blob, { type: "array" });
-    const sheetName = workbook.SheetNames[0]; // Assume data is in the first sheet
+    const sheetName = workbook.SheetNames[0];
     const sheet = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName], {
       header: 1,
     });
 
-    let territoryCounts = {};
-    let totalAlarms = 0;
-
     if (sheet.length <= 1) {
-      // Only headers or empty sheet
-      console.warn("Excel sheet is empty or contains only headers.");
+      console.warn("Sheet is empty or contains only headers.");
       localStorage.removeItem(CACHE_KEY);
       localStorage.removeItem(CACHE_TIMESTAMP_KEY);
       return [];
@@ -139,55 +118,90 @@ export const fetchTerritoryGraphData = async (forceRefresh = false) => {
     const headers = sheet[0];
     const territoryIndex = headers.indexOf("u_ntg_territory");
     const priorityIndex = headers.indexOf("u_service_priority");
+    const stateIndex = headers.indexOf("state");
 
-    if (territoryIndex === -1 || priorityIndex === -1) {
-      console.warn("Required columns not found in the Excel sheet headers.");
+    if (territoryIndex === -1 || priorityIndex === -1 || stateIndex === -1) {
+      console.warn("Required columns missing in the sheet.");
       localStorage.removeItem(CACHE_KEY);
       localStorage.removeItem(CACHE_TIMESTAMP_KEY);
       return [];
     }
 
-    // Step 4: Iterate through the rows (skipping header) and count occurrences in the "u_ntg_territory" column
-    sheet.slice(1).forEach((row) => {
+    let territoryCounts = {};
+    let totalAlarms = 0;
+    const acceptedStates = new Set();
+
+    sheet.slice(1).forEach((row, idx) => {
       const priorityRaw = row[priorityIndex];
+      const stateRaw = row[stateIndex];
+      const territoryRaw = row[territoryIndex];
+
       const normalizedPriority =
         typeof priorityRaw === "string"
           ? priorityRaw
               .replace(/\s+/g, " ")
               .replace(/[–—−]/g, "-")
+              .replace(/\u00A0/g, " ")
               .trim()
               .toLowerCase()
           : "";
 
-      if (normalizedPriority !== "3 - access") return;
+      const normalizedState =
+        typeof stateRaw === "string"
+          ? stateRaw
+              .replace(/\s+/g, " ")
+              .replace(/[–—−]/g, "-")
+              .replace(/\u00A0/g, " ")
+              .trim()
+              .toLowerCase()
+          : "";
 
-      const territory = String(row[territoryIndex] || "").trim();
-      if (territory === "7" || territory === "8") {
+      const territory = String(territoryRaw || "")
+        .replace(/\s+/g, " ")
+        .replace(/[–—−]/g, "-")
+        .replace(/\u00A0/g, " ")
+        .trim();
+
+      // Filtering logic
+      if (
+        normalizedPriority !== "3 - access" ||
+        normalizedState === "cancelled" ||
+        (territory !== "7" && territory !== "8")
+      ) {
+        console.log(`Skipping row ${idx + 2}:`, {
+          priorityRaw,
+          normalizedPriority,
+          stateRaw,
+          normalizedState,
+          territoryRaw,
+          territory,
+        });
+      } else {
         territoryCounts[territory] = (territoryCounts[territory] || 0) + 1;
         totalAlarms++;
+        acceptedStates.add(normalizedState); // Collect accepted state
       }
     });
 
-    // Step 5: Format the data for the chart
+    // ✅ Log all accepted states after filtering
+    console.log("Unique states after filtering:", [...acceptedStates]);
+
     const formattedData = Object.entries(territoryCounts).map(
       ([category, count], index) => ({
         category,
         count,
-        percentage: ((count / totalAlarms) * 100).toFixed(1), // Calculate percentage
-        fill: chartColors[index % chartColors.length], // Assign colors cyclically
+        percentage: ((count / totalAlarms) * 100).toFixed(1),
+        fill: chartColors[index % chartColors.length],
       })
     );
 
-    // 6. Cache the fresh data
     localStorage.setItem(CACHE_KEY, JSON.stringify(formattedData));
     localStorage.setItem(CACHE_TIMESTAMP_KEY, now.toString());
     console.log("Fresh territory graph data fetched and cached.");
 
-    // Step 7: Return formatted data
     return formattedData;
   } catch (error) {
-    console.error("Error fetching or processing territory graph data:", error);
-    // Clear cache on error to prevent serving stale/bad data
+    console.error("Error processing territory graph data:", error);
     localStorage.removeItem(CACHE_KEY);
     localStorage.removeItem(CACHE_TIMESTAMP_KEY);
     return [];
