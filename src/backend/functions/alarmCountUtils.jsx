@@ -62,10 +62,6 @@ export const fetchAlarmCount = async (forceRefresh = false) => {
     return normalizedRow;
   });
 
-  // Debug log
-  console.log("Headers:", Object.keys(jsonData[0] || {}));
-  console.log("First row sample:", jsonData[0]);
-
   const rowCount = jsonData.filter((row) => {
     const number = row.number;
     const priorityRaw = row.u_service_priority;

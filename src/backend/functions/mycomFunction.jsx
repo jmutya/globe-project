@@ -160,12 +160,6 @@ export const fetchmycomChartData = async () => {
         .trim()
         .toLowerCase();
 
-      if (callerIdValue === "mycom integration user") {
-        console.log(
-          `[DEBUG] caller_id: '${callerIdValue}', u_service_priority: '${servicePriorityValue}'`
-        );
-      }
-
       if (
         callerIdValue === "mycom integration user" &&
         servicePriorityValue === "3 - access"
