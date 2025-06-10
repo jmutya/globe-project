@@ -4,7 +4,7 @@ import supabase from "../supabase/supabase";
 // Define cache constants
 const CACHE_KEY = "areaAlarmDataCache";
 const CACHE_TIMESTAMP_KEY = "areaAlarmDataTimestamp";
-const CACHE_DURATION = 1 * 60 * 1000; // 59 minutes in milliseconds
+const CACHE_DURATION = 59 * 60 * 1000; // 59 minutes in milliseconds
 
 const getLatestUploadedFile = (files) => {
   let latestFile = null;
