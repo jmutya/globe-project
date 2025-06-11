@@ -76,10 +76,8 @@ function ClosingAccuracy() {
   const [unmatchedRows, setUnmatchedRows] = useState([]);
   const [allProcessedRows, setAllProcessedRows] = useState([]);
   const [ticketOpenedMonthOptions, setTicketOpenedMonthOptions] = useState([]);
-  // Renamed for clarity: now it holds filenames
   const [uploadedFileOptions, setUploadedFileOptions] = useState([]);
   const [selectedMonth, setSelectedMonth] = useState("");
-  // Renamed to reflect it's for selected file
   const [selectedFile, setSelectedFile] = useState("");
   const [error, setError] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
@@ -95,14 +93,13 @@ function ClosingAccuracy() {
           unmatchedRows: fetchedUnmatched,
           allProcessedRows: fetchedAllProcessed,
           ticketOpenedMonthOptions: fetchedTicketMonths,
-          // Renamed here to match the new return from the backend function
-          uploadedFileOptions: fetchedFileNames, // This now receives filenames
+          uploadedFileOptions: fetchedFileNames,
         } = await fetchAndProcessExcelData();
 
         setUnmatchedRows(fetchedUnmatched);
         setAllProcessedRows(fetchedAllProcessed);
         setTicketOpenedMonthOptions(fetchedTicketMonths);
-        setUploadedFileOptions(fetchedFileNames); // Set the filenames
+        setUploadedFileOptions(fetchedFileNames);
       } catch (err) {
         console.error("Error fetching or processing Excel data:", err);
         setError(`Failed to load data: ${err.message}`);
@@ -112,27 +109,36 @@ function ClosingAccuracy() {
     loadData();
   }, []);
 
-  // 2) Filter unmatchedRows by opened‐month, filename, and search term
+  // 2) Filter unmatchedRows by opened‐month, filename, search term, and valid assignee
   const filteredUnmatchedRows = unmatchedRows.filter((row) => {
+    // Exclude rows where assignedTo is 'Unassigned' or 'N/A'
+    const isAssigned =
+      row.assignedTo &&
+      row.assignedTo.toLowerCase() !== "unassigned" &&
+      row.assignedTo.toLowerCase() !== "n/a";
+
     const matchesOpenedMonth =
       selectedMonth === "" || row.ticketOpenedMonth === selectedMonth;
-    // Now filters by 'fileName' instead of 'fileUploadMonth'
+
     const matchesUploadedFile =
       selectedFile === "" || row.fileName === selectedFile;
+
     const matchesSearch =
       searchTerm === "" ||
       (row.assignedTo &&
         row.assignedTo.toLowerCase().includes(searchTerm.toLowerCase())) ||
       (row.number &&
         String(row.number).toLowerCase().includes(searchTerm.toLowerCase()));
-    return matchesOpenedMonth && matchesUploadedFile && matchesSearch;
+
+    // Return true only if all conditions are met, including the check for a valid assignee
+    return isAssigned && matchesOpenedMonth && matchesUploadedFile && matchesSearch;
   });
+
 
   // 3) Calculate overall completeness accuracy
   const filteredProcessedRows = allProcessedRows.filter((row) => {
     const matchesOpenedMonth =
       selectedMonth === "" || row.ticketOpenedMonth === selectedMonth;
-    // Now filters by 'fileName'
     const matchesUploadedFile =
       selectedFile === "" || row.fileName === selectedFile;
     return matchesOpenedMonth && matchesUploadedFile;
@@ -141,7 +147,6 @@ function ClosingAccuracy() {
   const filteredUnmatchedForAccuracy = unmatchedRows.filter((row) => {
     const matchesOpenedMonth =
       selectedMonth === "" || row.ticketOpenedMonth === selectedMonth;
-    // Now filters by 'fileName'
     const matchesUploadedFile =
       selectedFile === "" || row.fileName === selectedFile;
     return matchesOpenedMonth && matchesUploadedFile;
@@ -174,9 +179,13 @@ function ClosingAccuracy() {
     return stats ? calculateAccuracy(stats.total, stats.incomplete) : "N/A";
   };
 
-  // Sort table entries by accuracy
-  const sortedEntries = Object.entries(personStatsFiltered).sort(
-    ([, statsA], [, statsB]) => {
+  // Filter and sort table entries by accuracy, excluding "Unassigned" and "N/A"
+  const sortedEntries = Object.entries(personStatsFiltered)
+    .filter(
+      ([name]) =>
+        name.toLowerCase() !== "unassigned" && name.toLowerCase() !== "n/a"
+    )
+    .sort(([, statsA], [, statsB]) => {
       const accuracyA = parseFloat(
         calculateAccuracy(statsA.total, statsA.incomplete)
       );
@@ -186,8 +195,7 @@ function ClosingAccuracy() {
       return sortOrder === "asc"
         ? accuracyA - accuracyB
         : accuracyB - accuracyA;
-    }
-  );
+    });
 
   // 5) Export to PDF (accuracy table)
   const exportToPdf = () => {
@@ -230,7 +238,6 @@ function ClosingAccuracy() {
       "Ticket Number": row.number || "N/A",
       "Assigned To": row.assignedTo || "N/A",
       "Opened Date": row.opened || "N/A",
-      // Changed to show fileName
       "Uploaded From File": row.fileName || "N/A",
       "Cause (Original)": row.cause || "Empty",
       "Reason For Outage (Original)": row.reason || "Empty",
@@ -286,20 +293,19 @@ function ClosingAccuracy() {
             {/* Dropdown for File Uploaded (Filename) */}
             <select
               className="flex-1 p-2 border rounded-lg"
-              value={selectedFile} // Changed state variable
+              value={selectedFile}
               onChange={(e) => {
-                setSelectedFile(e.target.value); // Changed setter
+                setSelectedFile(e.target.value);
                 setExpandedIndex(null);
               }}
             >
               <option value="">All Uploaded Files</option>{" "}
-              {/* Changed option text */}
               {uploadedFileOptions.map(
                 (
-                  fileName // Iterating over filenames
+                  fileName
                 ) => (
                   <option key={`uploaded-${fileName}`} value={fileName}>
-                    {fileName} {/* Displaying the filename */}
+                    {fileName}
                   </option>
                 )
               )}
@@ -367,10 +373,8 @@ function ClosingAccuracy() {
                     <p className="text-sm text-gray-600">
                       Opened: {row.opened || "N/A"}
                     </p>
-                    {/* Display filename instead of full upload date/time if desired */}
                     <p className="text-sm text-gray-600">
                       File: {row.fileName || "N/A"}{" "}
-                      {/* Displaying the filename */}
                     </p>
                   </div>
                   {expandedIndex === idx ? (
@@ -418,12 +422,12 @@ function ClosingAccuracy() {
         <div className="flex items-center justify-between mb-4">
           <h3 className="font-semibold mb-4">
             Completion Accuracy per Assigned Person – Closing Ticket –{" "}
-            {selectedMonth && selectedFile // Updated condition
-              ? `for tickets opened in ${selectedMonth} from file ${selectedFile}` // Updated text
+            {selectedMonth && selectedFile
+              ? `for tickets opened in ${selectedMonth} from file ${selectedFile}`
               : selectedMonth
               ? `for tickets opened in ${selectedMonth}`
-              : selectedFile // Updated condition
-              ? `for file ${selectedFile}` // Updated text
+              : selectedFile
+              ? `for file ${selectedFile}`
               : "Overall"}
           </h3>
           <div className="flex items-center gap-2">

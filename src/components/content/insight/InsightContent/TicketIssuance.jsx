@@ -23,31 +23,23 @@ function TicketIssuance() {
   const [ticketOpenedMonthOptions, setTicketOpenedMonthOptions] = useState([]);
   const [uploadedFileOptions, setUploadedFileOptions] = useState([]);
   const [selectedMonth, setSelectedMonth] = useState("");
-  const [selectedFileName, setSelectedFileName] = useState(""); // This is where the selected file name is stored
+  const [selectedFileName, setSelectedFileName] = useState("");
   const [error, setError] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [expandedIndex, setExpandedIndex] = useState(null);
   const [sortOrder, setSortOrder] = useState("desc");
   const [isLoading, setIsLoading] = useState(true);
 
-  // --- MODIFIED loadData function ---
-  const loadData = async (fileNameToProcess = null) => { // Accept a parameter
+  const loadData = async (fileNameToProcess = null) => {
     setError(null);
     setIsLoading(true);
     try {
-      // Pass the selectedFileName to the backend function
       const data = await fetchAndProcessExcelData(fileNameToProcess);
 
       setUnmatchedRows(data.unmatchedRows);
       setAllProcessedRows(data.allProcessedRows);
-      // ONLY update ticketOpenedMonthOptions if a specific file was selected,
-      // or if you want to initially load all months from all files.
-      // The backend function is already designed to return filtered months.
       setTicketOpenedMonthOptions(data.ticketOpenedMonthOptions);
       setUploadedFileOptions(data.uploadedMonthOptions);
-
-      // Reset selected month when file changes, to avoid invalid selections
-      // This is important because the available months will change.
       setSelectedMonth("");
 
     } catch (err) {
@@ -58,21 +50,17 @@ function TicketIssuance() {
     }
   };
 
-  // --- MODIFIED useEffect for initial load AND when selectedFileName changes ---
   useEffect(() => {
-    // Initial load: no file selected, so pass null
     loadData(null);
-  }, []); // Run once on mount to get the initial list of files
+  }, []);
 
-  // --- NEW useEffect to react to selectedFileName changes ---
   useEffect(() => {
-    if (selectedFileName !== null) { // Only re-load if a file is actually selected/deselected
+    if (selectedFileName !== null) {
       loadData(selectedFileName);
     }
-  }, [selectedFileName]); // Re-run whenever selectedFileName changes
+  }, [selectedFileName]);
 
-  // Filtered rows for display based on selected filters and search term
-  // Your existing filtering logic is good for frontend display
+  // Filtered rows for display, excluding 'Unassigned' or 'N/A'
   const filteredUnmatchedRows = unmatchedRows.filter((row) => {
     const matchesOpenedMonth =
       selectedMonth === "" || row.ticketOpenedMonth === selectedMonth;
@@ -84,7 +72,11 @@ function TicketIssuance() {
         row.assignedTo.toLowerCase().includes(searchTerm.toLowerCase())) ||
       (row.number &&
         String(row.number).toLowerCase().includes(searchTerm.toLowerCase()));
-    return matchesOpenedMonth && matchesFileName && matchesSearch;
+
+    // New condition to ensure 'assignedTo' has a valid value
+    const hasValidAssignee = row.assignedTo && row.assignedTo !== "N/A" && row.assignedTo !== "Unassigned";
+
+    return matchesOpenedMonth && matchesFileName && matchesSearch && hasValidAssignee;
   });
 
   // Calculate overall accuracy for the filtered data
@@ -106,11 +98,12 @@ function TicketIssuance() {
     currentMonthIncompleteTickets
   );
 
-  // Calculate per-person accuracy for the table
+  // Calculate per-person accuracy, excluding 'Unassigned' or 'N/A'
   const personStatsFiltered = {};
   filteredProcessedRows.forEach((row) => {
-    const name = row.assignedTo || "Unassigned";
-    if (name) {
+    const name = row.assignedTo;
+    
+    if (name && name !== "N/A" && name !== "Unassigned") {
       if (!personStatsFiltered[name]) {
         personStatsFiltered[name] = { total: 0, incomplete: 0 };
       }
@@ -122,7 +115,7 @@ function TicketIssuance() {
   });
 
   const getPersonAccuracy = (assignedTo) => {
-    const name = assignedTo || "Unassigned";
+    const name = assignedTo;
     const stats = personStatsFiltered[name];
     if (stats) {
       return calculateAccuracy(stats.total, stats.incomplete);
@@ -189,7 +182,7 @@ function TicketIssuance() {
       "Assigned To": row.assignedTo || "N/A",
       "Opened Date": row.opened || "N/A",
       "Uploaded Date": formatDateTimeFromISO(row.fileUploadFullDateTime) || "N/A",
-      "Uploaded Filename": row.fileName || "N/A", // Added filename to export
+      "Uploaded Filename": row.fileName || "N/A",
       "Failure Category": row.failureCategory || "N/A",
       "Cause": row.cause || "N/A",
       "AOR001": row.aor001 || "N/A",
@@ -260,11 +253,8 @@ function TicketIssuance() {
                   className="flex-1 p-2 border rounded-lg"
                   value={selectedFileName}
                   onChange={(e) => {
-                    // When the file changes, update selectedFileName
                     setSelectedFileName(e.target.value);
-                    // Reset expanded index
                     setExpandedIndex(null);
-                    // loadData will be called by the new useEffect hook for selectedFileName
                   }}
                 >
                   <option value="">All Uploaded Files</option>
@@ -275,9 +265,7 @@ function TicketIssuance() {
                   ))}
                 </select>
 
-                {/* The month dropdown is conditionally rendered */}
-                {/* It will only show if a specific file is selected */}
-                {selectedFileName && ( // <--- Conditional rendering based on selectedFileName
+                {selectedFileName && (
                   <select
                     className="flex-1 p-2 border rounded-lg"
                     value={selectedMonth}
@@ -392,11 +380,11 @@ function TicketIssuance() {
           <div className="flex items-center justify-between mb-4">
             <h3 className="font-semibold mb-4">
               Completion Accuracy per Assigned Person - Ticket Issuance -{" "}
-              {selectedMonth && selectedFileName // Changed condition
+              {selectedMonth && selectedFileName
                 ? `for tickets opened in ${selectedMonth} from file ${selectedFileName}`
                 : selectedMonth
                 ? `for tickets opened in ${selectedMonth}`
-                : selectedFileName // Changed condition
+                : selectedFileName
                 ? `for file ${selectedFileName}`
                 : "Overall"}
             </h3>

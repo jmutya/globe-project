@@ -42,14 +42,17 @@ const ReportedCreatedTable = () => {
     return acc;
   }, {});
 
-  const totalMTTTByCaller = Object.entries(groupedByCaller).map(
-    ([caller, data]) => ({
+  const totalMTTTByCaller = Object.entries(groupedByCaller)
+    .map(([caller, data]) => ({
       caller,
       totalMTTT:
         data.count > 0 ? (data.totalMTTT / data.count).toFixed(2) : "0.00",
       ticketcount: data.count,
-    })
-  );
+    }))
+    // MODIFICATION: Filter out "mycom integration user"
+    .filter(
+      (item) => item.caller.toLowerCase() !== "mycom integration user"
+    );
 
   // Filter passed/failed
   const filteredRows = totalMTTTByCaller.filter((item) => {

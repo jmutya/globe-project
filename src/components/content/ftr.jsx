@@ -40,10 +40,15 @@ function FtrTable() {
         return acc;
       }, {});
 
-      const ticketStats = Object.entries(counts).map(([caller, count]) => ({
-        caller,
-        totalTickets: count,
-      }));
+      const ticketStats = Object.entries(counts)
+        .map(([caller, count]) => ({
+          caller,
+          totalTickets: count,
+        }))
+        // MODIFICATION: Filter out "mycom integration user"
+        .filter(
+          (item) => item.caller.toLowerCase() !== "mycom integration user"
+        );
 
       setTicketsPerCaller(ticketStats);
 

@@ -43,19 +43,22 @@ function MttiTable() {
     return acc;
   }, {});
 
-  const totalMTTIByCaller = Object.entries(groupedByCaller).map(
-    ([caller, data]) => {
+  const totalMTTIByCaller = Object.entries(groupedByCaller)
+    .map(([caller, data]) => {
       const avgMTTI = data.count > 0 ? (data.totalMTTI / data.count).toFixed(2) : "0.00";
       return { caller, totalMTTI: avgMTTI, ticketcount: data.count };
-    }
-  );
+    })
+    // MODIFICATION: Filter out "mycom integration user" here
+    .filter(
+      (item) => item.caller.toLowerCase() !== "mycom integration user"
+    );
 
   const filteredMTTIData = totalMTTIByCaller.filter((item) => {
     if (evaluationFilter === "All") return true;
     const isPassed = parseFloat(item.totalMTTI) < 16;
     return evaluationFilter === "Passed" ? isPassed : !isPassed;
   });
-  
+
   const sortedData = [...filteredMTTIData].sort((a, b) => {
     if (sortConfig.column === "ticketcount") {
       return sortConfig.direction === "asc"
@@ -72,7 +75,7 @@ function MttiTable() {
   const formatMinutesToHMS = (minutes) => {
     const numMinutes = parseFloat(minutes);
     if (isNaN(numMinutes) || numMinutes < 0) return "N/A";
-    
+
     const totalSeconds = Math.floor(numMinutes * 60);
     const days = Math.floor(totalSeconds / 86400);
     const hrs = Math.floor((totalSeconds % 86400) / 3600);
@@ -80,10 +83,10 @@ function MttiTable() {
     const secs = totalSeconds % 60;
 
     const parts = [
-        days > 0 && `${days}d`,
-        hrs > 0 && `${hrs}h`,
-        mins > 0 && `${mins}m`,
-        secs > 0 && `${secs}s`
+      days > 0 && `${days}d`,
+      hrs > 0 && `${hrs}h`,
+      mins > 0 && `${mins}m`,
+      secs > 0 && `${secs}s`
     ].filter(Boolean).join(" ");
 
     return parts.length > 0 ? parts : "0s";

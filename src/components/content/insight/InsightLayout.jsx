@@ -31,13 +31,13 @@ const InsightLayout = () => {
   return (
     <div className="p-4 md:p-8 bg-gray-50 min-h-[calc(100vh-theme.headerHeight)] md:min-h-[88vh] rounded-lg"> {/* Adjusted padding */}
       {/* === Custom Filters Section === */}
-      <div className="bg-white p-6 rounded-xl shadow-lg border border-gray-200 mb-8"> {/* Enhanced shadow and border */}
+      {/* <div className="bg-white p-6 rounded-xl shadow-lg border border-gray-200 mb-8"> 
         <div className="flex items-center mb-5">
-          <AdjustmentsHorizontalIcon className="w-7 h-7 text-indigo-600 mr-3" /> {/* Slightly larger icon */}
+          <AdjustmentsHorizontalIcon className="w-7 h-7 text-indigo-600 mr-3" /> 
           <h2 className="text-xl lg:text-2xl font-semibold text-gray-800">Outage Advanced Filters</h2>
         </div>
-        {/* <FilterData /> */}
-      </div>
+        <FilterData />
+      </div> */}
 
       {/* === Accuracy View Switcher Section === */}
       <div className="bg-white p-6 rounded-xl shadow-lg border border-gray-200"> {/* Enhanced shadow and border */}
