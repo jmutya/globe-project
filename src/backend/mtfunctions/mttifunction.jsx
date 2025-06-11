@@ -1,6 +1,7 @@
 // src/utils/mttiReportUtils.js
 import * as XLSX from "xlsx";
 import supabase from "../../backend/supabase/supabase";
+import { get, set } from "idb-keyval";
 
 const CACHE_KEY = "mttiReportData";
 const CACHE_DURATION_MS = 59 * 60 * 1000; // 59 minutes
@@ -37,91 +38,93 @@ const convertExcelDate = (value) => {
 };
 
 /**
- * Fetches MTTI data from a private Supabase bucket, with caching.
+ * Fetches MTTI data from a private Supabase bucket, with caching using IndexedDB.
  * @returns {Promise<object[]>} The processed MTTI report data.
  */
 export const fetchMttiData = async () => {
-  const cached = localStorage.getItem(CACHE_KEY);
-  if (cached) {
-    const { timestamp, data } = JSON.parse(cached);
-    if (Date.now() - timestamp < CACHE_DURATION_MS) {
-      console.log("Returning cached MTTI data.");
-      return data;
-    }
-  }
-
-  console.log("Fetching new MTTI data from Supabase.");
-  const { data: files, error } = await supabase.storage
-    .from("uploads")
-    .list("excels");
-
-  if (error) {
-    console.error("Supabase list error:", error);
-    throw new Error("Failed to list files in Supabase.");
-  }
-
-  let allData = [];
-  for (const file of files) {
-    try {
-      const { data: blob, error: downloadError } = await supabase.storage
-        .from("uploads")
-        .download(`excels/${file.name}`);
-
-      if (downloadError) throw downloadError;
-
-      const arrayBuffer = await blob.arrayBuffer();
-      const workbook = XLSX.read(arrayBuffer, { type: "array" });
-      const sheetName = workbook.SheetNames[0];
-      const sheet = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName], {
-        defval: "",
-      });
-      allData = [...allData, ...sheet];
-    } catch (err) {
-      console.error(`Failed to process file ${file.name}:`, err);
-      continue;
-    }
-  }
-
-  // Filter out unwanted rows
-  const filteredData = allData.filter((row) => {
-    const state = String(row["state"] || "")
-      .trim()
-      .toLowerCase();
-    const priority = String(row["u_service_priority"] || "")
-      .trim()
-      .toLowerCase();
-    return !(state === "cancelled" || priority !== "3 - access");
-  });
-
-  const excludedCount = allData.length - filteredData.length;
-  console.log(
-    `Filtered out ${excludedCount} rows due to cancelled state or unmatched priority.`
-  );
-
-  const processedData = filteredData.map((row) => {
-    const icRaw = row["u_investigation_completed"];
-    const reportedRaw = row["u_reported_date"];
-    const caller = String(row["caller_id"] || "Unknown Caller").trim();
-    const number = String(row["number"] || "N/A").trim();
-
-    const icISO = convertExcelDate(icRaw);
-    const reportedISO = convertExcelDate(reportedRaw);
-
-    let mtti = null;
-    if (icISO && reportedISO) {
-      const icDate = new Date(icISO);
-      const reportedDate = new Date(reportedISO);
-      const diffInMs = icDate - reportedDate;
-      mtti = parseFloat((diffInMs / (1000 * 60)).toFixed(2));
+  try {
+    const cached = await get(CACHE_KEY);
+    if (cached) {
+      const { timestamp, data } = cached;
+      if (Date.now() - timestamp < CACHE_DURATION_MS) {
+        console.log("Returning cached MTTI data from IndexedDB.");
+        return data;
+      }
     }
 
-    return { caller, number, mtti };
-  });
+    console.log("Fetching new MTTI data from Supabase.");
+    const { data: files, error } = await supabase.storage
+      .from("uploads")
+      .list("excels");
 
-  localStorage.setItem(
-    CACHE_KEY,
-    JSON.stringify({ timestamp: Date.now(), data: processedData })
-  );
+    if (error) {
+      console.error("Supabase list error:", error);
+      throw new Error("Failed to list files in Supabase.");
+    }
 
-  return processedData;
+    let allData = [];
+    for (const file of files) {
+      try {
+        const { data: blob, error: downloadError } = await supabase.storage
+          .from("uploads")
+          .download(`excels/${file.name}`);
+
+        if (downloadError) throw downloadError;
+
+        const arrayBuffer = await blob.arrayBuffer();
+        const workbook = XLSX.read(arrayBuffer, { type: "array" });
+        const sheetName = workbook.SheetNames[0];
+        const sheet = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName], {
+          defval: "",
+        });
+        allData = [...allData, ...sheet];
+      } catch (err) {
+        console.error(`Failed to process file ${file.name}:`, err);
+        continue;
+      }
+    }
+
+    const filteredData = allData.filter((row) => {
+      const state = String(row["state"] || "").trim().toLowerCase();
+      const priority = String(row["u_service_priority"] || "")
+        .trim()
+        .toLowerCase();
+      return !(state === "cancelled" || priority !== "3 - access");
+    });
+
+    const excludedCount = allData.length - filteredData.length;
+    console.log(
+      `Filtered out ${excludedCount} rows due to cancelled state or unmatched priority.`
+    );
+
+    const processedData = filteredData.map((row) => {
+      const icRaw = row["u_investigation_completed"];
+      const reportedRaw = row["u_reported_date"];
+      const caller = String(row["caller_id"] || "Unknown Caller").trim();
+      const number = String(row["number"] || "N/A").trim();
+
+      const icISO = convertExcelDate(icRaw);
+      const reportedISO = convertExcelDate(reportedRaw);
+
+      let mtti = null;
+      if (icISO && reportedISO) {
+        const icDate = new Date(icISO);
+        const reportedDate = new Date(reportedISO);
+        const diffInMs = icDate - reportedDate;
+        mtti = parseFloat((diffInMs / (1000 * 60)).toFixed(2));
+      }
+
+      return { caller, number, mtti };
+    });
+
+    await set(CACHE_KEY, {
+      timestamp: Date.now(),
+      data: processedData,
+    });
+
+    return processedData;
+  } catch (err) {
+    console.error("Error in fetchMttiData:", err);
+    throw err;
+  }
 };

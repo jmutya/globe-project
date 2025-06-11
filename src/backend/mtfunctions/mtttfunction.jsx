@@ -1,16 +1,12 @@
 // src/utils/reportUtils.js
 import * as XLSX from "xlsx";
 import supabase from "../../backend/supabase/supabase";
+import { get, set } from "idb-keyval"; // ✅ Use IndexedDB
 
 const CACHE_KEY = "reportedCreatedData";
 const CACHE_DURATION_MS = 59 * 60 * 1000; // 59 minutes
 
 // --- Supabase Interaction Logic ---
-
-/**
- * Fetches and parses all Excel files from the Supabase bucket.
- * @returns {Promise<object[]>} A promise that resolves to the combined JSON data from all files.
- */
 const fetchAndParseExcelFiles = async () => {
   const { data: files, error: listError } = await supabase.storage
     .from("uploads")
@@ -28,9 +24,7 @@ const fetchAndParseExcelFiles = async () => {
         .from("uploads")
         .download(`excels/${file.name}`);
 
-      if (downloadError) {
-        throw downloadError;
-      }
+      if (downloadError) throw downloadError;
 
       const arrayBuffer = await blob.arrayBuffer();
       const workbook = XLSX.read(arrayBuffer, { type: "array" });
@@ -41,19 +35,13 @@ const fetchAndParseExcelFiles = async () => {
       allData = [...allData, ...sheetData];
     } catch (error) {
       console.error(`Failed to process file ${file.name}:`, error);
-      continue; // Skip to the next file
+      continue;
     }
   }
   return allData;
 };
 
-// --- Data Transformation Logic ---
-
-/**
- * Converts various date formats (string, Excel number) to an ISO string.
- * @param {string|number} value - The date value from the Excel sheet.
- * @returns {string} The date in ISO format or an empty string if invalid.
- */
+// --- Date Conversion ---
 const convertExcelDate = (value) => {
   if (typeof value === "string") {
     const cleaned = value.replace(/\s+/g, " ").trim();
@@ -84,61 +72,65 @@ const convertExcelDate = (value) => {
   return "";
 };
 
-/**
- * Main function to get report data, using a cache to avoid redundant fetches.
- * @returns {Promise<object[]>} The processed report data.
- */
+// --- Main Fetch Function ---
 export const getReportedAndCreatedData = async () => {
-  const cached = localStorage.getItem(CACHE_KEY);
-  if (cached) {
-    const { timestamp, data } = JSON.parse(cached);
-    if (Date.now() - timestamp < CACHE_DURATION_MS) {
-      console.log("Returning cached data.");
-      return data;
+  try {
+    const cached = await get(CACHE_KEY);
+    if (cached && Date.now() - cached.timestamp < CACHE_DURATION_MS) {
+      console.log("Returning cached data from IndexedDB.");
+      return cached.data;
     }
+  } catch (err) {
+    console.warn("Failed to access IndexedDB cache:", err);
   }
 
   console.log("Fetching new data from Supabase.");
   const rawData = await fetchAndParseExcelFiles();
 
   const processedData = rawData
-  .filter((row) => {
-    const state = String(row["state"] || "").trim().toLowerCase();
-    const servicePriority = String(row["u_service_priority"] || "").trim().toLowerCase();
-    return !(state === "cancelled" || servicePriority !== "3 - access");
-  })
-  .map((row) => {
-    const reportedRaw = row["u_reported_date"];
-    const createdRaw = row["sys_created_on"];
-    const caller = String(row["caller_id"] || "Unknown Caller").trim();
-    const number = String(row["number"] || "N/A").trim();
+    .filter((row) => {
+      const state = String(row["state"] || "").trim().toLowerCase();
+      const servicePriority = String(row["u_service_priority"] || "")
+        .trim()
+        .toLowerCase();
+      return !(state === "cancelled" || servicePriority !== "3 - access");
+    })
+    .map((row) => {
+      const reportedRaw = row["u_reported_date"];
+      const createdRaw = row["sys_created_on"];
+      const caller = String(row["caller_id"] || "Unknown Caller").trim();
+      const number = String(row["number"] || "N/A").trim();
 
-    const reportedISO = convertExcelDate(reportedRaw);
-    const createdISO = convertExcelDate(createdRaw);
+      const reportedISO = convertExcelDate(reportedRaw);
+      const createdISO = convertExcelDate(createdRaw);
 
-    let mttt = "N/A";
-    if (reportedISO && createdISO) {
-      const reportedDate = new Date(reportedISO);
-      const createdDate = new Date(createdISO);
-      const diffInMs = createdDate - reportedDate;
-      mttt = (diffInMs / (1000 * 60)).toFixed(2);
-    }
+      let mttt = "N/A";
+      if (reportedISO && createdISO) {
+        const reportedDate = new Date(reportedISO);
+        const createdDate = new Date(createdISO);
+        const diffInMs = createdDate - reportedDate;
+        mttt = (diffInMs / (1000 * 60)).toFixed(2);
+      }
 
-    return {
-      caller,
-      number,
-      reported: reportedISO ? reportedISO.replace("T", " ").slice(0, 19) : "",
-      created: createdISO ? createdISO.replace("T", " ").slice(0, 19) : "",
-      mttt,
-    };
-  });
+      return {
+        caller,
+        number,
+        reported: reportedISO
+          ? reportedISO.replace("T", " ").slice(0, 19)
+          : "",
+        created: createdISO
+          ? createdISO.replace("T", " ").slice(0, 19)
+          : "",
+        mttt,
+      };
+    });
 
-
-  // Cache the newly fetched data
-  localStorage.setItem(
-    CACHE_KEY,
-    JSON.stringify({ timestamp: Date.now(), data: processedData })
-  );
+  // ✅ Cache in IndexedDB
+  try {
+    await set(CACHE_KEY, { timestamp: Date.now(), data: processedData });
+  } catch (err) {
+    console.warn("Failed to store data in IndexedDB:", err);
+  }
 
   return processedData;
 };
