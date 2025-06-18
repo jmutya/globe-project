@@ -55,6 +55,9 @@ function MttiTable() {
 
   const filteredMTTIData = totalMTTIByCaller.filter((item) => {
     if (evaluationFilter === "All") return true;
+    // Check for ticketcount before evaluating "Passed" or "Failed"
+    if (item.ticketcount === 0) return false; // Exclude N/A from Passed/Failed filters
+
     const isPassed = parseFloat(item.totalMTTI) < 16;
     return evaluationFilter === "Passed" ? isPassed : !isPassed;
   });
@@ -99,12 +102,17 @@ function MttiTable() {
 
   const exportToExcel = () => {
     const headers = ["Caller", "# of Assigned Tickets", "MTTI", "Evaluation"];
-    const rows = sortedData.map((item) => [
-      item.caller,
-      item.ticketcount,
-      formatMinutesToHMS(item.totalMTTI),
-      parseFloat(item.totalMTTI) < 16 ? "Passed" : "Failed",
-    ]);
+    const rows = sortedData.map((item) => {
+      const evaluation = item.ticketcount === 0
+        ? "N/A"
+        : (parseFloat(item.totalMTTI) < 16 ? "Passed" : "Failed");
+      return [
+        item.caller,
+        item.ticketcount,
+        formatMinutesToHMS(item.totalMTTI),
+        evaluation,
+      ];
+    });
 
     const worksheet = XLSX.utils.aoa_to_sheet([headers, ...rows]);
     const workbook = XLSX.utils.book_new();
@@ -186,7 +194,14 @@ function MttiTable() {
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
             {sortedData.map((item, idx) => {
-              const evaluationPassed = parseFloat(item.totalMTTI) < 16;
+              const evaluationContent = item.ticketcount === 0
+                ? "N/A"
+                : (parseFloat(item.totalMTTI) < 16 ? "Passed" : "Failed");
+
+              const evaluationClass = item.ticketcount === 0
+                ? "bg-gray-100 text-gray-800"
+                : (parseFloat(item.totalMTTI) < 16 ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800");
+
               return (
                 <tr key={idx} className="hover:bg-indigo-50 transition">
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
@@ -200,13 +215,9 @@ function MttiTable() {
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-center">
                     <span
-                      className={`inline-block px-2 py-1 text-xs font-semibold rounded-full ${
-                        evaluationPassed
-                          ? "bg-green-100 text-green-800"
-                          : "bg-red-100 text-red-800"
-                      }`}
+                      className={`inline-block px-2 py-1 text-xs font-semibold rounded-full ${evaluationClass}`}
                     >
-                      {evaluationPassed ? "Passed" : "Failed"}
+                      {evaluationContent}
                     </span>
                   </td>
                 </tr>

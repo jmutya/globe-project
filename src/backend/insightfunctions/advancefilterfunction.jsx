@@ -147,6 +147,16 @@ export const fetchAndProcessAllExcelData = async () => {
         );
         return null;
       }
+      if (match[1].includes("--")) {
+        errors.push(`Row ${idx + 1}: Consecutive hyphens found in "${match[1]}" (Ticket Number: ${number || 'N/A'})`);
+        return null;
+      }
+      // New condition: Check if "TER" is not followed by a number
+      // This regex checks for 'TER' followed by a hyphen and then NOT a digit
+      if (/(TER-[^0-9])|(TER$)/.test(match[1])) {
+        errors.push(`Row ${idx + 1}: "TER" must be followed by a number in "${match[1]}" (Ticket Number: ${number || 'N/A'})`);
+        return null;
+      }
       const parts = match[1].split("-");
       if (parts.length < 5) {
         errors.push(

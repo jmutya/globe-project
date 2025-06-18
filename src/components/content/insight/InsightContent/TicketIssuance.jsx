@@ -27,7 +27,7 @@ function TicketIssuance() {
   const [error, setError] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [expandedIndex, setExpandedIndex] = useState(null);
-  const [sortOrder, setSortOrder] = useState("desc");
+  const [sortOrder, setSortOrder] = useState("desc"); // 'asc' for ascending, 'desc' for descending
   const [isLoading, setIsLoading] = useState(true);
 
   const loadData = async (fileNameToProcess = null) => {
@@ -41,7 +41,6 @@ function TicketIssuance() {
       setTicketOpenedMonthOptions(data.ticketOpenedMonthOptions);
       setUploadedFileOptions(data.uploadedMonthOptions);
       setSelectedMonth("");
-
     } catch (err) {
       console.error("Error loading data in component:", err.message || String(err));
       setError(`Failed to load data: ${err.message || "Unknown error"}`);
@@ -102,7 +101,7 @@ function TicketIssuance() {
   const personStatsFiltered = {};
   filteredProcessedRows.forEach((row) => {
     const name = row.assignedTo;
-    
+
     if (name && name !== "N/A" && name !== "Unassigned") {
       if (!personStatsFiltered[name]) {
         personStatsFiltered[name] = { total: 0, incomplete: 0 };
@@ -125,13 +124,11 @@ function TicketIssuance() {
 
   const sortedEntries = Object.entries(personStatsFiltered).sort(
     ([nameA, statsA], [nameB, statsB]) => {
-      const accuracyA = parseFloat(calculateAccuracy(statsA.total, statsA.incomplete));
-      const accuracyB = parseFloat(calculateAccuracy(statsB.total, statsB.incomplete));
-
+      // MODIFICATION: Sort by total tickets (stats.total) instead of accuracy
       if (sortOrder === "asc") {
-        return accuracyA - accuracyB;
+        return statsA.total - statsB.total;
       } else {
-        return accuracyB - accuracyA;
+        return statsB.total - statsA.total;
       }
     }
   );
@@ -199,7 +196,7 @@ function TicketIssuance() {
     const ws = XLSX.utils.json_to_sheet(dataToExport);
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Incomplete Tickets");
-    XLSX.writeFile(wb, "Incomplete_Ticket_Issuance_Report.xlsx");
+    XSIX.writeFile(wb, "Incomplete_Ticket_Issuance_Report.xlsx");
   };
 
   return (

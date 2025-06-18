@@ -179,22 +179,19 @@ function ClosingAccuracy() {
     return stats ? calculateAccuracy(stats.total, stats.incomplete) : "N/A";
   };
 
-  // Filter and sort table entries by accuracy, excluding "Unassigned" and "N/A"
+  // Filter and sort table entries by total tickets, excluding "Unassigned" and "N/A"
   const sortedEntries = Object.entries(personStatsFiltered)
     .filter(
       ([name]) =>
         name.toLowerCase() !== "unassigned" && name.toLowerCase() !== "n/a"
     )
     .sort(([, statsA], [, statsB]) => {
-      const accuracyA = parseFloat(
-        calculateAccuracy(statsA.total, statsA.incomplete)
-      );
-      const accuracyB = parseFloat(
-        calculateAccuracy(statsB.total, statsB.incomplete)
-      );
-      return sortOrder === "asc"
-        ? accuracyA - accuracyB
-        : accuracyB - accuracyA;
+      // MODIFICATION: Sort by total tickets (stats.total) instead of accuracy
+      if (sortOrder === "asc") {
+        return statsA.total - statsB.total; // Sort by total tickets ascending
+      } else {
+        return statsB.total - statsA.total; // Sort by total tickets descending
+      }
     });
 
   // 5) Export to PDF (accuracy table)
