@@ -30,7 +30,8 @@ const componentMap = {
   Dashboard: lazy(() => import("../../pages/Dashboard_file")),
   // "Insights": lazy(() => import("../../content/insight/InsightContent/TicketIssuance")),
   // Dashboard: lazy(() => import("../../pages/comingSoon")),
-  // "sampleUpload": lazy(() => import("../../layout/sampleUpload")),
+  //  "sampleUpload": lazy(() => import("../../layout/sampleUpload")),
+  //  "Count": lazy(() => import("../../layout/count")),
 };
 
 const navigationItems = [
@@ -48,6 +49,14 @@ const navigationItems = [
   },
   { name: "Upload Files", icon: ArrowUpTrayIcon },
   { name: "Authorized Users", icon: UsersIcon },
+  // {
+  //   name: "sampleUpload",
+  //   icon: ArrowUpTrayIcon,
+  // },
+  // {
+  //   name: "Count",
+  //   icon: ArrowUpTrayIcon,
+  // },
 ];
 
 const Sidebar = ({ user }) => {

@@ -1,30 +1,29 @@
-import React, { useState } from 'react';
-import Papa from 'papaparse';
-import supabase from './../../backend/supabase/supabase'; // Supabase client
-// import TableRowCount from './fetchdatarow';
+import React, { useState } from "react";
+import Papa from "papaparse";
+import supabase from "./../../backend/supabase/supabase"; // Supabase client
 
 const FileUploader = () => {
   const [file, setFile] = useState(null);
-  const [message, setMessage] = useState('');
+  const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
-  const [tableName, setTableName] = useState('');
+  const [tableName, setTableName] = useState("");
+  const chunkSize = 500;
 
   const handleFileChange = (e) => {
     const selectedFile = e.target.files[0];
     if (!selectedFile) return;
 
     setFile(selectedFile);
-    setMessage('');
+    setMessage("");
 
-    // Convert file name to a valid SQL table name
-    const rawName = selectedFile.name.replace(/\.[^/.]+$/, ""); // remove .csv
-    const timestamp = Date.now(); // avoid collisions
+    const rawName = selectedFile.name.replace(/\.[^/.]+$/, "");
+    const timestamp = Date.now();
     const safeName = rawName.toLowerCase().replace(/[^a-z0-9_]/g, "_");
     setTableName(`csv_${safeName}_${timestamp}`);
   };
 
   const handleUpload = async () => {
-    if (!file || !tableName) return alert('Please select a CSV file.');
+    if (!file || !tableName) return alert("Please select a CSV file.");
 
     setLoading(true);
     Papa.parse(file, {
@@ -35,59 +34,79 @@ const FileUploader = () => {
         const rows = results.data;
 
         try {
-          // Step 1: Create table if not exists
           const createSQL = `
             CREATE TABLE IF NOT EXISTS "${tableName}" (
-              ${headers.map(h => `"${h}" TEXT`).join(', ')}
-            );
-          `;
-          await supabase.rpc('run_sql', { sql: createSQL });
+              ${headers.map((h) => `"${h}" TEXT`).join(", ")}
+              );
+            `;
+          console.log("Generated SQL for creating table:", createSQL); // Added console.log
+          await supabase.rpc("run_sql", { sql: createSQL });
 
-          // Step 2: Attempt to add missing columns
           for (const header of headers) {
             const alterSQL = `ALTER TABLE "${tableName}" ADD COLUMN IF NOT EXISTS "${header}" TEXT;`;
-            await supabase.rpc('run_sql', { sql: alterSQL });
+            console.log("Generated SQL for altering table:", alterSQL); // Added console.log
+            await supabase.rpc("run_sql", { sql: alterSQL });
           }
 
-          // Step 3: Insert rows in chunks
-          const chunkSize = 500;
-          for (let i = 0; i < rows.length; i += chunkSize) {
-            const chunk = rows.slice(i + 0, i + chunkSize);
+          const total = rows.length;
+          let uploadedCount = 0;
+
+          for (let i = 0; i < total; i += chunkSize) {
+            const chunk = rows.slice(i, i + chunkSize);
             const { error: insertError } = await supabase
               .from(tableName)
               .insert(chunk);
-            if (insertError) throw insertError;
+
+            if (insertError) {
+              throw insertError;
+            }
+
+            uploadedCount += chunk.length;
+            setMessage(`✅ Uploaded ${uploadedCount}/${total} rows...`);
           }
 
-          setMessage(`✅ Uploaded ${rows.length} rows to '${tableName}'.`);
+          setMessage(
+            `✅ Finished: Uploaded ${rows.length} rows to '${tableName}'.`
+          );
         } catch (err) {
-          console.error(err);
-          setMessage('❌ Upload failed: ' + err.message);
+          console.error("Upload Error:", err);
+          setMessage(
+            "❌ Upload failed: " + (err.message || JSON.stringify(err))
+          );
         } finally {
           setLoading(false);
         }
       },
       error: (error) => {
-        console.error('Parsing failed:', error);
-        setMessage('Parsing failed: ' + error.message);
+        console.error("Parsing failed:", error);
+        setMessage(
+          "❌ Parsing failed: " + (error.message || JSON.stringify(error))
+        );
         setLoading(false);
-      }
+      },
     });
   };
 
   return (
-    <div style={{ maxWidth: 500, margin: 'auto', textAlign: 'center' }}>
+    <div style={{ maxWidth: 500, margin: "auto", textAlign: "center" }}>
       <h2>CSV to Supabase Uploader</h2>
       <input type="file" accept=".csv" onChange={handleFileChange} />
-      {tableName && <p><strong>Target Table:</strong> {tableName}</p>}
+      {tableName && (
+        <p>
+          <strong>Target Table:</strong> {tableName}
+        </p>
+      )}
       <br />
       <button onClick={handleUpload} disabled={loading || !file}>
-        {loading ? 'Uploading...' : 'Upload to Supabase'}
+        {loading ? "Uploading..." : "Upload to Supabase"}
       </button>
-      {message && <p style={{ marginTop: 20 }}>{message}</p>}
-
-      {/* <TableRowCount latestTableName={tableName} /> */}
-
+      {message && (
+        <p style={{ marginTop: 20, whiteSpace: "pre-wrap" }}>
+          {typeof message === "object"
+            ? JSON.stringify(message, null, 2)
+            : message}
+        </p>
+      )}
     </div>
   );
 };
