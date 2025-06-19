@@ -161,6 +161,83 @@ export const calculateAccuracy = (total, incomplete) => {
 
 
 /**
+ * Fetches and processes the ID-to-Name mapping from the 'ref' subfolder.
+ * Assumes there's only one file in 'ref' which contains the mapping,
+ * or it merges data from multiple files if they exist.
+ *
+ * @returns {Map<string, string>} A map where keys are IDs and values are Names.
+ */
+const fetchIdToNameMapping = async () => {
+  const idToNameMap = new Map();
+  try {
+    const { data: refFiles, error: listError } = await supabase.storage
+      .from("uploads")
+      .list("ref", { sortBy: { column: "name", order: "asc" } });
+
+    if (listError) {
+      throw listError;
+    }
+
+    if (!refFiles || refFiles.length === 0) {
+      console.warn("No files found in the 'ref' folder for ID-to-Name mapping.");
+      return idToNameMap;
+    }
+
+    for (const refFile of refFiles) {
+      if (refFile.name === ".emptyFolderPlaceholder") {
+        continue;
+      }
+
+      const filePath = `ref/${refFile.name}`;
+      const { data: signedUrlData, error: signedUrlError } =
+        await supabase.storage.from("uploads").createSignedUrl(filePath, 60);
+
+      if (signedUrlError || !signedUrlData || !signedUrlData.signedUrl) {
+        console.warn(
+          `Could not generate signed URL for ${refFile.name}: ${
+            (signedUrlError && signedUrlError.message) || "No signedUrl"
+          }. Skipping.`
+        );
+        continue;
+      }
+
+      const response = await fetch(signedUrlData.signedUrl);
+      if (!response.ok) {
+        console.warn(
+          `HTTP error! status: ${response.status} fetching ${refFile.name}. Skipping.`
+        );
+        continue;
+      }
+
+      const arrayBuffer = await response.arrayBuffer();
+      const workbook = XLSX.read(arrayBuffer, { type: "array" });
+
+      // Assuming the ID-Name mapping is on the first sheet of the reference Excel file
+      const sheetData = XLSX.utils.sheet_to_json(
+        workbook.Sheets[workbook.SheetNames[0]],
+        { defval: "" }
+      );
+
+      sheetData.forEach((row) => {
+        const ID = String(row["ID"] || "").trim(); // Adjust column name if different in your ref file
+        const name = String(row["Name"] || "").trim(); // Adjust column name if different in your ref file
+        if (ID) {
+          idToNameMap.set(ID, name || "Unknown Name");
+        }
+      });
+    }
+  } catch (err) {
+    console.error(
+      "Error fetching or processing ID-to-Name mapping from 'ref' folder:",
+      err.message || String(err)
+    );
+    // Continue without the map if there's an error, or re-throw if critical
+  }
+  return idToNameMap;
+};
+
+
+/**
  * Fetches Excel files from Supabase Storage, processes them, and returns relevant data,
  * while caching each file’s processed output keyed by file.name + file.created_at.
  *
@@ -183,7 +260,10 @@ export const fetchAndProcessExcelData = async (selectedFileName = null) => {
   const selectedFileTicketMonthsSet = new Set(); 
 
   try {
-    // 1) List all files in "uploads/excels" folder (sorted by name asc)
+    // 1) Fetch the ID-to-Name mapping once
+    const firstUpdatedByIdToNameMap = await fetchIdToNameMapping();
+
+    // 2) List all files in "uploads/excels" folder (sorted by name asc)
     const { data: files, error: listError } = await supabase.storage
       .from("uploads")
       .list("excels", { sortBy: { column: "name", order: "asc" } });
@@ -204,7 +284,7 @@ export const fetchAndProcessExcelData = async (selectedFileName = null) => {
       };
     }
 
-    // 2) Loop through each file (& skip ".emptyFolderPlaceholder")
+    // 3) Loop through each file (& skip ".emptyFolderPlaceholder")
     for (const file of files) {
       if (file.name === ".emptyFolderPlaceholder") {
         continue;
@@ -214,7 +294,7 @@ export const fetchAndProcessExcelData = async (selectedFileName = null) => {
       const fileUploadFullDateTime = file.created_at; // ISO string
       uploadedFilesSet.add(fileName); // Add filename to the set
 
-      // 3) Check cache: do we already have an entry for this file AND same timestamp?
+      // 4) Check cache: do we already have an entry for this file AND same timestamp?
       const cachedEntry = excelFileCache.get(fileName);
       if (
         cachedEntry &&
@@ -244,7 +324,7 @@ export const fetchAndProcessExcelData = async (selectedFileName = null) => {
         continue;
       }
 
-      // 4) Cache miss (or changed file): fetch, parse, and process from scratch
+      // 5) Cache miss (or changed file): fetch, parse, and process from scratch
       const filePath = `excels/${fileName}`;
       const { data: signedUrlData, error: signedUrlError } =
         await supabase.storage.from("uploads").createSignedUrl(filePath, 60); // Signed URL validity
@@ -269,28 +349,7 @@ export const fetchAndProcessExcelData = async (selectedFileName = null) => {
       const arrayBuffer = await response.arrayBuffer();
       const workbook = XLSX.read(arrayBuffer, { type: "array" });
 
-      // --- Build ID→Name map from second sheet (if it exists) ---
-      const firstUpdatedByIdToNameMap = new Map();
-      const secondSheetName = workbook.SheetNames[1];
-      if (secondSheetName) {
-        const sheet1Data = XLSX.utils.sheet_to_json(
-          workbook.Sheets[secondSheetName],
-          { defval: "" }
-        );
-        sheet1Data.forEach((row) => {
-          const ID = String(row["ID"] || "").trim();
-          const name = String(row["Name"] || "").trim();
-          if (ID) {
-            firstUpdatedByIdToNameMap.set(ID, name || "Unknown Name");
-          }
-        });
-      } else {
-        console.warn(
-          `Excel file ${fileName} does not have a second sheet for ID-to-Name mapping.`
-        );
-      }
-
-      // 5) Process the first sheet, row by row
+      // 6) Process the first sheet, row by row
       const rawSheetRows = XLSX.utils.sheet_to_json(
         workbook.Sheets[workbook.SheetNames[0]],
         { defval: "" }
@@ -324,9 +383,8 @@ export const fetchAndProcessExcelData = async (selectedFileName = null) => {
           if (!normalizedCallervalue) {
             return;
           } else {
-            // Replace with mapped name if available
-            assignedTo =
-              firstUpdatedByIdToNameMap.get(firstUpdatedId) || "N/A";
+            // Use the fetched map for ID-to-Name resolution
+            assignedTo = firstUpdatedByIdToNameMap.get(firstUpdatedId) || "N/A";
           }
         }
 
@@ -373,14 +431,14 @@ export const fetchAndProcessExcelData = async (selectedFileName = null) => {
         }
       });
 
-      // 6) Cache this file’s processed results
+      // 7) Cache this file’s processed results
       excelFileCache.set(fileName, {
         fileUploadFullDateTime,
         processedRows: fileProcessedRows,
         unmatchedRows: fileUnmatchedRows,
       });
 
-      // 7) Add this file’s rows to the global aggregates
+      // 8) Add this file’s rows to the global aggregates
       allProcessed.push(...fileProcessedRows);
       allUnmatched.push(...fileUnmatchedRows);
       // (ticketMonthsSet has already been added per row, uploadedFilesSet per file)
@@ -389,7 +447,7 @@ export const fetchAndProcessExcelData = async (selectedFileName = null) => {
     // Save the entire updated cache to localStorage after all files are processed
     saveCacheToLocalStorage();
 
-    // 8) Sort month dropdowns descending (newest first):
+    // 9) Sort month dropdowns descending (newest first):
     const sortMonthsDesc = (arr) =>
       arr.sort((a, b) => {
         const [ma, ya] = a.split("/").map(Number);
